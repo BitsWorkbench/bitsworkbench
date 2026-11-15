@@ -96,6 +96,8 @@ export default {
   'text.editorLabel': 'Programa de Python',
   'text.editorHelp': 'Tab agrega sangría. Presiona Esc y luego Tab para salir del editor.',
   'text.viewLabel': 'El Python que forman tus bloques',
+  'palette.label': 'Paleta de Python',
+  'palette.hint': 'Arrástralo a tu programa, o presiona Enter para agregarlo donde está el cursor.',
   'editor.find': 'Buscar',
   'editor.replace': 'Reemplazar',
   'editor.next': 'siguiente',
@@ -200,7 +202,9 @@ export default {
       <li><strong>🐍 Python</strong>, abajo a la izquierda, muestra exactamente el código que forman
         tus bloques, en lugar de los bloques; <strong>🧩 Bloques</strong> los trae de vuelta. Presiona
         <strong>✏️ Editar como Python</strong> ahí para escribir el tuyo; al volver a los bloques se
-        pierden los cambios que escribiste (no se convierten otra vez en bloques), así que pregunta antes.</li>
+        pierden los cambios que escribiste (no se convierten otra vez en bloques), así que pregunta antes.
+        La paleta al lado del Python tiene las mismas categorías que la de los bloques, con cada bloque
+        como su Python: arrastra uno a tu programa, o haz clic en él para agregarlo donde está el cursor.</li>
       <li><strong>🆕 Nuevo</strong> empieza de nuevo. Haz clic en el nombre del proyecto, al lado, para cambiarle el nombre.</li>
     </ul>
     <h3>Atajos</h3>

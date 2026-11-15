@@ -98,6 +98,8 @@ export default {
   'text.editorLabel': 'Python program',
   'text.editorHelp': 'Tab indents. Press Escape, then Tab, to leave the editor.',
   'text.viewLabel': 'The Python your blocks make',
+  'palette.label': 'Python palette',
+  'palette.hint': 'Drag it into your program, or press Enter to add it where the cursor is.',
   // The Python editor's own panels (find and replace, folding)
   'editor.find': 'Find',
   'editor.replace': 'Replace',
@@ -202,7 +204,9 @@ export default {
       <li><strong>🐍 Python</strong>, at the bottom left, shows exactly the code your blocks make,
         in place of the blocks; <strong>🧩 Blocks</strong> brings them back. Press
         <strong>✏️ Edit as Python</strong> there to type your own; going back to blocks then
-        drops your typed changes (they do not turn back into blocks), so it asks first.</li>
+        drops your typed changes (they do not turn back into blocks), so it asks first.
+        The palette beside the Python has the same categories as the blocks', with each block as
+        its Python: drag one into your program, or click it to add it where the cursor is.</li>
       <li><strong>🆕 New</strong> starts over. Click the project name next to it to rename your project.</li>
     </ul>
     <h3>Shortcuts</h3>

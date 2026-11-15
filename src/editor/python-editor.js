@@ -1,7 +1,8 @@
 /**
  * The Python editor for typed programs: CodeMirror 6 with Python's grammar,
  * in the app's colours. The app talks to it through this small surface
- * (value, change, focus, the paused line) and never touches CodeMirror itself.
+ * (value, change, focus, the paused line, snippets) and never touches
+ * CodeMirror itself.
  */
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, Decoration } from '@codemirror/view'
 import { EditorState, StateEffect, StateField } from '@codemirror/state'
@@ -12,6 +13,7 @@ import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/sea
 import { python } from '@codemirror/lang-python'
 import { tags } from '@lezer/highlight'
 import { t } from '../i18n/index.js'
+import { snippetDrop, previewSnippet, dropSnippet, insertSnippet } from './snippet-drop.js'
 
 // The same colours as the blocks' read-only Python view (app.css .python-view).
 const colours = HighlightStyle.define([
@@ -75,61 +77,65 @@ export class PythonEditor {
    * @param {{label: string, describedBy?: string, onChange?: (text: string) => void}} options
    */
   constructor(parent, { label, describedBy, onChange }) {
-    this.view = new EditorView({
-      parent,
-      state: EditorState.create({
-        extensions: [
-          lineNumbers(),
-          foldGutter(),
-          highlightActiveLineGutter(),
-          history(),
-          drawSelection(),
-          dropCursor(),
-          indentUnit.of('    '),
-          indentOnInput(),
-          bracketMatching(),
-          closeBrackets(),
-          highlightActiveLine(),
-          highlightSelectionMatches(),
-          // At the top: the blocks/Python button sits at the bottom left.
-          search({ top: true }),
-          syntaxHighlighting(colours),
-          python(),
-          runLine,
-          phrases(),
-          keymap.of([
-            // Escape, then Tab, leaves the editor (the help text says so).
-            { key: 'Escape', run: temporarilySetTabFocusMode },
-            ...closeBracketsKeymap,
-            ...defaultKeymap,
-            ...historyKeymap,
-            ...foldKeymap,
-            ...searchKeymap,
-            indentWithTab,
-          ]),
-          EditorView.contentAttributes.of({
-            'aria-label': label,
-            ...(describedBy ? { 'aria-describedby': describedBy } : {}),
-            autocapitalize: 'off',
-            autocorrect: 'off',
-            spellcheck: 'false',
-          }),
-          EditorView.updateListener.of((u) => {
-            if (u.docChanged && onChange) onChange(this.value)
-          }),
-        ],
+    this.onChange = onChange
+    this.extensions = [
+      lineNumbers(),
+      foldGutter(),
+      highlightActiveLineGutter(),
+      history(),
+      drawSelection(),
+      dropCursor(),
+      indentUnit.of('    '),
+      indentOnInput(),
+      bracketMatching(),
+      closeBrackets(),
+      highlightActiveLine(),
+      highlightSelectionMatches(),
+      // At the top: the blocks/Python button sits at the bottom left.
+      search({ top: true }),
+      syntaxHighlighting(colours),
+      python(),
+      runLine,
+      snippetDrop,
+      phrases(),
+      keymap.of([
+        // Escape, then Tab, leaves the editor (the help text says so).
+        { key: 'Escape', run: temporarilySetTabFocusMode },
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...searchKeymap,
+        indentWithTab,
+      ]),
+      EditorView.contentAttributes.of({
+        'aria-label': label,
+        ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+        autocapitalize: 'off',
+        autocorrect: 'off',
+        spellcheck: 'false',
       }),
-    })
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged && onChange) onChange(this.value)
+      }),
+    ]
+    this.view = new EditorView({ parent, state: EditorState.create({ extensions: this.extensions }) })
   }
 
   get value() {
     return this.view.state.doc.toString()
   }
 
-  /** Replace the whole program (a new project, or switching to text mode). */
+  /**
+   * Replace the whole program (a new project, or switching to text mode).
+   * A fresh state, so undo history starts here: Ctrl+Z cannot undo the
+   * program away to nothing. The cursor starts at the end, where a new line
+   * of program usually goes.
+   */
   set value(text) {
     if (text === this.value) return
-    this.view.dispatch({ changes: { from: 0, to: this.view.state.doc.length, insert: text } })
+    this.view.setState(EditorState.create({ doc: text, selection: { anchor: text.length }, extensions: this.extensions }))
+    this.onChange?.(text)
   }
 
   /** The selected text (empty when nothing is selected). */
@@ -140,6 +146,26 @@ export class PythonEditor {
 
   focus() {
     this.view.focus()
+  }
+
+  /** Show where a dragged snippet would land, at a point on screen. */
+  previewDrop(snippet, x, y) {
+    previewSnippet(this.view, snippet, x, y)
+  }
+
+  /** Clear the drop preview (the drag left the editor, or was cancelled). */
+  clearPreview() {
+    previewSnippet(this.view, null)
+  }
+
+  /** Drop a snippet at a point on screen; false if the point is not in the editor. */
+  drop(snippet, x, y) {
+    return dropSnippet(this.view, snippet, x, y)
+  }
+
+  /** Put a snippet in at the cursor (a click, or Enter on the palette). */
+  insert(snippet) {
+    insertSnippet(this.view, snippet)
   }
 
   /** Mark and select the line a paused program is at; null clears it. */

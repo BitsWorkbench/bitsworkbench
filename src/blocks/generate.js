@@ -28,21 +28,8 @@ export function generatePython(workspace, targetId) {
   const target = getTarget(targetId)
   if (target) header.push(`# Device: ${target.fullName}`)
   header.push('')
-
-  // Radio reserves internal memory, so it must be imported first of all.
-  if (needs.has('radio')) header.push('import radio')
-  // Driven by the blocks actually used, not by the picker: a project full of
-  // CodeX blocks still generates CodeX imports if the picker says otherwise.
-  for (const [key, line] of Object.entries(DEVICE_IMPORT)) {
-    if (needs.has(NEED_FOR_DEVICE[key])) header.push(line)
-  }
-  if (needs.has('colors')) header.push('from colors import *')
-  if (needs.has('flight')) header.push('from flight import *')
-  if (needs.has('songplayer')) header.push('from songplayer import song_player')
-  if (needs.has('time')) header.push('import time')
-
-  const setup = []
-  if (needs.has('motors_enable')) setup.push('motors.enable(True)')
+  header.push(...importLines(needs))
+  const setup = setupLines(needs)
 
   if (!program) {
     return `${header.join('\n').trim()}\n\n# Add some blocks and press Run!\n`
@@ -52,6 +39,28 @@ export function generatePython(workspace, targetId) {
     .filter(Boolean)
     .join('\n\n')
     .concat('\n')
+}
+
+/** The import lines a set of needs calls for, in the order the firmware needs. */
+export function importLines(needs) {
+  const lines = []
+  // Radio reserves internal memory, so it must be imported first of all.
+  if (needs.has('radio')) lines.push('import radio')
+  // Driven by the blocks actually used, not by the picker: a project full of
+  // CodeX blocks still generates CodeX imports if the picker says otherwise.
+  for (const [key, line] of Object.entries(DEVICE_IMPORT)) {
+    if (needs.has(NEED_FOR_DEVICE[key])) lines.push(line)
+  }
+  if (needs.has('colors')) lines.push('from colors import *')
+  if (needs.has('flight')) lines.push('from flight import *')
+  if (needs.has('songplayer')) lines.push('from songplayer import song_player')
+  if (needs.has('time')) lines.push('import time')
+  return lines
+}
+
+/** The one-time setup lines a set of needs calls for, after the imports. */
+export function setupLines(needs) {
+  return needs.has('motors_enable') ? ['motors.enable(True)'] : []
 }
 
 /**
