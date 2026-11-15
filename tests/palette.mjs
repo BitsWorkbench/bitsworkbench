@@ -190,8 +190,10 @@ check(
 )
 await page.keyboard.press('Enter')
 await page.keyboard.press('ArrowDown')
+const focused = await page.evaluate(() => document.activeElement.textContent)
 await page.keyboard.press('Enter')
-check((await text()).includes('while True:'), 'Enter on a snippet puts it in')
+now = await text()
+check(now.includes('while True:'), `Enter on a snippet puts it in${now.includes('while True:') ? '' : ` (focused ${JSON.stringify(focused)}; text ${JSON.stringify(now)})`}`)
 
 // ------------------------------------------------- another board, another palette
 await page.evaluate(() => window.openCodeBot.workspace.setTarget('codex'))
