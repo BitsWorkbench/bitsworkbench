@@ -98,6 +98,33 @@ export default {
   'text.editorLabel': 'Python program',
   'text.editorHelp': 'Tab indents. Press Escape, then Tab, to leave the editor.',
   'text.viewLabel': 'The Python your blocks make',
+  // The Python editor's own panels (find and replace, folding)
+  'editor.find': 'Find',
+  'editor.replace': 'Replace',
+  'editor.next': 'next',
+  'editor.previous': 'previous',
+  'editor.all': 'all',
+  'editor.matchCase': 'match case',
+  'editor.regexp': 'pattern',
+  'editor.byWord': 'whole word',
+  'editor.replaceOne': 'replace',
+  'editor.replaceAll': 'replace all',
+  'editor.close': 'close',
+  'editor.currentMatch': 'current match',
+  'editor.onLine': 'on line',
+  'editor.replacedOne': 'replaced the match on line $',
+  'editor.replacedMany': 'replaced $ matches',
+  'editor.goToLine': 'Go to line',
+  'editor.go': 'go',
+  'editor.foldedLines': 'Folded lines',
+  'editor.unfoldedLines': 'Unfolded lines',
+  'editor.foldLine': 'Fold line',
+  'editor.unfoldLine': 'Unfold line',
+  'editor.foldedCode': 'folded code',
+  'editor.unfold': 'unfold',
+  'editor.to': 'to',
+  'editor.selectionDeleted': 'Selection deleted',
+  'editor.controlCharacter': 'Control character',
   'text.startedTitle': "You're writing Python now",
   'text.startedDetail': 'Run sends the code you type. Your blocks are kept for when you go back.',
   'text.backTitle': 'Go back to blocks?',
@@ -183,6 +210,14 @@ export default {
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: run your program</li>
       <li><kbd>Esc</kbd>: stop a running program</li>
       <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: save your project to a file</li>
+    </ul>
+    <h3>Writing Python</h3>
+    <ul>
+      <li><kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd>: indent or unindent the line</li>
+      <li><kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Y</kbd>: undo, redo</li>
+      <li><kbd>Ctrl</kbd>+<kbd>F</kbd>: find (and replace)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>/</kbd>: turn lines into comments, or back</li>
+      <li><kbd>Esc</kbd>, then <kbd>Tab</kbd>: leave the editor</li>
     </ul>
     <h3>Using the keyboard</h3>
     <p>Everything works without a mouse. <kbd>Tab</kbd> moves between parts of the screen.</p>

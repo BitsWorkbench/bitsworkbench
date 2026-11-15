@@ -75,17 +75,39 @@ check((await mode()) === 'text', '"Edit as Python" switches to text mode')
 check(await page.isVisible('#python-editor'), 'the Python becomes editable')
 view = await shows()
 check(view.python && !view.blocks, 'the blocks are out of sight while writing Python')
-const seeded = await page.inputValue('#python-editor')
+check(
+  await page.evaluate(() => {
+    const b = document.getElementById('btn-view').getBoundingClientRect()
+    return document.getElementById('btn-view').contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2))
+  }),
+  'the blocks/Python button is on top of the editor, not under its gutter',
+)
+const editorText = () => page.evaluate(() => window.openCodeBot.pythonEditor.value)
+const seeded = await editorText()
 check(seeded.includes('from botcore import *'), 'the editor starts with the blocks\' Python')
+check(await page.isVisible('#python-editor .cm-content[aria-label]'), 'the editor is labelled for screen readers')
+check((await page.locator('#python-editor .k').count()) > 0, 'the editor colours Python keywords')
 
-// Tab indents
-await page.click('#python-editor')
+// A colon's Enter indents; Tab and Shift+Tab move the line a level
+await page.click('#python-editor .cm-content')
 await page.keyboard.press('Control+End')
 await page.keyboard.type('\nfor i in range(3):\n')
+await page.keyboard.type("print('typed by hand'")
+let typed = await editorText()
+check(typed.includes("\n    print('typed by hand')"), 'Enter after a colon indents four spaces (and the bracket closes itself)')
 await page.keyboard.press('Tab')
-await page.keyboard.type("print('typed by hand')")
-const typed = await page.inputValue('#python-editor')
-check(typed.includes("\n    print('typed by hand')"), 'Tab indents four spaces')
+check((await editorText()).includes("\n        print('typed by hand')"), 'Tab indents four more spaces')
+await page.keyboard.press('Shift+Tab')
+typed = await editorText()
+check(typed.includes("\n    print('typed by hand')") && !typed.includes("\n        print"), 'Shift+Tab takes the indent back')
+await page.keyboard.press('Control+z')
+// (Ctrl+Y: Playwright's Control+Shift+z sends a lowercase z, unlike a keyboard)
+await page.keyboard.press('Control+y')
+check((await editorText()) === typed, 'undo and redo')
+// Escape, then Tab, leaves the editor
+await page.keyboard.press('Escape')
+await page.keyboard.press('Tab')
+check(!(await page.evaluate(() => document.getElementById('python-editor').contains(document.activeElement))), 'Escape, then Tab, leaves the editor')
 
 // Run sends the typed code
 await page.click('#btn-connect')
@@ -102,7 +124,7 @@ await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
 check((await mode()) === 'text', 'text mode survives a reload')
 check(await page.isVisible('#python-editor'), 'after a reload the typed Python is on screen')
-check((await page.inputValue('#python-editor')).includes('typed by hand'), 'the typed code survives a reload')
+check((await editorText()).includes('typed by hand'), 'the typed code survives a reload')
 
 // Back to blocks (the 🧩 Blocks button) asks first, because typed changes would be lost
 await page.click('#btn-view')
@@ -142,7 +164,7 @@ async function freshTyped(url, typed) {
   await p.evaluate(() => window.openCodeBot.workspace.workspace.clear())
   await p.click('#btn-view')
   await p.click('#btn-mode')
-  await p.fill('#python-editor', typed)
+  await p.evaluate((text) => { window.openCodeBot.pythonEditor.value = text }, typed)
   return p
 }
 const TYPED = "print('my own program')\n"

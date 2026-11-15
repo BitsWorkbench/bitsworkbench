@@ -408,15 +408,35 @@ kbd {
 .python-bar-msg { flex: 1 1 auto; }
 .btn-small { height: 32px; padding: 0 12px; font-size: 14px; flex: 0 0 auto; }
 .python-view { flex: 1 1 auto; min-height: 0; }
+/* The typed-Python editor (CodeMirror), in the same type and colours. */
 .python-editor {
-  width: 100%;
-  border: 0;
-  resize: none;
-  outline: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   background: var(--surface);
   box-shadow: inset 3px 0 0 var(--green);
+  /* CodeMirror's gutter sits at z-index 200; keep it under the view toggle. */
+  isolation: isolate;
 }
+.python-editor .cm-editor { flex: 1 1 auto; min-width: 0; height: 100%; }
+.python-editor .cm-editor.cm-focused { outline: none; }
+.python-editor .cm-editor:focus-within { box-shadow: inset 0 0 0 2px var(--green); }
+.python-editor .cm-scroller {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+/* Room at the foot for the blocks/Python button. */
+.python-editor .cm-content { padding-bottom: 72px; color: var(--ink); }
+.python-editor .cm-gutters { background: var(--paper-2); color: var(--ink-soft); border-right: 1px solid var(--line); }
+.python-editor .cm-activeLine { background: rgba(78, 183, 72, 0.06); }
+.python-editor .cm-activeLineGutter { background: rgba(78, 183, 72, 0.14); }
+.python-editor .cm-run-line { background: var(--gold-soft); outline: 1px solid var(--gold); }
 .python-editor[hidden], .python-view[hidden] { display: none; }
+.python-editor .k { color: #b0409a; font-weight: 700; }
+.python-editor .s { color: var(--green-deep); }
+.python-editor .c { color: var(--ink-soft); font-style: italic; }
+.python-editor .n { color: #a3540a; }
 
 
 .sr-only {

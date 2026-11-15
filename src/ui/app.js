@@ -13,6 +13,7 @@ import { t, listOf, LANGUAGES, language, languageName, setLanguage } from '../i1
 import { DeviceSwitch } from '../sim/device-switch.js'
 import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
+import { PythonEditor } from '../editor/python-editor.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -205,13 +206,8 @@ export class App {
     const id = line && this._ran?.blockAt[line]
     ws.highlightBlock?.(id && ws.getBlockById(id) ? id : null)
     if (this._ran?.text) {
-      const editor = $('python-editor')
-      if (!line || editor.value !== this._ran.code) return
-      const lines = editor.value.split('\n')
-      const start = lines.slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0)
-      editor.setSelectionRange(start, start + (lines[line - 1]?.length ?? 0))
-      const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 18
-      editor.scrollTop = Math.max(0, (line - 3) * lineHeight)
+      const editor = this.pythonEditor
+      editor.showLine(line && editor.value === this._ran.code ? line : null)
       return
     }
     const view = $('python-view')
@@ -331,7 +327,7 @@ export class App {
       true,
     )
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.device.state === State.RUNNING && e.target.id !== 'python-editor') {
+      if (e.key === 'Escape' && this.device.state === State.RUNNING && !$('python-editor').contains(e.target)) {
         this._stop()
       }
     })
@@ -679,19 +675,21 @@ export class App {
   // ------------------------------------------------------- blocks or text
 
   _bindTextMode() {
-    const editor = $('python-editor')
+    this.pythonEditor = new PythonEditor($('python-editor'), {
+      label: t('text.editorLabel'),
+      describedBy: 'python-editor-help',
+      onChange: (text) => this.workspace.setPythonText(text),
+    })
     $('btn-mode').addEventListener('click', () =>
       this.workspace.mode === 'text' ? this._toBlocks() : this._toText(),
     )
     $('btn-view').addEventListener('click', () => this._toggleView())
-    editor.addEventListener('input', () => this.workspace.setPythonText(editor.value))
-    editor.addEventListener('keydown', (e) => indentKeys(e, editor))
     this.workspace.addEventListener('mode', () => this._showMode())
   }
 
   _toText() {
     this.workspace.setMode('text', this._blocksPython())
-    $('python-editor').focus()
+    this.pythonEditor.focus()
     toast({
       kind: 'info',
       title: t('text.startedTitle'),
@@ -746,9 +744,8 @@ export class App {
   /** Make the screen match the mode. */
   _showMode() {
     const text = this.workspace.mode === 'text'
-    const editor = $('python-editor')
-    if (text && editor.value !== this.workspace.pythonText) editor.value = this.workspace.pythonText
-    editor.hidden = !text
+    if (text) this.pythonEditor.value = this.workspace.pythonText
+    $('python-editor').hidden = !text
     $('python-view').hidden = text
     $('btn-mode').textContent = t(text ? 'text.toBlocks' : 'text.toText')
     $('python-bar-msg').textContent = t(text ? 'text.barText' : 'text.barBlocks')
@@ -950,32 +947,4 @@ const KNOWN_ERRORS = ['NameError', 'SyntaxError', 'TypeError', 'ValueError', 'Ze
 
 function friendlyErrorTitle(name) {
   return KNOWN_ERRORS.includes(name) ? t(`pyerr.${name}`) : t('pyerr.other', { name })
-}
-
-/** Tab and Shift+Tab indent by four spaces; Escape lets the next Tab leave. */
-function indentKeys(e, editor) {
-  if (e.key === 'Escape') {
-    editor.dataset.tabLeaves = '1'
-    return
-  }
-  if (e.key !== 'Tab') {
-    delete editor.dataset.tabLeaves
-    return
-  }
-  if (editor.dataset.tabLeaves) {
-    delete editor.dataset.tabLeaves
-    return // let the browser move focus
-  }
-  e.preventDefault()
-  const { selectionStart: start, selectionEnd: end, value } = editor
-  const lineStart = value.lastIndexOf('\n', start - 1) + 1
-  if (e.shiftKey) {
-    const lead = value.slice(lineStart, lineStart + 4).match(/^ */)[0].length
-    if (!lead) return
-    editor.setRangeText('', lineStart, lineStart + lead, 'preserve')
-    editor.setSelectionRange(Math.max(lineStart, start - lead), Math.max(lineStart, end - lead))
-  } else {
-    editor.setRangeText('    ', start, end, 'end')
-  }
-  editor.dispatchEvent(new Event('input'))
 }

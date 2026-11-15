@@ -96,6 +96,32 @@ export default {
   'text.editorLabel': 'Programa de Python',
   'text.editorHelp': 'Tab agrega sangría. Presiona Esc y luego Tab para salir del editor.',
   'text.viewLabel': 'El Python que forman tus bloques',
+  'editor.find': 'Buscar',
+  'editor.replace': 'Reemplazar',
+  'editor.next': 'siguiente',
+  'editor.previous': 'anterior',
+  'editor.all': 'todos',
+  'editor.matchCase': 'mayúsculas',
+  'editor.regexp': 'patrón',
+  'editor.byWord': 'palabra completa',
+  'editor.replaceOne': 'reemplazar',
+  'editor.replaceAll': 'reemplazar todos',
+  'editor.close': 'cerrar',
+  'editor.currentMatch': 'coincidencia actual',
+  'editor.onLine': 'en la línea',
+  'editor.replacedOne': 'se reemplazó la coincidencia de la línea $',
+  'editor.replacedMany': 'se reemplazaron $ coincidencias',
+  'editor.goToLine': 'Ir a la línea',
+  'editor.go': 'ir',
+  'editor.foldedLines': 'Líneas plegadas',
+  'editor.unfoldedLines': 'Líneas desplegadas',
+  'editor.foldLine': 'Plegar línea',
+  'editor.unfoldLine': 'Desplegar línea',
+  'editor.foldedCode': 'código plegado',
+  'editor.unfold': 'desplegar',
+  'editor.to': 'a',
+  'editor.selectionDeleted': 'Selección borrada',
+  'editor.controlCharacter': 'Carácter de control',
   'text.startedTitle': 'Ahora estás escribiendo Python',
   'text.startedDetail': 'Ejecutar envía el código que escribes. Tus bloques se guardan para cuando regreses.',
   'text.backTitle': '¿Volver a los bloques?',
@@ -182,6 +208,14 @@ export default {
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: ejecutar tu programa</li>
       <li><kbd>Esc</kbd>: detener un programa en ejecución</li>
       <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: guardar tu proyecto en un archivo</li>
+    </ul>
+    <h3>Escribir Python</h3>
+    <ul>
+      <li><kbd>Tab</kbd> y <kbd>Shift</kbd>+<kbd>Tab</kbd>: agregar o quitar sangría a la línea</li>
+      <li><kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Y</kbd>: deshacer, rehacer</li>
+      <li><kbd>Ctrl</kbd>+<kbd>F</kbd>: buscar (y reemplazar)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>/</kbd>: convertir líneas en comentarios, o al revés</li>
+      <li><kbd>Esc</kbd> y luego <kbd>Tab</kbd>: salir del editor</li>
     </ul>
     <h3>Usar el teclado</h3>
     <p>Todo funciona sin ratón. <kbd>Tab</kbd> pasa de una parte de la pantalla a otra.</p>
