@@ -49,6 +49,9 @@ const mode = () => page.evaluate(() => window.openCodeBot.workspace.mode)
 const setText = (t) => page.evaluate((t) => { window.openCodeBot.pythonEditor.value = t }, t)
 const openCategory = (name) => page.click(`.py-cat:has-text("${name}")`)
 
+/** The marks the editor showed just before the last drag's drop. */
+let lastMarks = []
+
 /** Drag a card so its left edge sits `dx` px into line `n`'s text, at `where` of its height (0 top, 1 bottom). */
 async function drag(cardText, n, { dx = 0, where = 0.25 } = {}) {
   const exact = new RegExp(`^${cardText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
@@ -65,6 +68,7 @@ async function drag(cardText, n, { dx = 0, where = 0.25 } = {}) {
   const y = l.y + l.height * where - 14 + grab.y
   await page.mouse.move(x, y, { steps: 8 })
   const marked = await page.locator('.cm-snippet-marks > div').count()
+  lastMarks = await page.$$eval('.cm-snippet-marks > div', (m) => m.map((d) => d.className))
   await page.mouse.up()
   return marked
 }
@@ -133,6 +137,47 @@ await openCategory('Sensors')
   await page.mouse.up()
 }
 check((await text()).includes('x = ls.read(0)'), 'a value snippet goes inside the line')
+
+// ------------------------------------- a loop dropped over code takes it in
+const PROGRAM = 'from botcore import *\n\nleds.user(0xFF)\nspkr.pitch(440)\nprint("done")\n'
+await setText(PROGRAM)
+await openCategory('Loops')
+await drag('while True:\n    pass', 3, { where: 0.1 })
+now = await text()
+check(lastMarks.includes('cm-snippet-wrap'), 'while dragging a loop over code, the code it would take in is shaded')
+check(now.startsWith('from botcore import *\n\nwhile True:\n    leds.user(0xFF)\n'), 'a loop dropped with its shape over a line takes that line into its body')
+check(!now.includes('pass'), 'the taken code replaces the body\'s pass')
+check(now.endsWith('\nprint("done")\n'), 'code the shape does not reach stays where it was')
+check(
+  await page.evaluate(() => {
+    const s = window.openCodeBot.pythonEditor.view.state
+    return s.selection.main.empty && s.sliceDoc(s.selection.main.head, s.selection.main.head + 1) === ':'
+  }),
+  "the cursor waits at the end of the loop's condition",
+)
+await page.keyboard.press('Control+z')
+check((await text()) === PROGRAM, 'one undo puts the code back as it was')
+
+// a statement goes in whole: an if with its body and its else
+const IFELSE = 'from botcore import *\n\nif buttons.is_pressed(0):\n    leds.user(0xFF)\nelse:\n    leds.user(0)\nprint("done")\n'
+await setText(IFELSE)
+await openCategory('Loops')
+await drag('while True:\n    pass', 3, { where: 0.1 })
+check(
+  (await text()).includes('while True:\n    if buttons.is_pressed(0):\n        leds.user(0xFF)\n    else:\n        leds.user(0)\nprint("done")'),
+  'an if under the shape goes in whole, with its body and its else',
+)
+
+// nothing taken in: dropped on a blank line, or a snippet with no body
+await setText('from botcore import *\n\nleds.user(0xFF)\n\nprint("done")\n')
+await openCategory('Loops')
+await drag('while True:\n    pass', 4, { where: 0.5 })
+now = await text()
+check(now.includes('leds.user(0xFF)\nwhile True:\n    pass\nprint("done")'), 'dropped on a blank line, a loop takes nothing in')
+await setText(PROGRAM)
+await openCategory('Loops')
+await drag('break', 3, { where: 0.1 })
+check(!lastMarks.includes('cm-snippet-wrap') && (await text()).includes('\nbreak\nleds.user(0xFF)'), 'a snippet with no body takes nothing in')
 
 // ---------------------------------------------------- it brings its imports
 await setText('from botcore import *\n\nleds.user(0xFF)\n')

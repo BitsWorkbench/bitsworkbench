@@ -477,6 +477,12 @@ kbd {
 /* Where a dragged snippet would land, marked over the text (the text stays put). */
 .python-editor .cm-snippet-marks { pointer-events: none; }
 .python-editor .cm-snippet-marks > div { position: absolute; background: var(--c); border-radius: 2px; }
+/* The code a dropped loop or if would take into its body: shaded, with the body's edge. */
+.python-editor .cm-snippet-marks > .cm-snippet-wrap {
+  background: color-mix(in srgb, var(--c) 18%, transparent);
+  box-shadow: inset 4px 0 0 var(--c);
+  border-radius: 0 0 4px 4px;
+}
 .python-editor .cm-snippet-marks > .cm-snippet-slot {
   background: color-mix(in srgb, var(--c) 25%, transparent);
   box-shadow: inset 4px 0 0 var(--c);

@@ -135,8 +135,9 @@ export class SnippetPalette {
     const start = { x: e.clientX, y: e.clientY }
     let ghost = null
 
-    // Where the card's first line would sit: what the editor places by.
-    const at = (ev) => ({ x: ev.clientX - grab.x, y: ev.clientY - grab.y + 14 })
+    // Where the card's first line would sit, and its bottom edge (how far
+    // its shape reaches down over the code): what the editor places by.
+    const at = (ev) => ({ x: ev.clientX - grab.x, y: ev.clientY - grab.y + 14, bottom: ev.clientY - grab.y + rect.height })
 
     const move = (ev) => {
       if (!ghost) {
@@ -156,12 +157,12 @@ export class SnippetPalette {
       ev.preventDefault()
       ghost.style.transform = `translate(${ev.clientX - grab.x}px, ${ev.clientY - grab.y}px)`
       const p = at(ev)
-      this.editor().previewDrop(snippet, p.x, p.y)
+      this.editor().previewDrop(snippet, p.x, p.y, p.bottom)
     }
     const up = (ev) => {
       if (ghost) {
         const p = at(ev)
-        this.editor().drop(snippet, p.x, p.y)
+        this.editor().drop(snippet, p.x, p.y, p.bottom)
         // The click that follows a drag is not a click on the card.
         this.justDragged = true
         setTimeout(() => (this.justDragged = false), 0)
