@@ -46,7 +46,9 @@ export class SnippetPalette {
     })
     this.list.addEventListener('click', (e) => {
       const card = e.target.closest('.snippet')
-      if (!card || this.justDragged) return
+      // The pointer's click that ends a drag is not a click on the card; a
+      // key's click (detail 0) always is, however soon after a drag it comes.
+      if (!card || (this.justDragged && e.detail !== 0)) return
       this.use(this.snippetOf(card))
     })
     this.list.addEventListener('keydown', (e) => this.listKeys(e))
@@ -127,6 +129,7 @@ export class SnippetPalette {
   // ---------------------------------------------------------------- drag
 
   pointerDown(e) {
+    this.justDragged = false
     const card = e.target.closest('.snippet')
     if (!card || e.button !== 0) return
     const snippet = this.snippetOf(card)
@@ -163,9 +166,10 @@ export class SnippetPalette {
       if (ghost) {
         const p = at(ev)
         this.editor().drop(snippet, p.x, p.y, p.bottom)
-        // The click that follows a drag is not a click on the card.
+        // The click that follows a drag is not a click on the card (until the
+        // next press: a timer here lost to a quick tap, since the browser
+        // takes input ahead of timers when it is busy).
         this.justDragged = true
-        setTimeout(() => (this.justDragged = false), 0)
       }
       end()
     }
