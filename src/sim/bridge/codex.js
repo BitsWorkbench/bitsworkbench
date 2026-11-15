@@ -22,8 +22,13 @@ const COST_US = { gpio: 2, adc: 40, pwm: 15, i2cByte: 25, i2cStart: 60, gfxCall:
 
 export function codexBridge(cx) {
   const tca = { ptr: 0, regs: [0, 0, 0, 0, 0, 0, 0xff, 0xff] }
-  // What the KXTJ3 measures; codex.py's driver negates y and z on reading.
-  const kx = new KXTJ3(() => { const [x, y, z] = cx.gravity(); return [x, -y, -z] })
+  // What the KXTJ3's registers hold. kxtj3.py negates each value as it reads
+  // it (its sign conversion), then gives (-y, -x, z): so the program reads
+  // (reg y, reg x, -reg z). A program reads proper acceleration (gravity's
+  // opposite) along the silkscreen's axes: x to the right, y down the board,
+  // z into it, so -1 g in z lying face up, and right edge down reads x below
+  // zero. gravity() is gravity itself, x right, y down, z out of the face.
+  const kx = new KXTJ3(() => { const [x, y, z] = cx.gravity(); return [-y, -x, -z] })
   const als = { ptr: 0, contr: 0, regs: new Uint8Array(256) }
   als.regs[0x87] = 0x05; als.regs[0x86] = 0xa0
 

@@ -82,7 +82,7 @@ export class SimDevice extends EventTarget {
       if (kind.view === 'codex') {
         // CodeX stands in the showroom; the view presses its keys
         const [{ SimView }, { CODEX_KEYS }] = await Promise.all([import('./view/view.js'), import('./view/codex-figure.js')])
-        this.view = new SimView(this.viewHost, { assetsBase, buttons: { keys: CODEX_KEYS, onButton: (n, down) => this.press(n, down) } })
+        this.view = new SimView(this.viewHost, { assetsBase, buttons: { keys: CODEX_KEYS, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
         await this.view.loadRoom(kind.room).catch((err) => console.warn('room', err))
       } else {
         const { SimView } = await import('./view/view.js')

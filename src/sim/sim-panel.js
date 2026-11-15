@@ -51,8 +51,6 @@ export class SimPanel {
           <label title="${tHtml('simPanel.courseTitle')}"><span aria-hidden="true">〰️</span> <select class="sim-course" aria-label="${tHtml('simPanel.course')}"></select></label>
         </span>
         <span class="sim-group" data-for="codex">
-          <label title="${tHtml('simPanel.tiltXTitle')}"><span aria-hidden="true">↔</span> <input type="range" class="sim-tilt-x" min="-90" max="90" value="0" aria-label="${tHtml('simPanel.tiltX')}"></label>
-          <label title="${tHtml('simPanel.tiltYTitle')}"><span aria-hidden="true">↕</span> <input type="range" class="sim-tilt-y" min="-90" max="90" value="0" aria-label="${tHtml('simPanel.tiltY')}"></label>
           <label title="${tHtml('simPanel.lightTitle')}"><span aria-hidden="true">💡</span> <input type="range" class="sim-light" min="0" max="1000" value="250" aria-label="${tHtml('simPanel.light')}"></label>
         </span>
         <span class="sim-group">
@@ -101,9 +99,6 @@ export class SimPanel {
     speed.addEventListener('change', () => sim.setSpeed(Number(speed.value)))
 
     q('.sim-reset').addEventListener('click', () => sim.reset())
-    const tilt = () => sim.tilt((Number(q('.sim-tilt-x').value) * Math.PI) / 180, (Number(q('.sim-tilt-y').value) * Math.PI) / 180)
-    q('.sim-tilt-x').addEventListener('input', tilt)
-    q('.sim-tilt-y').addEventListener('input', tilt)
     q('.sim-light').addEventListener('input', () => sim.setLight(Number(q('.sim-light').value)))
 
     for (const b of host.querySelectorAll('.sim-board-btn')) {

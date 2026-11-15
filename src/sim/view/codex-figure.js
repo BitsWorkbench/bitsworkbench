@@ -6,6 +6,13 @@
 // face up (+y), the top of the board toward -z, its right toward +x. The
 // figure stands it up facing the camera (+z): face to +z, top to +y. The
 // figure's root is the board's centre, 10 cm above the floor.
+//
+// Tilt: the face-on view stands for looking down at the board, so the
+// accelerometer reads flat (world/codex.js gravity()) while it faces the
+// camera square. Tilted, its right edge (tiltX) or its bottom edge (tiltY)
+// turns away from the camera, as that edge going down would look from above.
+// Two rotation arrows beside the board (an arc under it for tiltX, one at its
+// right for tiltY) are what a drag tilts it by; they stay put as it turns.
 import * as THREE from 'three'
 import { haloTexture } from './led.js'
 
@@ -32,14 +39,27 @@ const ACTIVE_MM = 27.72
 const LED_AB = { 4: [34.6, -10.4], 5: [24.6, -10.4] }
 const LED_RED = new THREE.Color(1, 0.07, 0.03)
 
+// The rotation arrows: arcs of this radius (m), a tenth of a turn long and
+// bowed a little toward the camera, an arrowhead at each end, the showroom
+// grid's teal.
+const ARROW_R = 0.12
+const ARROW_SPAN = Math.PI / 10           // either way from the middle
+const ARROW_COLOR = new THREE.Color().setRGB(0, 0.75, 0.75, THREE.SRGBColorSpace)
+const ARROW_HOT = new THREE.Color().setRGB(0.4, 1, 1, THREE.SRGBColorSpace)
+export const TILT_MAX = Math.PI / 2       // either way, from flat
+
 export class CodeXFigure {
   constructor() {
     this.root = new THREE.Group()
     this.root.position.y = CODEX_HEIGHT
+    this.tilt = new THREE.Group()           // turned by the board's tilt
+    this.root.add(this.tilt)
     this.body = new THREE.Group()
     this.body.scale.setScalar(0.001)
     this.body.rotation.x = Math.PI / 2      // face up to face front, top to up
-    this.root.add(this.body)
+    this.tilt.add(this.body)
+    this.tiltNow = [0, 0]                   // [x, y], radians, from the snapshot
+    this.arrows = []                        // { axis, mat, target }, after load
     this.keys = []                          // by number: { mesh, rest }
     this.leds = []                          // by number: { mat, halo }
     this.pixels = []                        // NeoPixels 0 to 3: { mat, halo }
@@ -119,6 +139,56 @@ export class CodeXFigure {
     const box = new THREE.Box3().setFromObject(this.body)
     const c = box.getCenter(new THREE.Vector3()).sub(this.root.getWorldPosition(new THREE.Vector3()))
     this.body.position.sub(c)
+    const half = box.getSize(new THREE.Vector3()).multiplyScalar(0.5)
+    this._arrow('x', half.y + 0.012)
+    this._arrow('y', half.x + 0.012)
+  }
+
+  // A rotation arrow: for tiltX an arc under the board, bowed toward the
+  // camera (a turn about the upright); for tiltY one at its right (a turn about
+  // the level). `off` is how far from the board's centre it runs.
+  _arrow(axis, off) {
+    const R = ARROW_R, span = ARROW_SPAN
+    const at = (a) => {
+      const along = R * Math.sin(a), toward = R * Math.cos(a) - R + 0.012
+      return axis === 'x' ? new THREE.Vector3(along, -off, toward) : new THREE.Vector3(off, along, toward)
+    }
+    const curve = new THREE.CatmullRomCurve3(Array.from({ length: 17 }, (_, i) => at(-span + (2 * span * i) / 16)))
+    const mat = new THREE.MeshBasicMaterial({ color: ARROW_COLOR, toneMapped: false })
+    const group = new THREE.Group()
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.0012, 8), mat))
+    for (const end of [0, 1]) {
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.0035, 0.008, 12), mat)
+      const tangent = curve.getTangentAt(end).multiplyScalar(end ? 1 : -1)
+      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent)
+      head.position.copy(curve.getPointAt(end)).addScaledVector(tangent, 0.003)
+      group.add(head)
+    }
+    // a wider, unseen tube to grab it by
+    const target = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.007, 6), new THREE.MeshBasicMaterial({ visible: false }))
+    target.userData.axis = axis
+    group.add(target)
+    this.root.add(group)
+    this.arrows.push({ axis, mat, target })
+  }
+
+  // The arrow a ray meets ('x' or 'y'), or null.
+  arrowAt(raycaster) {
+    const hit = raycaster.intersectObjects(this.arrows.map((a) => a.target), false)[0]
+    return hit ? hit.object.userData.axis : null
+  }
+
+  // An arrow lit while the pointer is over it or drags it (null: neither).
+  hotArrow(axis) {
+    for (const a of this.arrows) a.mat.color.copy(a.axis === axis ? ARROW_HOT : ARROW_COLOR)
+  }
+
+  // Where arrow `axis`'s middle is in the world, for the tests.
+  arrowCentre(axis) {
+    const a = this.arrows.find((r) => r.axis === axis)
+    if (!a) return null
+    const mid = a.target.geometry.parameters.path.getPointAt(0.5)
+    return a.target.localToWorld(mid)
   }
 
   // A light on the board: the part's own material, lit by emission, and a
@@ -139,13 +209,14 @@ export class CodeXFigure {
   }
 
   // Where the camera starts: in front, a little to the right and above, as
-  // CodeSpace's showroom camera looks, near enough for the board (`size`
-  // across) to fill the view and its screen to be read.
+  // CodeSpace's showroom camera looks, near enough for the board and its
+  // rotation arrows (`size` across, a little right of its centre for the
+  // arrow there) to fill the view and its screen to be read.
   home() {
     return {
-      target: new THREE.Vector3(0, CODEX_HEIGHT, 0),
+      target: new THREE.Vector3(0.008, CODEX_HEIGHT - 0.006, 0),
       from: new THREE.Vector3(0.3, 0.2, 1).normalize(),
-      size: 0.14,
+      size: 0.18,
       minDistance: 0.05,
     }
   }
@@ -186,6 +257,11 @@ export class CodeXFigure {
   }
 
   update(s) {
+    // the board as tilted (see the top of this file)
+    if (s.tilt) {
+      this.tiltNow = s.tilt
+      this.tilt.rotation.set(s.tilt[1], s.tilt[0], 0)
+    }
     // the backlight: off shows the panel itself
     this.screen.visible = s.brightness > 0
     this.screen.material.color.setScalar(Math.min(1, Math.max(0.05, s.brightness / 100)))
