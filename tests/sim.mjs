@@ -304,17 +304,16 @@ await test('the REPL runs commands on the simulated board', async () => {
   const engine = new Engine({ loadMicroPython, world, bridge: bot.bridge, files: pythonFiles(), speed: Infinity, onOutput: (b) => (out += new TextDecoder().decode(b)) })
   await engine.replInput('from botcore import *\r')
   await engine.replInput('leds.user(5); print(6 * 7)\r')
-  await delay(50)
+  // each step waits for what it expects (never a fixed time, which a busy
+  // machine overruns)
+  await until(() => /42/.test(out))
   assert.match(out, />>> /)
-  assert.match(out, /42/)
   assert.equal(bot.leds.user, 5)
   // a command that loops forever, then Ctrl-C
   await engine.replInput('while True:\r    pass\r\r')
-  await delay(50)
+  await until(() => engine.replBusy)
   await engine.replInput('\x03')
-  await delay(100)
-  assert.match(out, /KeyboardInterrupt/)
-  assert.equal(engine.replBusy, false)
+  await until(() => /KeyboardInterrupt/.test(out) && !engine.replBusy)
 })
 
 if (haveGym) {
@@ -796,6 +795,12 @@ await flightTest('CodeAIR\'s factory program pairs with a CodeX remote by infrar
 })
 
 function delay(ms) { return new Promise((r) => setTimeout(r, ms)) }
+// Waits until `ok()` holds, failing after `ms`.
+async function until(ok, ms = 10000) {
+  for (const end = Date.now() + ms; !ok(); await delay(10)) {
+    if (Date.now() > end) throw new Error(`timed out after ${ms} ms waiting for ${ok}`)
+  }
+}
 
 if (failed) { console.log(`${failed} failed`); process.exit(1) }
 process.exit(0)

@@ -7,19 +7,15 @@
 // its origin. The figure's root sits at the world pose: under the drone's
 // centre at the height of its underside, facing +x.
 import * as THREE from 'three'
+import { Led, boxIn, reflect } from './led.js'
 
 const UNDERSIDE = 0.004          // the model's lowest point above its origin
 
-// Where things are on the board, in model coordinates [x left, z forward],
-// from the board's layout (TopPcb.jpg): the byte LEDs 0 to 7 in a column,
-// the status LED by the battery pads, the NeoPixels on the four arms (top
-// and bottom).
-const BYTE = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => [0.0100, 0.0066 - n * 0.00173])
-const STATUS = [0.0164, -0.0102]
-const ARMS = { FL: [0.0225, 0.0183], FR: [-0.0225, 0.0183], RL: [0.0225, -0.017], RR: [-0.0225, -0.017] }
-// codeair.py's pixel numbers: TOP_FRONT_RIGHT 0, BOTTOM_FRONT_RIGHT 1, ...
-const PIXELS = [['FR', 1], ['FR', 0], ['FL', 1], ['FL', 0], ['RL', 0], ['RL', 1], ['RR', 1], ['RR', 0]]
-const TOP_Y = 0.0255, BOTTOM_Y = 0.019
+// codeair.py's pixel numbers (TOP_FRONT_RIGHT 0, BOTTOM_FRONT_RIGHT 1, ...)
+// to the model's NeoPixels: Pixel1 front left, 2 front right, 3 rear left,
+// 4 rear right; a `b` is the one under the board.
+const PIXELS = ['Pixel2', 'Pixel2b', 'Pixel1', 'Pixel1b', 'Pixel3b', 'Pixel3', 'Pixel4', 'Pixel4b']
+const BLUE = 0x2a6bff, AMBER = 0xffa020
 
 export class CodeAIRFigure {
   constructor() {
@@ -31,11 +27,12 @@ export class CodeAIRFigure {
     this.body.position.y = -UNDERSIDE
     this.tilt.add(this.body)
     this.props = []
-    this.ledMats = []
-    this.pixelMats = []
+    this.leds = []                         // BYTE 0 to 7, then STA
+    this.pixels = []
   }
 
-  async load(loader, base) {
+  // env: studio light for the metal to reflect (view.js)
+  async load(loader, base, env) {
     const gltf = await loader.loadAsync(`${base}models/codeair.glb`)
     this.body.add(gltf.scene)
     gltf.scene.traverse((o) => {
@@ -48,25 +45,21 @@ export class CodeAIRFigure {
     })
     this.props.sort((a, b) => a.name.localeCompare(b.name))
 
-    const dot = (x, y, z, size, mats, glow) => {
-      const m = new THREE.MeshBasicMaterial({ color: 0x111111 })
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, 0.0012, size), m)
-      mesh.position.set(x, y, z)
-      this.body.add(mesh)
-      if (glow) {
-        // a halo, so a lit pixel reads at a distance
-        const g = new THREE.Mesh(new THREE.SphereGeometry(size * 1.6, 10, 6),
-          new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }))
-        g.position.copy(mesh.position)
-        g.userData.realism = 'effects'      // drawn at the levels that have them (realism.js)
-        this.body.add(g)
-        m.userData.halo = g.material
-      }
-      mats.push(m)
+    reflect(gltf.scene, env)
+    // Each LED seated on its part in the model: a lens over the part's top
+    // (or under a NeoPixel on the underside), as wide as its window.
+    const node = (name) => gltf.scene.getObjectByName(name)
+    const seat = (name, color, lens, glow, under) => {
+      const box = boxIn(this.body, node(name))
+      const at = box.getCenter(new THREE.Vector3())
+      at.y = under ? box.min.y - lens[1] / 2 : box.max.y + lens[1] / 2
+      return new Led(this.body, at, lens, color, glow, under ? -1 : 1)
     }
-    BYTE.forEach(([x, z]) => dot(x, TOP_Y, z, 0.0013, this.ledMats))
-    dot(STATUS[0], TOP_Y, STATUS[1], 0.0013, this.ledMats)
-    PIXELS.forEach(([arm, top]) => dot(ARMS[arm][0], top ? TOP_Y + 0.0005 : BOTTOM_Y - 0.0005, ARMS[arm][1], 0.0035, this.pixelMats, true))
+    for (let n = 0; n < 8; n++) this.leds.push(seat(`BYTE_${n}`, BLUE, [0.0012, 0.0003, 0.0007], 0.008))
+    this.leds.push(seat('STA', BLUE, [0.0007, 0.0003, 0.0012], 0.008))
+    // CHG lights while the battery charges, which the simulator never does.
+    seat('CHG', AMBER, [0.0007, 0.0003, 0.0012], 0.008)
+    this.pixels = PIXELS.map((name) => seat(name, 0xffffff, [0.0036, 0.0003, 0.0036], 0.016, name.endsWith('b')))
 
     const c = document.createElement('canvas')
     c.width = c.height = 64
@@ -99,15 +92,7 @@ export class CodeAIRFigure {
     this.props.forEach((p, i) => { p.rotation.y = (i === 0 || i === 3 ? 1 : -1) * s.propAngle * 0.15 })
 
     // LEDs n is the driver's output 7 - n; the status LED its output 8
-    this.ledMats.forEach((m, i) => {
-      const v = s.leds[i < 8 ? 7 - i : 8] / 255
-      m.color.setRGB(0.07 + 0.2 * v, 0.07 + 0.45 * v, 0.07 + 0.93 * v)
-    })
-    this.pixelMats.forEach((m, i) => {
-      const [r, g, b] = s.pixels[i]
-      const lift = (v) => (v > 0 ? 0.25 + 0.75 * (v / 255) ** 0.5 : 0.07)
-      m.color.setRGB(lift(r), lift(g), lift(b))
-      m.userData.halo.color.setRGB(r / 255, g / 255, b / 255)
-    })
+    this.leds.forEach((l, i) => l.set(s.leds[i < 8 ? 7 - i : 8] / 255))
+    this.pixels.forEach((p, i) => p.rgb(...s.pixels[i]))
   }
 }

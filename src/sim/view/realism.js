@@ -8,7 +8,7 @@
 //   antialias  smoothed edges (set when the view is made: it follows a change
 //              at the simulator's next start)
 //   shadows    the soft shadows under the robots
-//   effects    the glow around lit NeoPixels
+//   effects    the glow around lit LEDs and NeoPixels
 //   anisotropy texture sharpness on the floor at a glancing angle
 //   fps        frames a second at most; 0 for as many as the screen shows
 export const LEVELS = ['low', 'medium', 'high', 'ultra']

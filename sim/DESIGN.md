@@ -177,6 +177,20 @@ the right), both with a glow at the realism levels that have effects. The model 
 A and B (4 and 5): they are drawn as copies of LED 0 by the diode marks above keys A and B.
 Its keys go down while held, and a click on one presses it.
 
+**LEDs and metal on CodeBot and CodeAIR** (`src/sim/view/led.js`). An LED is drawn as
+CodeSpace's simulator draws it: a small clear package that shows its pale lens when unlit
+(never a black box) and its own colour when lit, with a glow at the realism levels that have
+effects. CodeBot's 0603 LEDs (2 mm by 1.4 mm, 1 mm tall) sit on their pads at CodeSpace's
+positions: the user LEDs red, 0 at the left under its 0; the line sensor LEDs and the battery
+LED (beside the power switch) green; the proximity emitters amber. CodeAIR's sit on the
+model's own parts, named by `build-models.mjs` from the CAD's part numbers: the eight BYTE LEDs
+blue (0 at the front), STA blue, CHG amber (it lights while the battery charges, which the
+simulator never does, so it is drawn unlit), and the NeoPixels on the model's four on top and
+four underneath. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
+shield, USB-C connector and motors) mirrors the studio light whatever the room: reflection
+only, so the painted parts keep the colours the room's own lights give them, and only parts
+that are metal (a plain metallic material or a palette's metal), never a printed board.
+
 `display.show()` draws as the firmware's C module does (`canvas_show`): a string in white
 from the top left corner at scale 2 over what is there, clearing the canvas first only for
 a different object than it showed last (and after any `clear()` or `fill()`), with no
@@ -590,8 +604,8 @@ reference, and the lists below wait for the bench.
   `land()` cuts the motors; what a ranger reports with nothing in range (32767 here); the
   flow sensor's sign and scale; which way roll and pitch are signed in the log; how many log
   packets the `crtp` module queues (two here, so `get_data` is at most one period stale);
-  the battery's voltage in flight. Positions of the LEDs and NeoPixels on the figure are
-  from the board's silkscreen.
+  the battery's voltage in flight. The LEDs and NeoPixels on the figure sit on the model's
+  own parts, which match the board's silkscreen.
 
 ## Where it stands
 

@@ -20,15 +20,19 @@ document.body.appendChild(renderer.domElement)
 
 // Each device: how to get it, and the direction the camera looks from
 // (a unit-ish vector from the device's centre).
+// The studio light the simulator gives the robots' metal to reflect (view.js).
+let studioTex = null
+const studio = () => (studioTex ??= new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture)
+
 const DEVICES = {
   async codebot() {
     const fig = new CodeBotFigure()
-    await fig.load(loader, '/sim-assets/')
+    await fig.load(loader, '/sim-assets/', studio())
     return { object: fig.root, from: [1.0, 0.85, 0.75] } // front-left, from above
   },
   async codeair() {
     const fig = new CodeAIRFigure()
-    await fig.load(loader, '/sim-assets/')
+    await fig.load(loader, '/sim-assets/', studio())
     return { object: fig.root, from: [0.9, 1.1, 0.8] }
   },
   async codex() {
@@ -82,7 +86,7 @@ window.renderIcon = async (kind, from) => {
   })
   const scene = new THREE.Scene()
   if (room) {
-    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = studio()
     scene.environmentIntensity = room
   }
   scene.add(new THREE.HemisphereLight(0xffffff, 0x6b5b4b, 2.2))

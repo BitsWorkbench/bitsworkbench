@@ -253,6 +253,21 @@ await page.evaluate(() => window.openCodeBot.device.sim.setCourse(null))
 if (onOval.off > 0.08) problems.push(`course: the follower left the oval (at ${onOval.at}, ${onOval.off.toFixed(2)} m off)`)
 else console.log('sim-ui: a follower kept to the oval course')
 
+// CodeBot's LEDs as drawn: a lit user LED red, a lit line sensor LED green,
+// an unlit one its pale lens (never a black box).
+await page.evaluate(() => window.openCodeBot.device.run('from botcore import *\nleds.user(1)\nleds.ls(1)\nwhile True:\n    pass\n'))
+const cbLeds = await page.waitForFunction(() => {
+  const f = [...window.openCodeBot.device.sim.view.figures.values()][0]
+  const rgb = (c) => c.toArray().map((v) => +v.toFixed(2))
+  const u = f.leds.user
+  return u[0].mat.emissive.r > 0 && { user0: rgb(u[0].mat.emissive), ls0: rgb(f.leds.ls[0].mat.emissive), user1: rgb(u[1].mat.color), user1Glow: rgb(u[1].mat.emissive) }
+}, null, { timeout: 5000 }).then((h) => h.jsonValue()).catch(() => null)
+await page.evaluate(() => window.openCodeBot.device.stop())
+const redOf = ([r, g, b]) => r > 0.5 && g < r / 3 && b < r / 3
+const greenOf = ([r, g, b]) => g > 0.5 && r < g / 3 && b < g / 3
+if (!cbLeds || !redOf(cbLeds.user0) || !greenOf(cbLeds.ls0) || Math.min(...cbLeds.user1) < 0.5 || Math.max(...cbLeds.user1Glow) > 0) problems.push(`CodeBot LEDs: drawn ${JSON.stringify(cbLeds)}`)
+else console.log('sim-ui: CodeBot\'s LEDs lit red and green, unlit ones pale')
+
 // The other rooms, from the picker: each drawn, the robot at its start.
 await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
 for (const room of ['classroom', 'cafeteria', 'auditorium', 'gym']) {
@@ -545,6 +560,24 @@ with recorder:
     .catch(() => problems.push('CodeAIR: it never got to 0.45 m'))
   await page.waitForTimeout(1500)
   await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codeair.png` })
+  // its LEDs as drawn: BYTE 1, 3, 5, 7 lit blue, the others their pale lens,
+  // the pixels blue; every LED on the board (whose top is 17.2 mm up the
+  // model), none floating above it
+  const air = await page.evaluate(() => {
+    const f = [...window.openCodeBot.device.sim.view.figures.values()][0]
+    const rgb = (c) => c.toArray().map((v) => +v.toFixed(2))
+    return {
+      lit: f.leds.slice(0, 8).map((l) => rgb(l.mat.emissive)),
+      lens: rgb(f.leds[0].mat.color),
+      pixel: rgb(f.pixels[0].mat.emissive),
+      heights: [...f.leds, ...f.pixels].map((l) => +(l.mesh.position.y * 1000).toFixed(1)),
+    }
+  })
+  const blueOf = ([r, g, b]) => b > 0.5 && r < b / 2
+  const seated = air.heights.every((y) => (y > 17 && y < 19.5) || (y > 14 && y < 15.4))
+  if (!air.lit.every((c, n) => (n % 2 ? blueOf(c) : Math.max(...c) === 0)) || Math.min(...air.lens) < 0.5 || !blueOf(air.pixel) || !seated) {
+    problems.push(`CodeAIR LEDs: drawn ${JSON.stringify(air)}`)
+  } else console.log('sim-ui: CodeAIR\'s LEDs lit blue on the board, unlit ones pale')
   await page.evaluate(() => window.openCodeBot.device.stop())
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
   const landed = await page.evaluate(() => window.openCodeBot.device.sim.lastFrame.devices[0].z)

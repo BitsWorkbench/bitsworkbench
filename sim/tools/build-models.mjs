@@ -27,7 +27,16 @@ const ROOT = path.resolve(import.meta.dirname, '../..')
 const MODELS = {
   'codebot-body.glb': { source: 'BotBody.glb', simplify: 0.5 },
   'codebot-wheel.glb': { source: 'WheelAssy.glb' },
-  'codeair.glb': { source: 'CodeAIR.glb', keep: /^Prop\d$/, simplify: 0.2, error: 0.005, flat: true, minPart: 0.008 },
+  // CodeAIR keeps apart its propellers, and the parts the figure lights: the
+  // NeoPixels (top and underside), the eight BYTE LEDs (0 at the front) and
+  // the CHG and STA LEDs, named here from the CAD's part numbers.
+  'codeair.glb': {
+    source: 'CodeAIR.glb', keep: /^(Prop\d|Pixel\db?|BYTE_\d|CHG|STA)$/, simplify: 0.2, error: 0.005, flat: true, minPart: 0.008,
+    rename: Object.fromEntries([
+      ...[165, 166, 163, 168, 171, 161, 170, 167].map((n, i) => [`SHAPE_1431_IndexedFaceSet.${n}`, `BYTE_${i}`]),
+      ['SHAPE_1431_IndexedFaceSet.162', 'CHG'], ['SHAPE_1431_IndexedFaceSet.164', 'STA'],
+    ]),
+  },
   // CodeX keeps apart what the figure moves or lights: the six keys, the four
   // LEDs, the four NeoPixels, the display's active area and its glass.
   // `rename`: nodes given a name the figure looks for.

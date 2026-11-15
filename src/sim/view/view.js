@@ -165,8 +165,9 @@ export class SimView {
     return room
   }
 
-  // Studio light for the showroom's metal and glass to reflect: three's
-  // RoomEnvironment, made once.
+  // Studio light for metal and glass to reflect: the showroom's, and the
+  // robots' metal in every room (led.js, reflect). Three's RoomEnvironment,
+  // made once.
   _studio() {
     if (!this._studioTex) {
       const pmrem = new THREE.PMREMGenerator(this.renderer)
@@ -187,7 +188,7 @@ export class SimView {
   async addDevice(snap) {
     const Figure = FIGURES[snap.kind]
     const fig = new Figure()
-    await fig.load(this.loader, this.assetsBase)
+    await fig.load(this.loader, this.assetsBase, this._studio())
     this.scene.add(fig.root)
     this.figures.set(snap.id, fig)
     this._realism()

@@ -7,6 +7,7 @@
 // figure stands it up facing the camera (+z): face to +z, top to +y. The
 // figure's root is the board's centre, 10 cm above the floor.
 import * as THREE from 'three'
+import { haloTexture } from './led.js'
 
 export const CODEX_HEIGHT = 0.10    // m, the board's centre above the floor
 
@@ -216,20 +217,4 @@ function centre(mesh) {
   mesh.updateMatrix()
   mesh.geometry.computeBoundingBox()
   return mesh.geometry.boundingBox.getCenter(new THREE.Vector3()).applyMatrix4(mesh.matrix)
-}
-
-let halo = null
-function haloTexture() {
-  if (halo) return halo
-  const c = document.createElement('canvas')
-  c.width = c.height = 64
-  const g = c.getContext('2d')
-  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
-  grad.addColorStop(0, 'rgba(255,255,255,1)')
-  grad.addColorStop(0.25, 'rgba(255,255,255,0.45)')
-  grad.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.fillRect(0, 0, 64, 64)
-  halo = new THREE.CanvasTexture(c)
-  return halo
 }

@@ -6,6 +6,7 @@
 // sits at the world pose: the axle's midpoint on the floor, facing +x.
 import * as THREE from 'three'
 import { CB3_BODY, CB3_PITCH } from '../world/codebot.js'
+import { Led, reflect } from './led.js'
 
 const U = 0.1                 // model units to metres
 const AXLE_Z = CB3_BODY.axle[0] / 100    // model units
@@ -14,11 +15,16 @@ const WHEEL_R = CB3_BODY.tyreRadius / 1000
 const TRACK = 0.111
 const PITCH = CB3_PITCH       // rad, front down to the skid
 
-// LED positions in model units (x left, z forward), from the CB3 layout.
-const USER = [23.9, 18.9, 13.8, 8.7, 3.6, -3.6, -8.7, -13.8].map((x, i) => [x / 100, 0.023, i])
+// LED positions in model units (x left, z forward), from the CB3 layout as
+// CodeSpace's simulator has it: user LED 0 at the left, under its 0; the
+// battery LED beside the power switch.
+const USER = [18.9, 13.8, 8.7, 3.6, -3.6, -8.7, -13.8, -18.9].map((x) => [x / 100, 0.023])
 const LS = [19.1, 9.7, 0, -9.7, -19.1].map((x) => [x / 100, 0.61])
 const PROX = [[0.358, 0.596], [-0.358, 0.596]]
-const PWR = [-0.333, -0.386]
+const PWR = [0.333, -0.386]
+// The CB3's colours: red user LEDs, green line sensor and battery LEDs, and
+// CodeSpace's amber for the proximity emitters.
+const RED = 0xff1a10, GREEN = 0x22ff33, AMBER = 0xffb040
 
 export class CodeBotFigure {
   constructor() {
@@ -27,10 +33,11 @@ export class CodeBotFigure {
     this.root.add(this.tilt)
     this.tilt.position.y = WHEEL_R
     this.tilt.rotation.z = -PITCH
-    this.ledMats = { user: [], ls: [], prox: [], pwr: [] }
+    this.leds = { user: [], ls: [], prox: [], pwr: [] }
   }
 
-  async load(loader, base) {
+  // env: studio light for the metal to reflect (view.js)
+  async load(loader, base, env) {
     const [body, wheel] = await Promise.all([
       loader.loadAsync(`${base}models/codebot-body.glb`),
       loader.loadAsync(`${base}models/codebot-wheel.glb`),
@@ -54,19 +61,18 @@ export class CodeBotFigure {
       return holder
     })
 
+    reflect(b, env)
+    reflect(wheel.scene, env)          // its clones share its materials
+    // A 0603 LED, 2 mm across by 1.4 mm, standing 1 mm on the board.
     const led = (group, x, z, color) => {
-      const m = new THREE.MeshBasicMaterial({ color: 0x222222 })
-      m.userData.on = new THREE.Color(color)
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.002, 0.003), m)
       // model (x left, z forward) to the body's frame after its rotation
-      mesh.position.set(z * U - AXLE_Z * U, (-AXLE_Y + 0.012) * U, -x * U)
-      this.tilt.add(mesh)
-      this.ledMats[group].push(m)
+      const at = new THREE.Vector3(z * U - AXLE_Z * U, (-AXLE_Y + 0.013) * U, -x * U)
+      this.leds[group].push(new Led(this.tilt, at, [0.0014, 0.001, 0.002], color, 0.018))
     }
-    USER.forEach(([x, z]) => led('user', x, z, 0x33ff44))
-    LS.forEach(([x, z]) => led('ls', x, z, 0x2266ff))
-    PROX.forEach(([x, z]) => led('prox', x, z, 0xff3322))
-    led('pwr', PWR[0], PWR[1], 0x33ff44)
+    USER.forEach(([x, z]) => led('user', x, z, RED))
+    LS.forEach(([x, z]) => led('ls', x, z, GREEN))
+    PROX.forEach(([x, z]) => led('prox', x, z, AMBER))
+    led('pwr', PWR[0], PWR[1], GREEN)
 
     // A soft shadow, cheaper than a shadow map.
     const c = document.createElement('canvas')
@@ -94,12 +100,10 @@ export class CodeBotFigure {
       this.wheels[0].rotation.z = -s.wheelAngle[0]
       this.wheels[1].rotation.z = -s.wheelAngle[1]
     }
-    const bits = (mats, v) => mats.forEach((m, i) => m.color.copy((v >> i) & 1 ? m.userData.on : OFF))
-    bits(this.ledMats.user, s.leds.user)
-    bits(this.ledMats.ls, s.leds.ls)
-    bits(this.ledMats.prox, s.leds.prox)
-    bits(this.ledMats.pwr, s.leds.pwr ? 1 : 0)
+    const bits = (leds, v) => leds.forEach((l, i) => l.set((v >> i) & 1))
+    bits(this.leds.user, s.leds.user)
+    bits(this.leds.ls, s.leds.ls)
+    bits(this.leds.prox, s.leds.prox)
+    bits(this.leds.pwr, s.leds.pwr ? 1 : 0)
   }
 }
-
-const OFF = new THREE.Color(0x222222)
