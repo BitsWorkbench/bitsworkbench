@@ -22,6 +22,9 @@ export const ROOMS = {
   auditorium: t('room.auditorium'),
 }
 
+// The 3D view's cameras, in the menu's order (view/camera-rig.js).
+export const CAMERA_MODES = ['rotate', 'chase', 'universal', 'attached']
+
 // A room's music, where it has a track: room id -> { file, credit }, the file
 // under sim-assets/ (its licence in sim/assets/LICENSE and
 // THIRD_PARTY_NOTICES.md) and the string key of its credit, which the

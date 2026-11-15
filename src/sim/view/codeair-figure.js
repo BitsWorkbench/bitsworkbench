@@ -1,6 +1,6 @@
 // CodeAIR as drawn: the drone's model leaning as it accelerates, its
 // propellers turning while the motors run, its NeoPixels, blue LEDs and
-// status LED lit from the snapshot, and a soft shadow on the floor below.
+// green status LED lit from the snapshot, and a soft shadow on the floor below.
 //
 // The model (codeair.glb) is in metres, its front toward +z and its left
 // toward +x (the board's silkscreen arrow), its underside about 4 mm above
@@ -15,7 +15,7 @@ const UNDERSIDE = 0.004          // the model's lowest point above its origin
 // to the model's NeoPixels: Pixel1 front left, 2 front right, 3 rear left,
 // 4 rear right; a `b` is the one under the board.
 const PIXELS = ['Pixel2', 'Pixel2b', 'Pixel1', 'Pixel1b', 'Pixel3b', 'Pixel3', 'Pixel4', 'Pixel4b']
-const BLUE = 0x2a6bff, AMBER = 0xffa020
+const BLUE = 0x2a6bff, GREEN = 0x22ff33, AMBER = 0xffa020
 
 export class CodeAIRFigure {
   constructor() {
@@ -56,8 +56,9 @@ export class CodeAIRFigure {
       return new Led(this.body, at, lens, color, glow, under ? -1 : 1)
     }
     for (let n = 0; n < 8; n++) this.leds.push(seat(`BYTE_${n}`, BLUE, [0.0012, 0.0003, 0.0007], 0.008))
-    this.leds.push(seat('STA', BLUE, [0.0007, 0.0003, 0.0012], 0.008))
-    // CHG lights while the battery charges, which the simulator never does.
+    this.leds.push(seat('STA', GREEN, [0.0007, 0.0003, 0.0012], 0.008))
+    // CHG lights while the battery charges on USB, and a simulated CodeAIR is
+    // never on USB: it stays dark.
     seat('CHG', AMBER, [0.0007, 0.0003, 0.0012], 0.008)
     this.pixels = PIXELS.map((name) => seat(name, 0xffffff, [0.0036, 0.0003, 0.0036], 0.016, name.endsWith('b')))
 

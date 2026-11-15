@@ -3,13 +3,19 @@
 // bar. It builds its own DOM inside `host`.
 import './sim.css'
 import { COURSES } from './world/courses.js'
-import { KINDS, ROOMS } from './kinds.js'
+import { KINDS, ROOMS, CAMERA_MODES } from './kinds.js'
 import { holdButton } from './hold-button.js'
 import { SettingsPanel } from './settings-panel.js'
 import { t, tHtml } from '../i18n/index.js'
 
-const CAMERAS = [['chase', '🎥', 'simPanel.camChase'], ['orbit', '🔄', 'simPanel.camOrbit'], ['top', '🗺️', 'simPanel.camTop']]
 const SPEEDS = [0.5, 1, 2, 4]
+
+// CodeSpace's icons for the room, the camera and centring it (Material Icons,
+// Apache License 2.0: filter_hdr, videocam, center_focus_strong).
+const icon = (d) => `<svg class="sim-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`
+const ROOM_ICON = icon('M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z')
+const CAMERA_ICON = icon('M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z')
+const CENTER_ICON = icon('M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm-7 7H3v4c0 1.1.9 2 2 2h4v-2H5v-4zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4z')
 
 // A board's two buttons (BTN 0 and 1), as the panel and the boards page show them.
 export function boardButtonsHtml() {
@@ -34,9 +40,12 @@ export class SimPanel {
         <div class="sim-view"></div>
       </div>
       <div class="sim-bar" role="toolbar" aria-label="${tHtml('simPanel.bar')}" hidden>
-        <span class="sim-group sim-cameras" data-for="codebot codeair" role="group" aria-label="${tHtml('simPanel.camera')}"></span>
         <span class="sim-group" data-for="codebot codeair">
-          <label title="${tHtml('simPanel.roomTitle')}"><span aria-hidden="true">🏫</span> <select class="sim-room" aria-label="${tHtml('simPanel.room')}"></select></label>
+          <label class="sim-pick" title="${tHtml('simPanel.roomTitle')}">${ROOM_ICON}<select class="sim-room" aria-label="${tHtml('simPanel.room')}"></select></label>
+        </span>
+        <span class="sim-group" data-for="codebot codeair">
+          <label class="sim-pick">${CAMERA_ICON}<select class="sim-camera" aria-label="${tHtml('simPanel.camera')}"></select></label>
+          <button type="button" class="icon-btn sim-center" ${both('simPanel.center')}>${CENTER_ICON}</button>
         </span>
         <span class="sim-group" data-for="codebot">
           <label title="${tHtml('simPanel.courseTitle')}"><span aria-hidden="true">〰️</span> <select class="sim-course" aria-label="${tHtml('simPanel.course')}"></select></label>
@@ -66,18 +75,17 @@ export class SimPanel {
     sim.attachView(q('.sim-view'))
     this.settings = new SettingsPanel(this.stage, q('.sim-gear'), sim)
 
-    for (const [mode, icon, key] of CAMERAS) {
-      const b = document.createElement('button')
-      b.type = 'button'
-      b.className = 'sim-chip'
-      b.dataset.mode = mode
-      // the picture is for the eye; a screen reader says the word
-      b.append(Object.assign(document.createElement('span'), { textContent: icon }), ` ${t(key)}`)
-      b.firstChild.setAttribute('aria-hidden', 'true')
-      b.addEventListener('click', () => this._camera(mode))
-      q('.sim-cameras').appendChild(b)
+    // the camera menu; its title says how the one chosen moves
+    const camera = (this.cameraSelect = q('.sim-camera'))
+    for (const mode of CAMERA_MODES) camera.add(new Option(t(`simPanel.cam.${mode}`), mode))
+    const shown = (mode) => {
+      camera.value = mode
+      camera.title = t(`simPanel.camHelp.${mode}`)
     }
-    this._camera('chase')
+    camera.addEventListener('change', () => sim.setCamera(camera.value))
+    sim.addEventListener('camera', (e) => shown(e.detail))
+    shown(sim.cameraMode)
+    q('.sim-center').addEventListener('click', () => sim.setCamera(sim.cameraMode))
 
     const course = (this.courseSelect = q('.sim-course'))
     course.add(new Option(t('simPanel.noCourse'), ''))
@@ -110,7 +118,6 @@ export class SimPanel {
 
     sim.addEventListener('state', () => this.refresh())
     sim.addEventListener('device', () => this.refresh())
-    sim.addEventListener('camera', (e) => this._chips(e.detail))
   }
 
   refresh() {
@@ -122,17 +129,5 @@ export class SimPanel {
     if (on) this.roomSelect.value = this.sim.room ?? KINDS[this.sim.targetId]?.env
     if (!on) this.settings.close({ focus: false })
     this.settings.refresh()
-  }
-
-  _camera(mode) {
-    this._chips(mode)
-    this.sim.setCamera(mode)
-  }
-
-  _chips(mode) {
-    for (const b of this.bar.querySelectorAll('.sim-cameras .sim-chip')) {
-      b.classList.toggle('is-active', b.dataset.mode === mode)
-      b.setAttribute('aria-pressed', String(b.dataset.mode === mode))
-    }
   }
 }

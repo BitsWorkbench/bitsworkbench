@@ -24,7 +24,7 @@ export class SimDevice extends EventTarget {
     this.worker = null
     this.view = null
     this.viewHost = null
-    this.cameraMode = 'chase'
+    this.cameraMode = 'rotate'     // view/camera-rig.js CAMERA_MODES
     this.course = null             // a line course on the floor (world/courses.js)
     this.room = null               // a room from kinds.js ROOMS; null: the board's own
     this.supported = 'WebAssembly' in globalThis && typeof Worker !== 'undefined'
@@ -87,12 +87,7 @@ export class SimDevice extends EventTarget {
       } else {
         const { SimView } = await import('./view/view.js')
         this.view = new SimView(this.viewHost, { assetsBase })
-        this.view.cameraMode = this.cameraMode
-        // a drag or a key took the camera into orbit: the bar shows it
-        this.view.onCameraMode = (mode) => {
-          this.cameraMode = mode
-          this.dispatchEvent(new CustomEvent('camera', { detail: mode }))
-        }
+        this.view.setCamera(this.cameraMode)
         await this.view.loadRoom(room).catch((err) => console.warn('room', err))
       }
     }
@@ -212,9 +207,11 @@ export class SimDevice extends EventTarget {
     return kind?.view === '3d' ? ROOMS[this.room ?? kind.env]?.toLocaleLowerCase(language) : null
   }
 
+  // A camera, at its home (again: back to its home). The bar's menu follows.
   setCamera(mode) {
     this.cameraMode = mode
     this.view?.setCamera(mode)
+    this.dispatchEvent(new CustomEvent('camera', { detail: mode }))
   }
 
   // The terminal: Ctrl-C stops a program; between programs, a live REPL.

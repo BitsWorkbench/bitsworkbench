@@ -13,6 +13,7 @@ import { CodeBotFigure } from './codebot-figure.js'
 import { CodeAIRFigure } from './codeair-figure.js'
 import { CodeXFigure } from './codex-figure.js'
 import { courseMesh } from './course-mesh.js'
+import { CameraRig } from './camera-rig.js'
 import { PRESETS, AutoRealism } from './realism.js'
 import { settings } from '../settings.js'
 
@@ -32,7 +33,6 @@ export class SimView {
     this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     this.figures = new Map()
     this.frames = [null, null]      // the two latest snapshots, with arrival times
-    this.cameraMode = 'chase'
 
     // Realism (realism.js): chosen in the settings panel, or Auto, which
     // moves a level at a time from the frame rate it measures. A school
@@ -65,41 +65,22 @@ export class SimView {
     this.camera.position.set(0.6, 0.5, 0.6)
     this.controls = new OrbitControls(this.camera, r.domElement)
     this.controls.enableDamping = true
-    this.controls.maxPolarAngle = Math.PI * 0.49
     this.controls.minDistance = 0.12
     this.controls.maxDistance = 30
-    this.controls.addEventListener('start', () => { if (this.cameraMode === 'chase') { this.cameraMode = 'orbit'; this.onCameraMode?.('orbit') } })
     this.controls.addEventListener('change', () => this._touch())
-    // The keyboard, with the view focused: left and right go round the
-    // board, up and down look from higher or lower, + and - go nearer and
-    // farther. Any of them takes the camera into orbit, as a drag does.
+    // The cameras (camera-rig.js); the keyboard moves them with the view
+    // focused, unless a board's key takes the key first.
     const canvas = r.domElement
+    this.rig = new CameraRig(this.camera, this.controls, canvas, () => this._touch())
+    this.rig.setMode('rotate')
     canvas.tabIndex = 0
     canvas.setAttribute('role', 'img')
     canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown + -')
-    canvas.addEventListener('keydown', (e) => {
-      if (this.buttons && this._buttonKey(e)) return
-      const turn = { ArrowLeft: [-0.2, 0], ArrowRight: [0.2, 0], ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] }[e.key]
-      const zoom = { '+': 0.8, '=': 0.8, '-': 1.25, _: 1.25 }[e.key]
-      if (!turn && !zoom) return
-      e.preventDefault()
-      if (this.cameraMode !== 'orbit') { this.cameraMode = 'orbit'; this.onCameraMode?.('orbit') }
-      const c = this.controls
-      const s = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(c.target))
-      if (turn) {
-        s.theta += turn[0]
-        s.phi = Math.min(c.maxPolarAngle, Math.max(0.05, s.phi + turn[1]))
-      } else {
-        s.radius = Math.min(c.maxDistance, Math.max(c.minDistance, s.radius * zoom))
-      }
-      this.camera.position.setFromSpherical(s).add(c.target)
-      this._touch()
-    })
-    if (buttons) {
-      canvas.addEventListener('keyup', (e) => this._buttonKey(e))
-      canvas.addEventListener('blur', () => this._releaseAll())
-      this._bindPointer(canvas)
-    }
+    const key = (e) => { if (!(this.buttons && this._buttonKey(e))) this.rig.key(e) }
+    canvas.addEventListener('keydown', key)
+    canvas.addEventListener('keyup', key)
+    canvas.addEventListener('blur', () => { this._releaseAll(); this.rig.held.clear() })
+    if (buttons) this._bindPointer(canvas)
     this._changedAt = 0           // when the picture last had reason to change
 
     this._resize = new ResizeObserver(() => this.resize())
@@ -195,11 +176,11 @@ export class SimView {
     this._touch()
     fig.update(snap)
     if (fig.home) {
-      // a board that stays put: the camera starts where the figure says, in orbit
-      // (from a direction, near enough for its size to fit the view's narrower way)
+      // a board that stays put: the camera starts where the figure says, and turns
+      // round it (from a direction, near enough for its size to fit the view's narrower way)
       const h = fig.home()
       const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect))
-      this.cameraMode = 'orbit'
+      this.rig.setMode('rotate')
       this.controls.target.copy(h.target)
       this.camera.position.copy(h.target).addScaledVector(h.from, (h.size * 0.55) / Math.tan(half))
       this.controls.minDistance = h.minDistance
@@ -313,13 +294,18 @@ export class SimView {
     this._changedAt = performance.now()
   }
 
+  // A camera (camera-rig.js), at its home; again, back to its home.
   setCamera(mode) {
     this._touch()
     const s = this.frames[1]?.frame.devices[0]
     if (s && s.x === undefined) return        // a board that stays put keeps its camera
-    this.cameraMode = mode
+    this.rig.setMode(mode)
     if (!s) return
     this._placeCamera(s, true)
+  }
+
+  get cameraMode() {
+    return this.rig.mode
   }
 
   resize() {
@@ -352,43 +338,27 @@ export class SimView {
   }
 
   _placeCamera(s, jump) {
-    const target = new THREE.Vector3(s.x, (s.z ?? 0) + 0.04, -s.y)
-    if (this.cameraMode === 'top') {
-      this.camera.position.set(s.x, 2.2 + (s.z ?? 0), -s.y + 0.001)
-      this.controls.target.copy(target)
-    } else if (this.cameraMode === 'chase') {
-      const back = new THREE.Vector3(-Math.cos(s.heading), 0, Math.sin(s.heading)).multiplyScalar(0.45)
-      const want = target.clone().add(back).add(new THREE.Vector3(0, 0.28, 0))
-      if (jump) this.camera.position.copy(want)
-      else this.camera.position.lerp(want, 0.08)
-      this.controls.target.lerp(target, jump ? 1 : 0.2)
-    } else if (jump) {
-      this.controls.target.copy(target)
-    }
+    this.rig.heading(s)
+    this.rig.place(s, jump)
   }
 
-  _loop() {
+  _loop(now) {
     this._raf = requestAnimationFrame(this._loop)
+    const dt = this._lastLoop ? (now - this._lastLoop) / 1000 : 0
+    this._lastLoop = now
     if (!this.host.isConnected || this.host.clientWidth === 0) return
     const devices = this._current()
+    // a board that stays put (CodeX): the camera is the student's
     if (devices) {
       for (const s of devices) this.figures.get(s.id)?.update(s)
-      if (devices[0].x === undefined) {
-        // a board that stays put (CodeX): the camera is the student's
-      } else if (this.cameraMode !== 'orbit') this._placeCamera(devices[0], false)
-      else {
-        // Orbit follows the robot without fighting the student's drag.
-        const t = new THREE.Vector3(devices[0].x, (devices[0].z ?? 0) + 0.04, -devices[0].y)
-        const d = t.clone().sub(this.controls.target)
-        this.controls.target.add(d)
-        this.camera.position.add(d)
-      }
+      if (devices[0].x !== undefined) this._placeCamera(devices[0], false)
     }
-    const moved = this.controls.update()
+    if (this.rig.update(dt)) this._touch()
+    const moved = this.rig.controls.enabled && this.controls.update()
     // Draw while things move, and a while after (the picture eases to rest:
     // interpolation, the chase camera); then rest, and leave the CPU to the
     // program.
-    const now = performance.now()
+    now = performance.now()
     if (!moved && now - this._changedAt > SETTLE_MS) { this._gov.last = 0; this.fps = null; return }
     // the level's frame cap: a frame comes no sooner than its share of a second
     const cap = PRESETS[this.level].fps

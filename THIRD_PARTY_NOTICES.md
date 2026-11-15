@@ -220,6 +220,14 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ```
 
+### Material Icons, three of them
+
+- **Files:** `src/sim/sim-panel.js` (the path data of `filter_hdr`, `videocam` and
+  `center_focus_strong`, for the simulator bar's room menu, camera menu and Center button).
+- **Origin:** Google's Material Icons (<https://github.com/google/material-design-icons>).
+- **Licence:** Apache License 2.0, copyright Google LLC
+  (<https://www.apache.org/licenses/LICENSE-2.0>).
+
 ### CodeBot, CodeX and CodeAIR's own Python
 
 - **Files:** `src/sim/python/`.
