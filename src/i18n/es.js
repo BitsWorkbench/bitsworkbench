@@ -96,6 +96,33 @@ export default {
   'text.editorLabel': 'Programa de Python',
   'text.editorHelp': 'Tab agrega sangría. Presiona Esc y luego Tab para salir del editor.',
   'text.viewLabel': 'El Python que forman tus bloques',
+  'files.button': '📁 Archivos',
+  'files.label': 'Archivos',
+  'files.intro': 'Elige una carpeta de tu computadora para guardar tus programas. Aquí puedes abrir y guardar sus archivos.',
+  'files.reopen': 'Abrir {name} otra vez',
+  'files.openFolder': 'Abrir una carpeta',
+  'files.openOther': 'Abrir otra carpeta',
+  'files.folderLabel': 'Archivos en {name}',
+  'files.newFile': 'Archivo nuevo',
+  'files.newName': 'Nombre del archivo nuevo (guarda tu programa tal como está ahora)',
+  'files.cancel': 'Cancelar',
+  'files.create': 'Crear',
+  'files.badName': 'Usa letras, números, espacios, - y _ en el nombre.',
+  'files.exists': '{name} ya está en la carpeta. Elige otro nombre.',
+  'files.empty': 'Todavía no hay archivos aquí.',
+  'files.unsupported': 'Este navegador no puede abrir una carpeta (Chrome y Edge sí pueden). Aún puedes abrir un archivo de Python y guardarlo con Descargar Python en el menú ⋯.',
+  'files.openSingle': 'Abrir un archivo de Python',
+  'files.save': 'Guardar',
+  'files.unsaved': 'Todavía sin guardar',
+  'files.openFailed': 'No se pudo abrir {file}',
+  'files.saveFailed': 'No se pudo guardar {file}',
+  'files.reopenDetail': 'Vuelve a permitir la carpeta {folder} desde el panel Archivos y guarda otra vez.',
+  'files.savedTitle': 'Guardado',
+  'files.savedDetail': '{file} está guardado en {folder}.',
+  'files.replaceTitle': '¿Abrir {file}?',
+  'files.replaceBodyHtml': '<p>El Python que estás escribiendo no está guardado en un archivo. Si abres {file}, ocupará el lugar de lo que escribiste.</p>',
+  'files.replaceConfirm': 'Abrirlo',
+  'files.keep': 'Conservar el mío',
   'palette.label': 'Paleta de Python',
   'palette.hint': 'Arrástralo a tu programa, o presiona Enter para agregarlo donde está el cursor.',
   'editor.find': 'Buscar',
@@ -207,13 +234,16 @@ export default {
         como su Python: arrastra uno a tu programa, o haz clic en él para agregarlo donde está el cursor.
         Arrastra un bucle o un <code>if</code> sobre parte de tu código y ese código queda dentro
         (lo que va a tomar se sombrea mientras arrastras).</li>
+      <li><strong>📁 Archivos</strong>, arriba del Python, abre una carpeta de tu computadora (en Chrome o Edge):
+        abre los archivos de Python que tiene, crea uno nuevo y guarda con <strong>Guardar</strong> o
+        <kbd>Ctrl</kbd>+<kbd>S</kbd>. Un punto junto al nombre del archivo indica que tiene cambios sin guardar.</li>
       <li><strong>🆕 Nuevo</strong> empieza de nuevo. Haz clic en el nombre del proyecto, al lado, para cambiarle el nombre.</li>
     </ul>
     <h3>Atajos</h3>
     <ul>
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: ejecutar tu programa</li>
       <li><kbd>Esc</kbd>: detener un programa en ejecución</li>
-      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: guardar tu proyecto en un archivo</li>
+      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: guardar tu proyecto en un archivo (o, con un archivo abierto de tu carpeta, guardar ese archivo)</li>
     </ul>
     <h3>Escribir Python</h3>
     <ul>
