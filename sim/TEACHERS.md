@@ -76,9 +76,10 @@ the simulator does not reach across the network).
 
 ## Full screen for the class
 
-- **CodeX**: press **⛶ Full screen** under its face, or **F** with the face
-  selected. The screen fills the display; the arrow keys are its direction pad,
-  A (or Z) and B (or X) its buttons. Esc leaves full screen.
+- **CodeX**: press **⛶** in the bar under it, or **F** with its picture
+  selected. The picture fills the display (drag to turn it, + and - to come
+  nearer its screen); the arrow keys are its direction pad, A (or Z) and B (or
+  X) its buttons. Esc leaves full screen.
 - **CodeBot and CodeAIR**: use the browser's own full screen (F11, or the
   full-screen key on a Chromebook), with the Top camera for line following.
 
@@ -88,8 +89,9 @@ Every control can be reached with Tab and used with the keyboard; the focused
 one has a blue ring. The bar between the board and the terminal moves with the
 up and down arrows. Hold Space or Enter on BTN 0 or BTN 1 to hold the button.
 With the 3D picture selected, the left and right arrows go round the board, up
-and down look from higher or lower, and + and - zoom. With CodeX's face
-selected, the arrows, A and B are its buttons.
+and down look from higher or lower, and + and - zoom. With CodeX's picture
+selected, the arrows, A and B are its buttons, and + and - zoom; its keys are
+also in the bar, and a click on a key of the model presses it.
 
 A screen reader names the picture and describes it: which room, where the board
 is and which way it faces, whether it is moving, its lights and speaker. It

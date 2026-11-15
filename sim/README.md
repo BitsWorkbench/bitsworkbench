@@ -17,7 +17,7 @@ teacher uses it, in [TEACHERS.md](TEACHERS.md).
 | `src/sim/python/radio/` | the radio module CodeX and CodeAIR share; under it `world/radio.js` (a board's radio), `world/infrared.js` (its infrared, under `python/common/pulseio.py`), `runtime/broadcast-air.js` (between workers and tabs) and `runtime/lockstep.js` (headless groups) |
 | `src/sim/python/<device>/` | the device's own Python modules, unchanged, and stand-ins for its C modules; `src/sim/kinds.js` says which folders each device runs, and lists the rooms |
 | `src/sim/bridge/` | each device's simulated board: its pins, ADC, PWM and bus chips, over the device's model; what each costs in device time |
-| `src/sim/view/` | the pictures: Three.js for the room (`view.js`) with CodeBot and CodeAIR in it (`codebot-figure.js`, `codeair-figure.js`), a flat face for CodeX (`codex-face.js`) |
+| `src/sim/view/` | the pictures: Three.js for the room (`view.js`) with CodeBot, CodeAIR and CodeX in it (`codebot-figure.js`, `codeair-figure.js`, `codex-figure.js`); CodeX stands in the showroom, built in `view.js` |
 | `src/sim/sim-device.js` | the simulator as a device, with the USB DeviceManager's face |
 | `src/sim/device-switch.js` | the app's one device: the USB board or the simulator |
 | `src/sim/sim-panel.js` | the simulator panel, above the terminal: the view and its controls (Pause and Step are the app's run controls) |

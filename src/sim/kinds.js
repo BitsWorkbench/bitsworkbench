@@ -5,7 +5,9 @@ import { t } from '../i18n/index.js'
 
 export const KINDS = {
   codebot: { env: 'gym', view: '3d', python: ['common', 'codebot'] },
-  codex: { env: 'empty', view: 'codex', python: ['common', 'radio', 'codex'] },
+  // CodeX is held, not driven: its world is empty, and the view shows it in
+  // the showroom (view.js), as CodeSpace's simulator does
+  codex: { env: 'empty', room: 'showroom', view: 'codex', python: ['common', 'radio', 'codex'] },
   // and the flight library, which only a build with CodeAIR flight carries
   // (sim/tools/flight-library.mjs): without it CodeAIR is not offered
   codeair: { env: 'gym', view: '3d', python: ['common', 'radio', 'codeair'], needsFlight: true },
