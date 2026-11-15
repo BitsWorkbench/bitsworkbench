@@ -10,9 +10,16 @@
  * fills that line. A value snippet goes inside a line, where the card's left
  * edge points.
  *
+ * A snippet with a body (a loop, an if) dropped with its shape over code
+ * takes that code in: the whole statements at the drop's indent that the
+ * card covers (each with the lines nested in it, an if with its else) move
+ * into the body, one level deeper, in place of its `pass`. Dropped on a blank
+ * line, at the end, or put in at the cursor, it takes nothing.
+ *
  * The dragged card itself floats over the code, showing the snippet's shape;
- * the editor marks only where it would land, on a layer over the text, so
- * the text never moves under the pointer while it is dragged.
+ * the editor marks only where it would land (and shades the code it would
+ * take in), on a layer over the text, so the text never moves under the
+ * pointer while it is dragged.
  */
 import { EditorView, layer } from '@codemirror/view'
 import { StateEffect, StateField } from '@codemirror/state'
@@ -76,7 +83,13 @@ const marks = layer({
       return [new Mark('cm-snippet-slot', left, line.top + view.documentTop - oy, right - left, line.height, p.colour)]
     }
     const y = p.n > doc.lines ? view.lineBlockAt(doc.length).bottom : view.lineBlockAt(doc.line(p.n).from).top
-    return [new Mark('cm-snippet-gap', left, y + view.documentTop - oy - 2, right - left, 4, p.colour)]
+    const out = [new Mark('cm-snippet-gap', left, y + view.documentTop - oy - 2, right - left, 4, p.colour)]
+    if (p.wrapTo) {
+      // The code the snippet would take into its body.
+      const bottom = view.lineBlockAt(doc.line(p.wrapTo).from).bottom
+      out.push(new Mark('cm-snippet-wrap', left, y + view.documentTop - oy + 2, right - left, bottom - y - 2, p.colour))
+    }
+    return out
   },
 })
 
@@ -105,13 +118,57 @@ function allowedIndents(doc, n) {
   return { min, max }
 }
 
+/** Lines that carry on a statement at the same indent (an if's else, a try's except). */
+const continues = (text) => /^\s*(elif\b|else\b|except\b|finally\b)/.test(text)
+
+/** The line (in a snippet's code) of the body its dropped code goes into: a first `pass` under a colon; -1 for none. */
+function bodySlot(code) {
+  const lines = code.split('\n')
+  const i = lines.findIndex((l) => l === `${' '.repeat(INDENT)}pass`)
+  return i > 0 && opensBlock(lines[i - 1]) && indentOf(lines[i - 1]) === 0 ? i : -1
+}
+
+/**
+ * The whole statements from line n at exactly `indent` whose middle lies
+ * above `bottom` (a point on screen): the last line they take, or 0.
+ */
+function covered(view, n, indent, bottom) {
+  const { doc } = view.state
+  const first = doc.line(n).text
+  if (isBlank(first) || indentOf(first) !== indent || continues(first)) return 0
+  let last = 0
+  let i = n
+  while (i <= doc.lines) {
+    const text = doc.line(i).text
+    if (isBlank(text)) {
+      i++
+      continue
+    }
+    if (indentOf(text) !== indent) break // the block ends
+    const block = view.lineBlockAt(doc.line(i).from)
+    if (view.documentTop + block.top + block.height / 2 > bottom) break
+    // The statement runs on through its deeper lines, and its else or except.
+    let end = i
+    for (let j = i + 1; j <= doc.lines; j++) {
+      const t = doc.line(j).text
+      if (isBlank(t)) continue
+      if (indentOf(t) > indent || (indentOf(t) === indent && continues(t))) end = j
+      else break
+    }
+    last = end
+    i = end + 1
+  }
+  return last
+}
+
 /**
  * Where a snippet would land with its left edge at (x, y), or null when the
- * point is not over the editor's text.
- * Statement: { line: true, n, fill, indent }, before line n (fill: replace
- * blank line n). Value: { line: false, pos }.
+ * point is not over the editor's text. `bottom` is the card's bottom edge.
+ * Statement: { line: true, n, fill, indent, wrapTo }, before line n (fill:
+ * replace blank line n; wrapTo: the last line it takes into its body, or 0).
+ * Value: { line: false, pos }.
  */
-function placeAt(view, snippet, x, y) {
+function placeAt(view, snippet, x, y, bottom) {
   const box = view.scrollDOM.getBoundingClientRect()
   if (x < box.left - 40 || x > box.right || y < box.top || y > box.bottom) return null
   const { doc } = view.state
@@ -134,7 +191,8 @@ function placeAt(view, snippet, x, y) {
   const wanted = Math.round(col / INDENT) * INDENT
   const { min, max } = allowedIndents(doc, n)
   const indent = Math.min(max, Math.max(min, wanted))
-  return { line: true, n, fill, indent }
+  const wraps = !fill && bottom != null && n <= doc.lines && bodySlot(snippet.code) >= 0
+  return { line: true, n, fill, indent, wrapTo: wraps ? covered(view, n, indent, bottom) : 0 }
 }
 
 // ------------------------------------------------------------ the change
@@ -194,7 +252,19 @@ function transactionFor(state, snippet, place) {
     main = { from: place.pos, to: place.pos, insert: snippet.code }
   } else {
     const code = indented(snippet.code, place.indent)
-    if (place.fill) {
+    if (place.wrapTo) {
+      // The covered code goes in place of the body's pass, one level deeper.
+      const lines = code.split('\n')
+      const slot = bodySlot(snippet.code)
+      const from = doc.line(place.n).from
+      const to = doc.line(place.wrapTo).to
+      const taken = doc
+        .sliceString(from, to)
+        .split('\n')
+        .map((l) => (isBlank(l) ? l : ' '.repeat(INDENT) + l))
+      const insert = [...lines.slice(0, slot), ...taken, ...lines.slice(slot + 1)].join('\n')
+      main = { from, to, insert }
+    } else if (place.fill) {
       const line = doc.line(place.n)
       main = { from: line.from, to: line.to, insert: code }
     } else if (place.n > doc.lines) {
@@ -213,8 +283,13 @@ function transactionFor(state, snippet, place) {
   const start = main.from + before + lead
   const body = main.insert.trimStart()
   const passAt = body.indexOf('pass')
-  const selection =
-    passAt >= 0 ? { anchor: start + passAt, head: start + passAt + 4 } : { anchor: start + body.trimEnd().length }
+  // Code taken in fills the body, so the cursor goes to the end of the
+  // header's condition (before its colon), ready to change it.
+  const selection = place.wrapTo
+    ? { anchor: start + body.indexOf('\n') - 1 }
+    : passAt >= 0
+      ? { anchor: start + passAt, head: start + passAt + 4 }
+      : { anchor: start + body.trimEnd().length }
   return {
     changes: [...extra, main],
     selection,
@@ -225,8 +300,8 @@ function transactionFor(state, snippet, place) {
 
 // ------------------------------------------------------------ the surface
 
-export function previewSnippet(view, snippet, x, y) {
-  const place = snippet && placeAt(view, snippet, x, y)
+export function previewSnippet(view, snippet, x, y, bottom) {
+  const place = snippet && placeAt(view, snippet, x, y, bottom)
   const now = view.state.field(preview)
   if (!place) {
     if (now) view.dispatch({ effects: setPreview.of(null) })
@@ -237,8 +312,8 @@ export function previewSnippet(view, snippet, x, y) {
   view.dispatch({ effects: setPreview.of(next) })
 }
 
-export function dropSnippet(view, snippet, x, y) {
-  const place = placeAt(view, snippet, x, y)
+export function dropSnippet(view, snippet, x, y, bottom) {
+  const place = placeAt(view, snippet, x, y, bottom)
   if (!place) {
     previewSnippet(view, null)
     return false

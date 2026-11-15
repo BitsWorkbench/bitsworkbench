@@ -204,7 +204,9 @@ export default {
         <strong>✏️ Editar como Python</strong> ahí para escribir el tuyo; al volver a los bloques se
         pierden los cambios que escribiste (no se convierten otra vez en bloques), así que pregunta antes.
         La paleta al lado del Python tiene las mismas categorías que la de los bloques, con cada bloque
-        como su Python: arrastra uno a tu programa, o haz clic en él para agregarlo donde está el cursor.</li>
+        como su Python: arrastra uno a tu programa, o haz clic en él para agregarlo donde está el cursor.
+        Arrastra un bucle o un <code>if</code> sobre parte de tu código y ese código queda dentro
+        (lo que va a tomar se sombrea mientras arrastras).</li>
       <li><strong>🆕 Nuevo</strong> empieza de nuevo. Haz clic en el nombre del proyecto, al lado, para cambiarle el nombre.</li>
     </ul>
     <h3>Atajos</h3>

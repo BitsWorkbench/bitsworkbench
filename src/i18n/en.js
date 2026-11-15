@@ -206,7 +206,9 @@ export default {
         <strong>✏️ Edit as Python</strong> there to type your own; going back to blocks then
         drops your typed changes (they do not turn back into blocks), so it asks first.
         The palette beside the Python has the same categories as the blocks', with each block as
-        its Python: drag one into your program, or click it to add it where the cursor is.</li>
+        its Python: drag one into your program, or click it to add it where the cursor is.
+        Drag a loop or an <code>if</code> over some of your code and that code goes inside it
+        (the part it will take is shaded as you drag).</li>
       <li><strong>🆕 New</strong> starts over. Click the project name next to it to rename your project.</li>
     </ul>
     <h3>Shortcuts</h3>

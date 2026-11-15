@@ -148,9 +148,13 @@ export class PythonEditor {
     this.view.focus()
   }
 
-  /** Show where a dragged snippet would land, at a point on screen. */
-  previewDrop(snippet, x, y) {
-    previewSnippet(this.view, snippet, x, y)
+  /**
+   * Show where a dragged snippet would land: (x, y) is its card's left edge
+   * at its first line; `bottom`, the card's bottom edge, says which code its
+   * shape covers (a loop or an if takes that code into its body).
+   */
+  previewDrop(snippet, x, y, bottom) {
+    previewSnippet(this.view, snippet, x, y, bottom)
   }
 
   /** Clear the drop preview (the drag left the editor, or was cancelled). */
@@ -158,9 +162,9 @@ export class PythonEditor {
     previewSnippet(this.view, null)
   }
 
-  /** Drop a snippet at a point on screen; false if the point is not in the editor. */
-  drop(snippet, x, y) {
-    return dropSnippet(this.view, snippet, x, y)
+  /** Drop a snippet there (as previewDrop); false if the point is not in the editor. */
+  drop(snippet, x, y, bottom) {
+    return dropSnippet(this.view, snippet, x, y, bottom)
   }
 
   /** Put a snippet in at the cursor (a click, or Enter on the palette). */
