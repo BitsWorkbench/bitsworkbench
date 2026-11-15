@@ -88,6 +88,7 @@ export class CodeX {
       buttons: [...this.buttons],
       sound: this.sounding(),
       screenVersion: this.screen.version,
+      tilt: [this.tiltX, this.tiltY],
     }
   }
 }

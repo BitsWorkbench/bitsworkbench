@@ -11,7 +11,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { CodeBotFigure } from './codebot-figure.js'
 import { CodeAIRFigure } from './codeair-figure.js'
-import { CodeXFigure } from './codex-figure.js'
+import { CodeXFigure, TILT_MAX } from './codex-figure.js'
 import { courseMesh } from './course-mesh.js'
 import { CameraRig } from './camera-rig.js'
 import { PRESETS, AutoRealism } from './realism.js'
@@ -24,7 +24,10 @@ export class SimView {
   // `buttons`, for a board whose keys the view presses (CodeX): { keys, onButton },
   // keys from KeyboardEvent.key to a button's number, onButton(n, down). Its
   // keys are then pressed by the keyboard (F goes full screen) and by a click
-  // on the model, and the arrow keys no longer turn the camera.
+  // on the model, and the arrow keys no longer turn the camera. With
+  // `onTilt(x, y)` too (radians, world/codex.js tiltX and tiltY), a drag on
+  // the figure's rotation arrows tilts the board, as do Shift and the arrow
+  // keys (5 degrees a press); Home sets it level.
   constructor(host, { assetsBase, buttons = null }) {
     this.host = host
     this.assetsBase = assetsBase
@@ -75,7 +78,7 @@ export class SimView {
     this.rig.setMode('rotate')
     canvas.tabIndex = 0
     canvas.setAttribute('role', 'img')
-    canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown + -')
+    canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown + -' + (buttons?.onTilt ? ' Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown Home' : ''))
     const key = (e) => { if (!(this.buttons && this._buttonKey(e))) this.rig.key(e) }
     canvas.addEventListener('keydown', key)
     canvas.addEventListener('keyup', key)
@@ -214,6 +217,16 @@ export class SimView {
     return null
   }
 
+  // Where the middle of the rotation arrow for `axis` ('x' or 'y') is on the
+  // page, for the tests: { x, y }.
+  arrowPoint(axis) {
+    const p = this._tiltFigure()?.arrowCentre(axis)
+    if (!p) return null
+    p.project(this.camera)
+    const r = this.renderer.domElement.getBoundingClientRect()
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height }
+  }
+
   fullScreen() {
     const f = this.host.requestFullscreen?.() ?? this.host.webkitRequestFullscreen?.()
     Promise.resolve(f).then(() => this.renderer.domElement.focus()).catch(() => {})
@@ -226,6 +239,14 @@ export class SimView {
       e.preventDefault()
       if (e.type !== 'keydown') return true
       if (document.fullscreenElement === this.host) document.exitFullscreen?.(); else this.fullScreen()
+      return true
+    }
+    const tilt = this.buttons.onTilt && (e.key === 'Home' ? [null, null] : e.shiftKey && TILT_KEYS[e.key])
+    if (tilt) {
+      e.preventDefault()
+      if (e.type !== 'keydown') return true
+      const [x, y] = this._tiltIs()
+      this._tilt(tilt[0] === null ? 0 : x + tilt[0], tilt[1] === null ? 0 : y + tilt[1])
       return true
     }
     const n = this.buttons.keys[e.key]
@@ -241,44 +262,88 @@ export class SimView {
     this.buttons.onButton(n, down)
   }
 
+  // the figure that tilts (CodeX), or null
+  _tiltFigure() {
+    for (const f of this.figures.values()) if (f.arrowAt) return f
+    return null
+  }
+
+  // Ask for a tilt, within the board's reach either way.
+  _tilt(x, y) {
+    const lim = (v) => Math.max(-TILT_MAX, Math.min(TILT_MAX, v))
+    this._tiltAsked = [lim(x), lim(y)]
+    this.buttons.onTilt(...this._tiltAsked)
+  }
+
+  // The tilt to step from: the last one asked for (keys come faster than
+  // the world's frames), else the board's as drawn.
+  _tiltIs() {
+    return this._tiltAsked ?? this._tiltFigure()?.tiltNow ?? [0, 0]
+  }
+
   _releaseAll() {
     for (const n of [...this.down]) this._press(n, false)
   }
 
-  // A click on a key presses it while held (before the camera sees it, so it
-  // does not turn); over a key the pointer shows a hand.
+  // A click on a key presses it while held, and a drag on a rotation arrow
+  // tilts the board (both before the camera sees them, so it does not turn);
+  // over a key the pointer shows a hand, over an arrow a grip.
   _bindPointer(canvas) {
     const ray = new THREE.Raycaster()
-    const keyAt = (e) => {
+    const aim = (e) => {
       const r = canvas.getBoundingClientRect()
       ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera)
+      return ray
+    }
+    const keyAt = (e) => {
+      aim(e)
       for (const f of this.figures.values()) {
         const n = f.keyAt?.(ray) ?? -1
         if (n >= 0) return n
       }
       return -1
     }
-    let held = null                 // { id, n }
+    const arrowAt = (e) => (this.buttons.onTilt && this._tiltFigure()?.arrowAt(aim(e))) || null
+    let held = null                 // { id, n } a key, or { id, axis, x, y, from } an arrow
     canvas.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || held) return
-      const n = keyAt(e)
-      if (n < 0) return
+      const axis = arrowAt(e)
+      const n = axis ? -1 : keyAt(e)
+      if (!axis && n < 0) return
       e.stopImmediatePropagation()
       e.preventDefault()
       canvas.focus()
       canvas.setPointerCapture?.(e.pointerId)
+      if (axis) {
+        held = { id: e.pointerId, axis, x: e.clientX, y: e.clientY, from: [...this._tiltIs()] }
+        canvas.style.cursor = 'grabbing'
+        return
+      }
       held = { id: e.pointerId, n }
       this._press(n, true)
     }, { capture: true })
     const up = (e) => {
       if (!held || e.pointerId !== held.id) return
-      this._press(held.n, false)
+      if (held.axis) canvas.style.cursor = 'grab'
+      else this._press(held.n, false)
       held = null
     }
     canvas.addEventListener('pointerup', up)
     canvas.addEventListener('pointercancel', up)
     canvas.addEventListener('pointermove', (e) => {
-      if (!held && e.buttons === 0) canvas.style.cursor = keyAt(e) >= 0 ? 'pointer' : ''
+      if (held?.axis && e.pointerId === held.id) {
+        // the arc under the board goes with a sideways drag, the one at its
+        // right with an up and down one (right or down: that edge away)
+        const [x, y] = held.from
+        if (held.axis === 'x') this._tilt(x + (e.clientX - held.x) * TILT_PER_PX, y)
+        else this._tilt(x, y + (e.clientY - held.y) * TILT_PER_PX)
+        return
+      }
+      if (held || e.buttons !== 0) return
+      const axis = arrowAt(e)
+      this._tiltFigure()?.hotArrow(axis)
+      this._touch()
+      canvas.style.cursor = axis ? 'grab' : keyAt(e) >= 0 ? 'pointer' : ''
     })
   }
 
@@ -405,6 +470,12 @@ export class SimView {
 }
 
 const SETTLE_MS = 1500
+
+// Tilting: a drag's radians a pixel; Shift and an arrow key's step (5 degrees)
+// as [x, y], x the right edge down, y the bottom edge down.
+const TILT_PER_PX = 0.01
+const STEP = Math.PI / 36
+const TILT_KEYS = { ArrowRight: [STEP, 0], ArrowLeft: [-STEP, 0], ArrowDown: [0, STEP], ArrowUp: [0, -STEP] }
 
 function lerpSnap(a, b, f) {
   let dh = b.heading - a.heading

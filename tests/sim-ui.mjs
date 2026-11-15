@@ -536,6 +536,64 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', nu
   .then(() => console.log('sim-ui: a click on the CodeX model pressed its B key'), () => problems.push('CodeX: a click on the model did not press button B'))
 if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== camBefore) problems.push('CodeX: pressing a key on the model turned the camera')
 
+// Tilt: a drag on a rotation arrow tilts the CodeX (the model turns, the
+// accelerometer reads it, the camera stays); Shift and an arrow key tilt it
+// too, and Home sets it level. No sliders in the bar.
+{
+  const before = problems.length
+  if (await page.$('.sim-tilt-x, .sim-tilt-y')) problems.push('tilt: the bar still has tilt sliders')
+  await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.run(`from codex import *
+import time
+while True:
+    print('A', *accel.read())
+    time.sleep(0.1)
+`) })
+  // the program's latest reading, once one passes `ok`
+  const reads = (ok, what) => page.waitForFunction((src) => {
+    const m = [...window.__sim.out.matchAll(/A (-?\d+) (-?\d+) (-?\d+)/g)].pop()
+    if (!m) return false
+    const [x, y, z] = m.slice(1).map(Number)
+    return new Function('x', 'y', 'z', `return ${src}`)(x, y, z) && [x, y, z]
+  }, ok, { timeout: 5000 }).then((h) => h.jsonValue(), async () => { problems.push(`tilt: ${what} (last: ${(await page.evaluate(() => window.__sim.out)).trim().split('\n').pop()})`); return null })
+  const tiltNow = () => page.evaluate(() => {
+    const v = window.openCodeBot.device.sim.view
+    const f = v._tiltFigure()
+    return { world: window.openCodeBot.device.sim.lastFrame.devices[0].tilt, model: [f.tilt.rotation.y, f.tilt.rotation.x], cam: v.camera.position.toArray().join() }
+  })
+  await reads('Math.abs(x) < 1500 && z < -14000', 'flat did not read flat')
+  const drag = async (axis, dx, dy) => {
+    const p = await page.evaluate((a) => window.openCodeBot.device.sim.view.arrowPoint(a), axis)
+    await page.mouse.move(p.x, p.y)
+    await page.mouse.down()
+    await page.mouse.move(p.x + dx, p.y + dy, { steps: 6 })
+    await page.mouse.up()
+  }
+  const cam0 = (await tiltNow()).cam
+  await drag('x', 60, 0)               // the arc under it, to the right: right edge down
+  await page.waitForFunction(() => Math.abs(window.openCodeBot.device.sim.lastFrame.devices[0].tilt[0] - 0.6) < 0.05, null, { timeout: 5000 }).catch(() => {})
+  // (readings are along the silkscreen's axes, x right and y down, and
+  // against gravity: an edge down reads below zero on its axis)
+  await reads('x < -7000', 'a drag to the right on the lower arrow did not read right edge down')
+  await drag('y', 0, 40)               // the arc at its right, down: bottom edge down
+  await reads('x < -6000 && y < -4000', 'a drag down on the right arrow did not read bottom edge down')
+  const t = await tiltNow()
+  if (Math.abs(t.world[0] - 0.6) > 0.05 || Math.abs(t.world[1] - 0.4) > 0.05) problems.push(`tilt: dragged to ${t.world}, not 0.6, 0.4`)
+  if (Math.abs(t.model[0] - t.world[0]) > 0.01 || Math.abs(t.model[1] - t.world[1]) > 0.01) problems.push(`tilt: the model turned to ${t.model}, the board is at ${t.world}`)
+  if (t.cam !== cam0) problems.push('tilt: a drag on an arrow turned the camera')
+  await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codex-tilt.png` })
+  await page.focus('.sim-canvas')
+  await page.keyboard.press('Home')
+  await reads('Math.abs(x) < 1500 && Math.abs(y) < 1500', 'Home did not set it level')
+  await page.keyboard.press('Shift+ArrowLeft')
+  await page.keyboard.press('Shift+ArrowLeft')
+  await reads('x > 2000 && Math.abs(y) < 1500', 'Shift+Left did not tilt the left edge down')
+  const k = await tiltNow()
+  if (Math.abs(k.world[0] + Math.PI / 18) > 0.01) problems.push(`tilt: two Shift+Left presses gave ${k.world}`)
+  await page.keyboard.press('Home')
+  await page.evaluate(() => window.openCodeBot.device.stop())
+  if (problems.length === before) console.log('sim-ui: dragging CodeX\'s rotation arrows tilts it, Shift and the arrows too, Home levels it')
+}
+
 // CodeAIR flies only in a build with its flight library (SIM_FLIGHT=1,
 // sim/tools/flight-library.mjs), which serves the GPL's text with it.
 // (A missing file answers with the app's page, so look for the text itself.)

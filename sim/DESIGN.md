@@ -162,14 +162,21 @@ doubled near the floor; a flat puck against the floor and the room's boxes, boun
 restitution and a random sideways kick; free fall with the motors off. Blocking calls
 (`fly.forward(0.5)`) poll setpoints on simulated time, as on the drone.
 
-**CodeX.** No physics. Tilt comes from the user (drag the device, or a phone's orientation)
-as gravity in the device frame.
+**CodeX.** No physics. Tilt comes from the user as gravity in the device frame: a drag on
+one of the two rotation arrows beside the model (the arc under it turns the right edge down
+or up, the arc at its right the bottom edge), or Shift and the arrow keys with the view
+focused (5 degrees a press; Home sets it level), up to 90 degrees either way. A phone's own
+orientation is not read (it never was). The program reads proper acceleration along the
+silkscreen's axes (x to the right, y down the board, z into it; -1 g in z lying face up), so
+an edge going down reads below zero on its axis (`bridge/codex.js`, through the KXTJ3
+driver's sign conversion and axis swap).
 
 It is drawn as CodeSpace's simulator draws it: its model (`codex.glb`, from
 `sim/assets/CodeX.glb`) standing 10 cm over the floor of the showroom, a black floor a metre
 square with a teal grid at 10 cm under a slate sky, lit as a studio (three's RoomEnvironment
-in place of CodeSpace's studio light). The picture stands it up whatever the tilt sliders
-say; the accelerometer reads them. Its screen is the program's 240 x 240 pixels on the
+in place of CodeSpace's studio light). Facing the camera square stands for lying flat, as
+if looked down on; tilted, the model turns its right or bottom edge away from the camera,
+the way that edge going down looks from above (`codex-figure.js`), and the arrows stay put. Its screen is the program's 240 x 240 pixels on the
 model's active area, 27.72 mm square (the firmware drives a 1.54 inch ST7789), lit by the
 backlight; LEDs 0 to 3 light the model's LEDs under the screen (0 at the right, as the
 silkscreen numbers them), the NeoPixels its four RGB parts (0 and 1 on the left, 2 and 3 on
@@ -637,8 +644,8 @@ Built, on branch `sim` (pushed to firialabs/opencodebot):
   on the same layer and a simulated board (IO expander, KXTJ3, LTR-303, the button ISR,
   backlight), with Firia's C graphics (bitmaps, canvases, the two-root tree, its 6x8 font
   from the firmware) and tone generator reimplemented. A flat face: screen, D-pad, A and B,
-  LEDs, NeoPixels; full screen for a class with the arrow keys and A and B; tilt and light
-  sliders; sound from the voices the program connects.
+  LEDs, NeoPixels; full screen for a class with the arrow keys and A and B; tilt by dragging its
+  rotation arrows or with Shift and the arrow keys; a light slider; sound from the voices the program connects.
 
 - CodeAIR in the gymnasium (in a build with CodeAIR flight, which fetches its cflib:
   `sim/README.md`, "CodeAIR flight"): its own codeair, flight, flightdb, recorder and cflib over a
