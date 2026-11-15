@@ -8,7 +8,7 @@ Codacious lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No install, no accounts, no setup — just a
 web page and a USB cable.
 
-**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)** — nothing to
+**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
 It is a gentle on-ramp, not a replacement: everything it makes is real
@@ -27,7 +27,7 @@ waiting for them.
 |---|---|
 | 🔌 **Plug and play** | Detects which board you plugged in and shows only the blocks it can actually run. |
 | 🧩 **Friendly blocks** | Chunky, colourful, emoji-labelled blocks for screens, lights, motors, flight, sound, sensors and radio. |
-| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time. |
+| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace). |
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. |
@@ -139,6 +139,7 @@ src/
     generate.js        assembles imports and setup around the block code
     theme.js           colours and shapes
   workspace/   the Blockly workspace, saving and starter projects
+  editor/      the Python editor for typed programs (CodeMirror 6)
   ui/          terminal, toasts, dialogs and the app shell
   i18n/        every string the app shows, one table per language
 ```

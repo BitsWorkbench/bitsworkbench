@@ -255,6 +255,7 @@ POSSIBILITY OF SUCH DAMAGE.
 | Blockly, `@blockly/block-plus-minus` | Apache-2.0 |
 | Three.js | MIT |
 | xterm.js, `@xterm/addon-fit` | MIT |
+| CodeMirror 6 (`@codemirror/*`), Lezer (`@lezer/*`), and their helpers `style-mod`, `w3c-keyname`, `crelt` | MIT |
 | Fredoka and Nunito fonts (`@fontsource-variable`) | SIL Open Font License 1.1 |
 
 Each package's licence text is in its folder under `node_modules/` after `npm ci`.
