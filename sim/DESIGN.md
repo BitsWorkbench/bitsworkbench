@@ -1,6 +1,6 @@
-# LabBlocks simulator: design
+# Codacious simulator: design
 
-A browser simulator of Firia Labs' devices inside LabBlocks: CodeBot in a
+A browser simulator of Firia Labs' devices inside Codacious: CodeBot in a
 gymnasium first, then CodeX, then CodeAIR. A student's program runs unchanged on the
 simulator and on the hardware, and the whole product can be tested in the cloud with no USB
 device.
@@ -24,7 +24,7 @@ module runs in Node with no renderer for automated tests.
 ```
  main thread                              worker
  +-----------------------------+          +--------------------------------------+
- | LabBlocks UI, editors       |  run,    | MicroPython (wasm, JSPI)             |
+ | Codacious UI, editors       |  run,    | MicroPython (wasm, JSPI)             |
  | SimDevice (device target)   |--stop,-->|   student program                    |
  |                             |  pause,  |   frozen shims: botcore, codex, ...  |
  | Three.js renderer           |  step,   |        | calls      ^ sensor values   |
@@ -304,7 +304,7 @@ same on every student's machine, and tests and grading stay reproducible:
 `tests/sim.mjs` runs one program flat out and paced against the wall clock (which hands
 out frames at different moments) and checks the traces are identical.
 
-## 5. Plugging into LabBlocks
+## 5. Plugging into Codacious
 
 The app's UI talks to one DeviceManager: `connect`, `disconnect`, `run(source)`, `stop`,
 `sendRaw`, `isConnected`, `targetId`, `state`, and the events `state`, `device`, `data`,
@@ -345,7 +345,7 @@ once it has been chosen.
 2. World: the CodeBot model, the gymnasium's world JSON and reflectance map, the sensors,
    the `botcore` shim. Headless tests drive real student programs.
 3. Rendering: Three.js view of the gymnasium and CodeBot, cameras, LEDs, sound.
-4. LabBlocks: SimDevice, the connect choice, the view panel; blocks and Python editors run
+4. Codacious: SimDevice, the connect choice, the view panel; blocks and Python editors run
    on the simulated CodeBot. Calibrate against a real CB3.
 5. CodeX: `codex` shim, Canvas and Bitmap over a framebuffer, the screen panel, full screen
    with keyboard buttons.
