@@ -14,6 +14,7 @@ import { DeviceSwitch } from '../sim/device-switch.js'
 import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
 import { PythonEditor } from '../editor/python-editor.js'
+import { SnippetPalette } from '../editor/palette.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -642,6 +643,8 @@ export class App {
     let timer
     this.workspace.addEventListener('change', () => {
       $('blocks-hint').hidden = !this.workspace.hasNoBlocks || this.view === 'python'
+      // Another board, another palette (rebuilt only when the board changed).
+      if (this.view === 'python') this.palette.render(this.workspace.targetId)
       clearTimeout(timer)
       timer = setTimeout(() => {
         this._refreshPython()
@@ -679,6 +682,13 @@ export class App {
       label: t('text.editorLabel'),
       describedBy: 'python-editor-help',
       onChange: (text) => this.workspace.setPythonText(text),
+    })
+    // Using a snippet from the read-only view starts writing Python (the blocks are kept).
+    this.palette = new SnippetPalette($('py-palette'), {
+      editor: () => this.pythonEditor,
+      beforeUse: () => {
+        if (this.workspace.mode !== 'text') this._toText()
+      },
     })
     $('btn-mode').addEventListener('click', () =>
       this.workspace.mode === 'text' ? this._toBlocks() : this._toText(),
@@ -732,6 +742,7 @@ export class App {
     const python = view === 'python'
     $('code-pane').hidden = !python
     $('blockly-root').hidden = python
+    if (python) this.palette.render(this.workspace.targetId)
     $('blocks-pane').classList.toggle('is-python', python)
     const toggle = $('btn-view')
     toggle.textContent = t(python ? 'view.toBlocks' : 'view.toPython')

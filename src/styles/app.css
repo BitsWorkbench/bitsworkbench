@@ -375,10 +375,112 @@ kbd {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
   background: var(--paper);
 }
+.code-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 .code-pane[hidden], .blockly-root[hidden] { display: none; }
+
+/* The Python palette: the blocks' categories (drawn as Blockly draws them,
+   see .blocklyToolboxCategory) and a flyout of snippets in their colours. */
+.py-palette {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 2; /* the flyout lies over the editor */
+  background: var(--paper-2);
+  border-right: 1px solid var(--line);
+}
+.py-cats {
+  height: 100%;
+  overflow-y: auto;
+  /* The foot leaves room for the blocks/Python button. */
+  padding: 10px 10px 64px 0;
+}
+.py-cat {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 4px;
+  padding: 4px 16px 4px 10px;
+  border: 0;
+  border-left: 8px solid var(--c);
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14.5px;
+  line-height: 1.25;
+  color: var(--ink);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.py-cat:hover { background-color: rgba(76, 77, 79, 0.06); }
+.py-cat.is-open { background-color: var(--c); color: var(--block-ink); }
+.py-sep { border-bottom: 1px solid var(--line-strong); margin: 8px 10px 8px 0; }
+.py-flyout {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: min(340px, 60vw);
+  overflow-y: auto;
+  padding: 12px;
+  background: color-mix(in srgb, var(--palette-bg) 85%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.py-flyout[hidden] { display: none; }
+.py-snippets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+/* A snippet: its Python on a shade of its category's colour. */
+.snippet {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-left: 6px solid var(--c);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--c) 30%, white);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--block-ink);
+  text-align: left;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: grab;
+  /* Sideways drags are the card's; up and down scroll the list on touch. */
+  touch-action: pan-y;
+  user-select: none;
+}
+.snippet.is-value { border-radius: var(--r-pill); border-left-width: 0; padding: 4px 14px; background: color-mix(in srgb, var(--c) 45%, white); }
+.snippet:hover { filter: brightness(1.04); }
+.snippet .k { font-weight: 700; }
+.snippet-dragging {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  pointer-events: none;
+  cursor: grabbing;
+  opacity: 0.95;
+  box-shadow: var(--shadow-md, 0 6px 18px rgba(0, 0, 0, 0.2));
+}
+/* Where a dragged snippet would land, marked over the text (the text stays put). */
+.python-editor .cm-snippet-marks { pointer-events: none; }
+.python-editor .cm-snippet-marks > div { position: absolute; background: var(--c); border-radius: 2px; }
+.python-editor .cm-snippet-marks > .cm-snippet-slot {
+  background: color-mix(in srgb, var(--c) 25%, transparent);
+  box-shadow: inset 4px 0 0 var(--c);
+}
 /* Room at the foot for the blocks/Python button. */
 .code-pane .python-view { padding-bottom: 72px; }
 /* Bottom left, under the palette's categories, in both views. */
