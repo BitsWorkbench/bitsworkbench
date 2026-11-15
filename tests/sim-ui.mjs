@@ -152,7 +152,7 @@ await page.screenshot({ path: `${SHOT_DIR}/ocb-sim.png` })
 
   await page.selectOption('.sim-realism', 'low')
   await page.check('.sim-show-fps')
-  await page.evaluate(() => window.openCodeBot.device.sim.view.setCamera('orbit'))   // something to draw
+  await page.evaluate(() => window.openCodeBot.device.sim.view.setCamera('rotate'))   // something to draw
   await page.waitForTimeout(1200)
   const view = await page.evaluate(() => ({ level: window.openCodeBot.device.sim.view.level, ratio: window.openCodeBot.device.sim.view.ratio, overlay: document.querySelector('.sim-perf').hidden ? null : document.querySelector('.sim-perf').textContent }))
   if (view.level !== 'low' || view.ratio > 0.6 || !/fps/.test(view.overlay ?? '')) problems.push(`settings: realism low and frame rate shown gave ${JSON.stringify(view)}`)
@@ -239,7 +239,7 @@ while True:
         motors.run(LEFT, 45)
         motors.run(RIGHT, 10)
 `))
-await page.evaluate(() => window.openCodeBot.device.sim.setCamera('top'))
+await page.evaluate(() => window.openCodeBot.device.sim.setCamera('universal'))   // from high above
 await page.waitForTimeout(3000)
 const onOval = await page.evaluate(() => {
   const d = window.openCodeBot.device.sim.lastFrame.devices[0]
@@ -297,9 +297,13 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   })
   if (!/CodeBot/.test(a11y.label ?? '')) problems.push(`a11y: the 3D view's label is ${a11y.label}`)
   if (!/CodeBot in the gymnasium.*facing/.test(a11y.desc)) problems.push(`a11y: the 3D view's description is "${a11y.desc}"`)
+  // in chase, left turns it round the robot, and it stays in chase
+  const camAt = () => page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray())
+  const camBefore = await camAt()
   await page.keyboard.press('ArrowLeft')
-  const turned = await page.evaluate(() => ({ mode: window.openCodeBot.device.sim.cameraMode, pressed: document.querySelector('.sim-chip[data-mode="orbit"]').getAttribute('aria-pressed') }))
-  if (turned.mode !== 'orbit' || turned.pressed !== 'true') problems.push(`a11y: an arrow key left the camera in ${turned.mode} (orbit chip pressed: ${turned.pressed})`)
+  const turned = await page.evaluate(() => ({ mode: window.openCodeBot.device.sim.view.cameraMode, turn: window.openCodeBot.device.sim.view.rig.chase.turn, menu: document.querySelector('.sim-camera').value }))
+  const camAfter = await camAt()
+  if (turned.mode !== 'chase' || turned.menu !== 'chase' || Math.abs(turned.turn + 0.2) > 0.01 || Math.hypot(camAfter[0] - camBefore[0], camAfter[2] - camBefore[2]) < 0.02) problems.push(`a11y: an arrow key in chase gave ${JSON.stringify(turned)} (camera ${camBefore} to ${camAfter})`)
   await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.run('from botcore import *\nimport time\nwhile not buttons.was_pressed(0):\n    time.sleep(0.02)\nprint("held")') })
   await page.waitForTimeout(500)
   await page.focus('.sim-board-btn[data-n="0"]')
@@ -310,6 +314,45 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 }).catch(() => {})
   await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
   if (problems.length === before) console.log('sim-ui: the view is described, arrows turn the camera, and Space holds a board button')
+}
+
+// The camera menu: each of CodeSpace's four where it should be for the robot,
+// Universal flown by the keyboard, and Center back to the camera's home.
+{
+  const before = problems.length
+  // the camera's distance from the robot, and its height above it
+  const where = () => page.evaluate(() => {
+    const v = window.openCodeBot.device.sim.view
+    const d = window.openCodeBot.device.sim.lastFrame.devices[0]
+    const c = v.camera.position
+    return { mode: v.cameraMode, far: Math.hypot(c.x - d.x, c.z + d.y), up: c.y - (d.z ?? 0), at: c.toArray() }
+  })
+  const want = { rotate: [0.25, 0.45], chase: [0.25, 0.35], universal: [0.6, 0.8], attached: [0.1, 0.16] }
+  for (const [mode, [lo, hi]] of Object.entries(want)) {
+    await page.selectOption('.sim-camera', mode)
+    const w = await where()
+    if (w.mode !== mode || w.far < lo || w.far > hi) problems.push(`cameras: ${mode} put the camera ${JSON.stringify(w)}`)
+  }
+  await page.selectOption('.sim-camera', 'universal')
+  await page.focus('.sim-canvas')
+  const from = await where()
+  await page.keyboard.down('w')
+  await page.waitForFunction((y) => window.openCodeBot.device.sim.view.camera.position.y < y - 0.05, from.at[1], { timeout: 5000 })
+    .catch(() => problems.push('cameras: W did not fly the universal camera forward'))
+  await page.keyboard.up('w')
+  await page.selectOption('.sim-camera', 'rotate')
+  const home = await where()
+  await page.focus('.sim-canvas')
+  await page.keyboard.press('ArrowLeft')
+  await page.keyboard.press('ArrowLeft')
+  const moved = await where()
+  await page.click('.sim-center')
+  const back = await where()
+  const gap = (a, b) => Math.hypot(...a.at.map((v, i) => v - b.at[i]))
+  if (gap(moved, home) < 0.05 || gap(back, home) > 0.01) problems.push(`cameras: center did not bring rotate home (${JSON.stringify({ home, moved, back })})`)
+  if (await page.inputValue('.sim-camera') !== 'rotate') problems.push('cameras: the menu does not show rotate')
+  await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
+  if (problems.length === before) console.log('sim-ui: the four cameras sit where they should, Universal flies, and Center brings one home')
 }
 
 // The run controls: at rest Run alone; running, Stop and Pause; paused, Step
@@ -551,6 +594,7 @@ from flight import *
 with recorder:
     pixels.fill(BLUE, 100)
     leds.set_mask(0b10101010, 255)
+    leds.set_status(255)
     fly.take_off(0.5)
     fly.turn_left(45)
     fly.steady(5)
@@ -561,23 +605,25 @@ with recorder:
   await page.waitForTimeout(1500)
   await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codeair.png` })
   // its LEDs as drawn: BYTE 1, 3, 5, 7 lit blue, the others their pale lens,
-  // the pixels blue; every LED on the board (whose top is 17.2 mm up the
-  // model), none floating above it
+  // STA green, the pixels blue; every LED on the board (whose top is 17.2 mm
+  // up the model), none floating above it
   const air = await page.evaluate(() => {
     const f = [...window.openCodeBot.device.sim.view.figures.values()][0]
     const rgb = (c) => c.toArray().map((v) => +v.toFixed(2))
     return {
       lit: f.leds.slice(0, 8).map((l) => rgb(l.mat.emissive)),
+      sta: rgb(f.leds[8].mat.emissive),
       lens: rgb(f.leds[0].mat.color),
       pixel: rgb(f.pixels[0].mat.emissive),
       heights: [...f.leds, ...f.pixels].map((l) => +(l.mesh.position.y * 1000).toFixed(1)),
     }
   })
   const blueOf = ([r, g, b]) => b > 0.5 && r < b / 2
+  const greenOfAir = ([r, g, b]) => g > 0.5 && r < g / 3 && b < g / 3
   const seated = air.heights.every((y) => (y > 17 && y < 19.5) || (y > 14 && y < 15.4))
-  if (!air.lit.every((c, n) => (n % 2 ? blueOf(c) : Math.max(...c) === 0)) || Math.min(...air.lens) < 0.5 || !blueOf(air.pixel) || !seated) {
+  if (!air.lit.every((c, n) => (n % 2 ? blueOf(c) : Math.max(...c) === 0)) || !greenOfAir(air.sta) || Math.min(...air.lens) < 0.5 || !blueOf(air.pixel) || !seated) {
     problems.push(`CodeAIR LEDs: drawn ${JSON.stringify(air)}`)
-  } else console.log('sim-ui: CodeAIR\'s LEDs lit blue on the board, unlit ones pale')
+  } else console.log('sim-ui: CodeAIR\'s LEDs lit blue on the board and STA green, unlit ones pale')
   await page.evaluate(() => window.openCodeBot.device.stop())
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
   const landed = await page.evaluate(() => window.openCodeBot.device.sim.lastFrame.devices[0].z)

@@ -74,7 +74,7 @@ test('every key the code uses is in English', () => {
     ...['backing', 'turnLeft', 'turnRight'].map((m) => `say.${m}`),
     ...['east', 'northEast', 'north', 'northWest', 'west', 'southWest', 'south', 'southEast'].map((c) => `compass.${c}`),
     'codex.up', 'codex.left', 'codex.right', 'codex.down',
-    'simPanel.camChase', 'simPanel.camOrbit', 'simPanel.camTop',
+    ...['rotate', 'chase', 'universal', 'attached'].flatMap((m) => [`simPanel.cam.${m}`, `simPanel.camHelp.${m}`]),
     ...['motors', 'speaker', 'effects', 'music'].flatMap((b) => [`settings.${b}`, `settings.${b}Hint`]),
     ...['low', 'medium', 'high', 'ultra'].map((l) => `settings.level.${l}`),
     'music.creditKidFears',

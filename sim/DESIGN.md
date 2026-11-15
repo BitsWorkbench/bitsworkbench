@@ -184,8 +184,8 @@ effects. CodeBot's 0603 LEDs (2 mm by 1.4 mm, 1 mm tall) sit on their pads at Co
 positions: the user LEDs red, 0 at the left under its 0; the line sensor LEDs and the battery
 LED (beside the power switch) green; the proximity emitters amber. CodeAIR's sit on the
 model's own parts, named by `build-models.mjs` from the CAD's part numbers: the eight BYTE LEDs
-blue (0 at the front), STA blue, CHG amber (it lights while the battery charges, which the
-simulator never does, so it is drawn unlit), and the NeoPixels on the model's four on top and
+blue (0 at the front), STA green, CHG amber (it lights while the battery charges on USB, and
+a simulated CodeAIR is never on USB, so it is drawn unlit), and the NeoPixels on the model's four on top and
 four underneath. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
 shield, USB-C connector and motors) mirrors the studio light whatever the room: reflection
 only, so the painted parts keep the colours the room's own lights give them, and only parts
@@ -301,8 +301,14 @@ The renderer interpolates between the two latest snapshots, so the picture is sm
 frame rate while the world runs at 1 kHz. OffscreenCanvas in a worker works (measured) and
 stays an option if the main thread ever gets busy.
 
-Cameras: an orbit camera, a chase camera that follows the robot, and a top-down view that
-shows the floor lines, which is the view that helps most with line following.
+Cameras: CodeSpace's four, with its names, homes and controls (`view/camera-rig.js`), picked
+from a menu behind its video camera icon, with its Center button beside it to bring the camera
+back home. Rotate (the first) turns round the robot's starting point, 40 cm out and 18 degrees
+above level; Chase follows 30 cm behind and 20 cm up, and a drag or the arrow keys move where
+it chases from; Universal flies freely from 1.5 m up (drag to look, arrows or W A S D to move,
+Q and E down and up, the wheel forward and back), which shows the floor lines from above; and
+Attached rides behind the robot's middle, looking where it goes. The room menu has CodeSpace's
+mountain icon. Both icons are Material Icons (Apache License 2.0), as CodeSpace uses.
 
 ### Realism: what the page draws, never what the world does
 
@@ -616,7 +622,7 @@ Built, on branch `sim` (pushed to firialabs/opencodebot):
   one fresh VM per run.
 - CodeBot in the gymnasium: drive, walls and stalls, line sensors over the court lines,
   proximity, encoders, accelerometer, buttons, LEDs, speaker.
-- In the app: a Simulate button, a Simulator tab (follow, orbit and top cameras, pause,
+- In the app: a Simulate button, a Simulator tab (CodeSpace's four cameras, pause,
   step, speed, the board's buttons, reset), output and errors through the app's usual
   events, sound.
 - Tests: `tests/sim.mjs` (13 headless) and `tests/sim-ui.mjs` (every CodeBot block, the
