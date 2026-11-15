@@ -367,7 +367,7 @@ export default {
   'sim.stoppedTitle': 'El simulador se detuvo',
   'sim.stoppedDetail': 'Vuelve a cargar la página para iniciarlo otra vez.',
   'sim.problemTitle': 'El simulador tuvo un problema',
-  'sim.keysCodex': 'Las flechas presionan su control de dirección, A y B sus botones, F pone pantalla completa.',
+  'sim.keysCodex': 'Las flechas presionan su control de dirección, A y B sus botones, más y menos hacen zoom, F pone pantalla completa.',
   'sim.keys3d': 'Las flechas giran la cámara, más y menos hacen zoom.',
   'sim.viewLabel': '{device} simulado. {keys}',
   'sim.hello': '{device} simulado.',
@@ -450,7 +450,6 @@ export default {
   'course.tee': 'T',
 
   // La cara del CodeX
-  'codex.screen': 'Pantalla del CodeX',
   'codex.pad': 'Control de dirección',
   'codex.up': 'Arriba',
   'codex.left': 'Izquierda',
@@ -459,8 +458,6 @@ export default {
   'codex.buttonA': 'Botón A',
   'codex.buttonB': 'Botón B',
   'codex.fullTitle': 'Pantalla completa (Esc para salir)',
-  'codex.full': '⛶ Pantalla completa',
-  'codex.keys': 'Teclas: flechas, A, B, F',
 
   // La placa simulada en palabras, para un lector de pantalla
   'compass.east': 'este',

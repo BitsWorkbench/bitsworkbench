@@ -10,7 +10,7 @@ import '../sim.css'
 import './boards.css'
 import { SimDevice } from '../sim-device.js'
 import { holdButton } from '../hold-button.js'
-import { boardButtonsHtml } from '../sim-panel.js'
+import { boardButtonsHtml, codexButtonsHtml } from '../sim-panel.js'
 import { t, tHtml, translatePage } from '../../i18n/index.js'
 import { TerminalPanel } from '../../ui/terminal.js'
 import { EXAMPLES, example, exampleFor } from './examples.js'
@@ -51,6 +51,9 @@ class Board {
         <span class="bd-buttons" role="group" aria-label="${tHtml('simPanel.buttons')}">
           ${boardButtonsHtml()}
         </span>
+        <span class="bd-cx-buttons" role="group" aria-label="${tHtml('simPanel.buttons')}">
+          ${codexButtonsHtml()}
+        </span>
         <span class="bd-status" role="status"></span>
       </div>
       <textarea class="bd-code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="${tHtml('boards.program')}"></textarea>
@@ -89,6 +92,10 @@ class Board {
       const n = Number(b.dataset.n)
       holdButton(b, (down) => this.sim.press(n, down))
     }
+    for (const b of this.el.querySelectorAll('.cx-btn')) {
+      const n = Number(b.dataset.b)
+      holdButton(b, (down) => this.sim.press(n, down))
+    }
   }
 
   _fillExamples() {
@@ -115,7 +122,8 @@ class Board {
       if (!ok) return
       this.stage.dataset.on = 'true'
       this.bar.hidden = false
-      this.el.querySelector('.bd-buttons').hidden = this.kind === 'codex'   // CodeX's face has its own
+      this.el.querySelector('.bd-buttons').hidden = this.kind === 'codex'   // CodeX has its own keys
+      this.el.querySelector('.bd-cx-buttons').hidden = this.kind !== 'codex'
     }
     this.terminal.say(t('boards.running'))
     await this.sim.run(this.code.value)

@@ -16,6 +16,14 @@ export function boardButtonsHtml() {
   return [0, 1].map((n) => `<button type="button" class="sim-board-btn" data-n="${n}" title="${tHtml('simPanel.buttonTitle', { n })}">${tHtml('simPanel.buttonFace', { n })}</button>`).join('\n')
 }
 
+// CodeX's keys (BTN_U .. BTN_B = 0 .. 5): its direction pad, then B and A,
+// as the panel and the boards page show them.
+export function codexButtonsHtml() {
+  const key = (b, n, face, label) => `<button type="button" class="cx-btn cx-${b}" data-b="${n}" title="${tHtml(label)}" aria-label="${tHtml(label)}"><span aria-hidden="true">${face}</span></button>`
+  return `<span class="cx-pad" role="group" aria-label="${tHtml('codex.pad')}">${key('L', 3, '◀', 'codex.left')}${key('U', 0, '▲', 'codex.up')}${key('D', 2, '▼', 'codex.down')}${key('R', 1, '▶', 'codex.right')}</span>`
+    + `${key('B', 5, 'B', 'codex.buttonB')}${key('A', 4, 'A', 'codex.buttonA')}`
+}
+
 export class SimPanel {
   constructor(host, sim) {
     this.sim = sim
@@ -44,6 +52,10 @@ export class SimPanel {
         <span class="sim-group sim-buttons" data-for="codebot codeair" role="group" aria-label="${tHtml('simPanel.buttons')}">
           ${boardButtonsHtml()}
         </span>
+        <span class="sim-group sim-buttons" data-for="codex" role="group" aria-label="${tHtml('simPanel.buttons')}">
+          ${codexButtonsHtml()}
+        </span>
+        <button type="button" class="icon-btn sim-full" data-for="codex" ${both('codex.fullTitle')}>⛶</button>
         <a class="sim-chip sim-boards" data-for="codex codeair" href="./boards.html" target="_blank" rel="noopener" title="${tHtml('simPanel.moreBoardsTitle')}">${tHtml('simPanel.moreBoards')}</a>
         <button type="button" class="icon-btn sim-reset" data-for="codebot codeair" ${both('simPanel.reset')}>↺</button>
         <button type="button" class="icon-btn sim-gear" ${both('settings.open')}>⚙️</button>
@@ -90,6 +102,11 @@ export class SimPanel {
       const n = Number(b.dataset.n)
       holdButton(b, (down) => sim.press(n, down))
     }
+    for (const b of host.querySelectorAll('.cx-btn')) {
+      const n = Number(b.dataset.b)
+      holdButton(b, (down) => sim.press(n, down))
+    }
+    q('.sim-full').addEventListener('click', () => sim.view?.fullScreen?.())
 
     sim.addEventListener('state', () => this.refresh())
     sim.addEventListener('device', () => this.refresh())

@@ -8,18 +8,27 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { CodeBotFigure } from './codebot-figure.js'
 import { CodeAIRFigure } from './codeair-figure.js'
+import { CodeXFigure } from './codex-figure.js'
 import { courseMesh } from './course-mesh.js'
 import { PRESETS, AutoRealism } from './realism.js'
 import { settings } from '../settings.js'
 
-const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure }
+const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFigure }
+const SKY = 0xdfe8ef
 
 export class SimView {
-  constructor(host, { assetsBase }) {
+  // `buttons`, for a board whose keys the view presses (CodeX): { keys, onButton },
+  // keys from KeyboardEvent.key to a button's number, onButton(n, down). Its
+  // keys are then pressed by the keyboard (F goes full screen) and by a click
+  // on the model, and the arrow keys no longer turn the camera.
+  constructor(host, { assetsBase, buttons = null }) {
     this.host = host
     this.assetsBase = assetsBase
+    this.buttons = buttons
+    this.down = new Set()
     this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     this.figures = new Map()
     this.frames = [null, null]      // the two latest snapshots, with arrival times
@@ -46,7 +55,7 @@ export class SimView {
     r.domElement.className = 'sim-canvas'
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0xdfe8ef)
+    this.scene.background = new THREE.Color(SKY)
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x6b5b4b, 1.6))
     const sun = new THREE.DirectionalLight(0xffffff, 1.6)
     sun.position.set(3, 8, 2)
@@ -69,6 +78,7 @@ export class SimView {
     canvas.setAttribute('role', 'img')
     canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown + -')
     canvas.addEventListener('keydown', (e) => {
+      if (this.buttons && this._buttonKey(e)) return
       const turn = { ArrowLeft: [-0.2, 0], ArrowRight: [0.2, 0], ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] }[e.key]
       const zoom = { '+': 0.8, '=': 0.8, '-': 1.25, _: 1.25 }[e.key]
       if (!turn && !zoom) return
@@ -85,6 +95,11 @@ export class SimView {
       this.camera.position.setFromSpherical(s).add(c.target)
       this._touch()
     })
+    if (buttons) {
+      canvas.addEventListener('keyup', (e) => this._buttonKey(e))
+      canvas.addEventListener('blur', () => this._releaseAll())
+      this._bindPointer(canvas)
+    }
     this._changedAt = 0           // when the picture last had reason to change
 
     this._resize = new ResizeObserver(() => this.resize())
@@ -101,7 +116,7 @@ export class SimView {
 
   async loadRoom(id) {
     const ask = (this._roomAsked = id)
-    const gltf = await this.loader.loadAsync(`${this.assetsBase}env/${id}/room.glb`)
+    const room = id === 'showroom' ? this._showroom() : (await this.loader.loadAsync(`${this.assetsBase}env/${id}/room.glb`)).scene
     if (ask !== this._roomAsked) return        // another room was chosen meanwhile
     this.room?.removeFromParent()
     // the last room's buffers and textures, off the GPU
@@ -113,13 +128,52 @@ export class SimView {
         m.dispose()
       }
     })
-    this.room = gltf.scene
-    // The rooms are modelled at 1 unit = 10 cm.
-    this.room.scale.setScalar(0.1)
+    this.room = room
+    // The rooms are modelled at 1 unit = 10 cm; the showroom is built in metres.
+    if (id !== 'showroom') room.scale.setScalar(0.1)
+    this.scene.background = id === 'showroom' ? room.userData.sky : new THREE.Color(SKY)
+    this.scene.environment = id === 'showroom' ? this._studio() : null
     this.scene.add(this.room)
     this._realism()
     this.roomId = id
     this._touch()
+  }
+
+  // The showroom, CodeSpace's room for a board held up to look at: a black
+  // floor a metre square with a teal grid at 10 cm (brighter on its centre
+  // lines), under a slate sky, lit as a photographer's studio (_studio).
+  _showroom() {
+    const room = new THREE.Group()
+    room.userData.sky = new THREE.Color().setRGB(0.2, 0.2, 0.3, THREE.SRGBColorSpace)
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x000000 }))
+    floor.rotation.x = -Math.PI / 2
+    room.add(floor)
+    const lines = (coords, color) => {
+      const g = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(coords, 3))
+      const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color().setRGB(...color, THREE.SRGBColorSpace), toneMapped: false }))
+      l.position.y = 0.0005
+      room.add(l)
+    }
+    const minor = [], major = []
+    for (let i = -5; i <= 5; i++) {
+      const at = i / 10
+      const to = i === 0 ? major : minor
+      to.push(at, 0, -0.5, at, 0, 0.5, -0.5, 0, at, 0.5, 0, at)
+    }
+    lines(minor, [0, 0.29, 0.29])
+    lines(major, [0, 0.9, 0.9])
+    return room
+  }
+
+  // Studio light for the showroom's metal and glass to reflect: three's
+  // RoomEnvironment, made once.
+  _studio() {
+    if (!this._studioTex) {
+      const pmrem = new THREE.PMREMGenerator(this.renderer)
+      this._studioTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+      pmrem.dispose()
+    }
+    return this._studioTex
   }
 
   // The line course on the floor (its shape from world/courses.js), or none.
@@ -139,8 +193,111 @@ export class SimView {
     this._realism()
     this._touch()
     fig.update(snap)
-    this._placeCamera(snap, true)
+    if (fig.home) {
+      // a board that stays put: the camera starts where the figure says, in orbit
+      // (from a direction, near enough for its size to fit the view's narrower way)
+      const h = fig.home()
+      const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect))
+      this.cameraMode = 'orbit'
+      this.controls.target.copy(h.target)
+      this.camera.position.copy(h.target).addScaledVector(h.from, (h.size * 0.55) / Math.tan(half))
+      this.controls.minDistance = h.minDistance
+    } else {
+      this._placeCamera(snap, true)
+    }
     return fig
+  }
+
+  // A new picture for a board's screen (CodeX): RGB565 pixels.
+  screen(px) {
+    for (const f of this.figures.values()) f.screenPixels?.(px)
+    this._touch()
+  }
+
+  // The screen's colour at (x, y), for the tests: [r, g, b].
+  screenRGB(x, y) {
+    for (const f of this.figures.values()) if (f.screenRGB) return f.screenRGB(x, y)
+    return null
+  }
+
+  // Where key n of a board's model is on the page, for the tests: { x, y }.
+  keyPoint(n) {
+    for (const f of this.figures.values()) {
+      const p = f.keyCentre?.(n)
+      if (!p) continue
+      p.project(this.camera)
+      const r = this.renderer.domElement.getBoundingClientRect()
+      return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height }
+    }
+    return null
+  }
+
+  fullScreen() {
+    const f = this.host.requestFullscreen?.() ?? this.host.webkitRequestFullscreen?.()
+    Promise.resolve(f).then(() => this.renderer.domElement.focus()).catch(() => {})
+  }
+
+  // A key of the board's (true if it was one), or F for full screen.
+  _buttonKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return false
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault()
+      if (e.type !== 'keydown') return true
+      if (document.fullscreenElement === this.host) document.exitFullscreen?.(); else this.fullScreen()
+      return true
+    }
+    const n = this.buttons.keys[e.key]
+    if (n === undefined) return false
+    e.preventDefault()
+    if (!(e.type === 'keydown' && e.repeat)) this._press(n, e.type === 'keydown')
+    return true
+  }
+
+  _press(n, down) {
+    if (down === this.down.has(n)) return
+    if (down) this.down.add(n); else this.down.delete(n)
+    this.buttons.onButton(n, down)
+  }
+
+  _releaseAll() {
+    for (const n of [...this.down]) this._press(n, false)
+  }
+
+  // A click on a key presses it while held (before the camera sees it, so it
+  // does not turn); over a key the pointer shows a hand.
+  _bindPointer(canvas) {
+    const ray = new THREE.Raycaster()
+    const keyAt = (e) => {
+      const r = canvas.getBoundingClientRect()
+      ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera)
+      for (const f of this.figures.values()) {
+        const n = f.keyAt?.(ray) ?? -1
+        if (n >= 0) return n
+      }
+      return -1
+    }
+    let held = null                 // { id, n }
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || held) return
+      const n = keyAt(e)
+      if (n < 0) return
+      e.stopImmediatePropagation()
+      e.preventDefault()
+      canvas.focus()
+      canvas.setPointerCapture?.(e.pointerId)
+      held = { id: e.pointerId, n }
+      this._press(n, true)
+    }, { capture: true })
+    const up = (e) => {
+      if (!held || e.pointerId !== held.id) return
+      this._press(held.n, false)
+      held = null
+    }
+    canvas.addEventListener('pointerup', up)
+    canvas.addEventListener('pointercancel', up)
+    canvas.addEventListener('pointermove', (e) => {
+      if (!held && e.buttons === 0) canvas.style.cursor = keyAt(e) >= 0 ? 'pointer' : ''
+    })
   }
 
   // A snapshot from the world: { t, devices: [...] }.
@@ -157,9 +314,11 @@ export class SimView {
 
   setCamera(mode) {
     this._touch()
-    this.cameraMode = mode
     const s = this.frames[1]?.frame.devices[0]
-    if (s) this._placeCamera(s, true)
+    if (s && s.x === undefined) return        // a board that stays put keeps its camera
+    this.cameraMode = mode
+    if (!s) return
+    this._placeCamera(s, true)
   }
 
   resize() {
@@ -175,6 +334,7 @@ export class SimView {
     cancelAnimationFrame(this._raf)
     this._resize.disconnect()
     this.controls.dispose()
+    this._studioTex?.dispose()
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }
@@ -212,7 +372,9 @@ export class SimView {
     const devices = this._current()
     if (devices) {
       for (const s of devices) this.figures.get(s.id)?.update(s)
-      if (this.cameraMode !== 'orbit') this._placeCamera(devices[0], false)
+      if (devices[0].x === undefined) {
+        // a board that stays put (CodeX): the camera is the student's
+      } else if (this.cameraMode !== 'orbit') this._placeCamera(devices[0], false)
       else {
         // Orbit follows the robot without fighting the student's drag.
         const t = new THREE.Vector3(devices[0].x, (devices[0].z ?? 0) + 0.04, -devices[0].y)

@@ -8,7 +8,7 @@ Codacious lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No install, no accounts, no setup — just a
 web page and a USB cable.
 
-**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)** — nothing to
+**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
 It is a gentle on-ramp, not a replacement: everything it makes is real

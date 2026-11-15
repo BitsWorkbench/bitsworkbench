@@ -3,9 +3,9 @@
 // onto the panel. Python's bitmap, canvas and tft modules are thin faces of
 // this (python/codex/).
 //
-// Where the device's behaviour is not documented (print's wrapping and
-// scrolling, show's scaling) this follows the spec's best reading; see
-// sim/README.md, "Calibration".
+// show() follows the firmware's C module (canvas_show); where the device's
+// behaviour is not documented (print's wrapping and scrolling) this follows
+// the spec's best reading; see sim/DESIGN.md.
 import { Screen } from './screen.js'
 import { CODEX_6X8 } from './fonts/codex6x8.js'
 
@@ -90,28 +90,43 @@ export class Gfx {
     return this.touched(n)
   }
 
-  // display.show(str): clear, then the text as large as fits, centred.
+  // display.show(str), as the C module draws it (canvas.py clears first when
+  // it is a new string): white, from the top left corner, at scale 2, over
+  // what is there. Nothing wraps it: the device writes each pixel at
+  // x + width * y in the canvas's memory, so text past the right edge
+  // comes round on the left, a row lower, and past the last row it ends.
   showText(id, text) {
-    const it = this.get(id)
-    const b = it.bmp
-    let n = b.fill(0)
-    it.col = it.row = 0
-    const len = Math.max(1, [...text].length)
-    const scale = Math.max(1, Math.min(Math.floor(b.width / (FONT.w * len)), Math.floor(b.height / FONT.h), 8))
-    const x = Math.floor((b.width - len * FONT.w * scale) / 2)
-    const y = Math.floor((b.height - FONT.h * scale) / 2)
-    n += b.drawText(FONT, text, x, y, 0xffff, scale, null)
+    const b = this.get(id).bmp
+    const W = b.width, end = W * b.height, scale = 2
+    let n = 0
+    let x0 = 0
+    for (const ch of text) {
+      const rows = FONT.glyph(ch)
+      for (let r = 0; r < FONT.h; r++) {
+        for (let col = 0; col < FONT.w; col++) {
+          if (!((rows[r] >> (FONT.w - 1 - col)) & 1)) continue
+          const at = x0 + col * scale + W * r * scale
+          for (let yy = 0; yy < scale; yy++) {
+            for (let xx = 0; xx < scale; xx++) {
+              const i = at + xx + W * yy
+              if (i < end) { b.px[i] = 0xffff; n++ }
+            }
+          }
+        }
+      }
+      x0 += FONT.w * scale
+    }
     return this.touched(n)
   }
 
-  // display.show(image): clear, then the image scaled to fit, centred.
+  // display.show(image): cleared, then the image from the top left corner,
+  // at the largest whole scale that fits, as the C module draws it.
   showImage(id, src) {
     const it = this.get(id)
     const b = it.bmp, s = this.get(src).bmp
-    let n = b.fill(0)
+    let n = b.fill(it.transparent >= 0 ? it.transparent : 0)
     const scale = Math.max(1, Math.floor(Math.min(b.width / s.width, b.height / s.height)))
-    const x = Math.floor((b.width - s.width * scale) / 2), y = Math.floor((b.height - s.height * scale) / 2)
-    n += this.image(id, src, x, y, 0, 0, -1, -1, scale)
+    n += this.image(id, src, 0, 0, 0, 0, -1, -1, scale)
     return this.touched(n)
   }
 

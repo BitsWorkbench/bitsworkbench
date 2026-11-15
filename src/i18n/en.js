@@ -367,7 +367,7 @@ export default {
   'sim.stoppedTitle': 'The simulator stopped',
   'sim.stoppedDetail': 'Reload the page to start it again.',
   'sim.problemTitle': 'The simulator hit a problem',
-  'sim.keysCodex': 'Arrow keys press its direction pad, A and B its buttons, F goes full screen.',
+  'sim.keysCodex': 'Arrow keys press its direction pad, A and B its buttons, plus and minus zoom, F goes full screen.',
   'sim.keys3d': 'Arrow keys turn the camera, plus and minus zoom.',
   'sim.viewLabel': 'Simulated {device}. {keys}',
   'sim.hello': 'Simulated {device}.',
@@ -449,8 +449,7 @@ export default {
   'course.gap': 'Oval with a gap',
   'course.tee': 'T',
 
-  // CodeX's face
-  'codex.screen': "CodeX's screen",
+  // CodeX's keys in the bar
   'codex.pad': 'Direction pad',
   'codex.up': 'Up',
   'codex.left': 'Left',
@@ -459,8 +458,6 @@ export default {
   'codex.buttonA': 'Button A',
   'codex.buttonB': 'Button B',
   'codex.fullTitle': 'Full screen (Esc to leave)',
-  'codex.full': '⛶ Full screen',
-  'codex.keys': 'Keys: arrows, A, B, F',
 
   // The simulated board in words, for a screen reader
   'compass.east': 'east',

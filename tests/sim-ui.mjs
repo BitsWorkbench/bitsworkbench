@@ -458,18 +458,32 @@ display.fill(GREEN)
 pixels.fill(RED, 100)
 `))
 await page.waitForTimeout(1500)
-await page.focus('.cx-wrap')
+await page.focus('.sim-canvas')
 await page.keyboard.down('a')
 await page.waitForTimeout(150)
 await page.keyboard.up('a')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 }).catch(() => problems.push('CodeX: the A key did not press button A'))
-const green = await page.evaluate(() => {
-  const c = document.querySelector('.cx-screen').getContext('2d').getImageData(120, 20, 1, 1).data
-  return [c[0], c[1], c[2]]
-})
+const green = await page.evaluate(() => window.openCodeBot.device.sim.view.screenRGB(120, 20))
 if (!(green[1] > 200 && green[0] < 50)) problems.push(`CodeX: the screen is ${green}, not green`)
 else console.log('sim-ui: CodeX drew, and the keyboard pressed its A button')
 await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codex.png` })
+
+// A click on the model's B key presses it (and does not turn the camera).
+await page.evaluate(() => window.openCodeBot.device.run(`from codex import *
+while not buttons.was_pressed(BTN_B):
+    pass
+`))
+await page.waitForTimeout(1000)
+const keyB = await page.evaluate(() => window.openCodeBot.device.sim.view.keyPoint(5))
+const camBefore = await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())
+await page.mouse.move(keyB.x, keyB.y)
+await page.mouse.down()
+await page.mouse.move(keyB.x + 30, keyB.y + 10, { steps: 3 })
+await page.waitForTimeout(150)
+await page.mouse.up()
+await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 })
+  .then(() => console.log('sim-ui: a click on the CodeX model pressed its B key'), () => problems.push('CodeX: a click on the model did not press button B'))
+if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== camBefore) problems.push('CodeX: pressing a key on the model turned the camera')
 
 // CodeAIR flies only in a build with its flight library (SIM_FLIGHT=1,
 // sim/tools/flight-library.mjs), which serves the GPL's text with it.
@@ -589,14 +603,15 @@ while True:
   await xfly.setViewportSize({ width: 1280, height: 900 })
   xfly.on('pageerror', (e) => problems.push(`xfly page error: ${e.message}`))
   await xfly.goto(new globalThis.URL('boards.html?boards=codex:codeair-remote,codeair:xfly', URL).href, { waitUntil: 'networkidle' })
-  for (const b of await xfly.$$('.bd-run')) await b.click()
-  await xfly.waitForFunction(() => window.boards.every((b) => b.sim.state === 'running'), null, { timeout: 20000 })
   // What each board prints, to wait on what happens rather than on the clock
-  // (a slow machine runs the boards slower than real time).
+  // (a slow machine runs the boards slower than real time); heard from before
+  // they run, since one board may start well before another is ready.
   await xfly.evaluate(() => {
     window.__out = window.boards.map(() => '')
     window.boards.forEach((b, i) => b.sim.addEventListener('data', (e) => { window.__out[i] += new TextDecoder().decode(e.detail) }))
   })
+  for (const b of await xfly.$$('.bd-run')) await b.click()
+  await xfly.waitForFunction(() => window.boards.every((b) => b.sim.state === 'running'), null, { timeout: 20000 })
   await xfly.waitForFunction(() => /No pairing found/.test(window.__out[1]), null, { timeout: 20000 })
     .catch(() => problems.push('xfly: the CodeAIR never began to seek a pairing'))
   const holdB = xfly.locator('.bd-card:first-child .cx-B')

@@ -676,6 +676,31 @@ await test('a board described: where, which way, what it is doing; and what chan
   assert.match(describe({ kind: 'codex', pixels: [[1, 0, 0]], leds: [1, 0, 0, 0, 0, 0] }), /1 of 4 NeoPixels lit, 1 of 6 red LEDs on/)
 })
 
+console.log('CodeX screen')
+
+await test("show() draws text as the firmware does: white, top left, scale 2", async () => {
+  const r = await runHeadless({ kind: 'codex', seconds: 5, source: 'from codex import *\nimport time\ndisplay.show("Hello, world")\ntime.sleep(0.2)' })
+  r.device.gfx.present(true)       // as the browser's worker does each frame
+  const px = r.device.screen.px, at = (x, y) => px[y * 240 + x]
+  assert.equal(at(0, 0), 0xffff, "H's top left is white at (0, 0)")
+  assert.equal(at(1, 1), 0xffff, 'at scale 2')
+  let right = 0, below = 0
+  for (let y = 0; y < 240; y++) for (let x = 0; x < 240; x++) if (at(x, y)) { if (x >= 144) right++; if (y >= 16) below++ }
+  assert.equal(right, 0, '12 characters of 12 pixels: nothing right of x 144')
+  assert.equal(below, 0, 'one row of 16 pixels: nothing below y 16')
+})
+
+await test('show() clears only for a new object, or after fill()', async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 5,
+    source: 'from codex import *\nimport time\ns = "A"\ndisplay.show(s)\ndisplay.fill_rect(200, 200, 10, 10, RED)\ndisplay.show(s)\ntime.sleep(0.1)\nprint(display.get_pixel(205, 205))\ndisplay.show("B")\ntime.sleep(0.1)\nprint(display.get_pixel(205, 205))',
+  })
+  assert.equal(r.error ?? null, null)
+  const [same, other] = r.output.trim().split(/\r?\n/)
+  assert.notEqual(same, '(0, 0, 0)', 'showing the same string again drew over the square')
+  assert.equal(other, '(0, 0, 0)', 'a different string cleared it')
+})
+
 console.log('radio')
 
 const PING = `import radio, time

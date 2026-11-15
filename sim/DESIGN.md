@@ -165,6 +165,24 @@ restitution and a random sideways kick; free fall with the motors off. Blocking 
 **CodeX.** No physics. Tilt comes from the user (drag the device, or a phone's orientation)
 as gravity in the device frame.
 
+It is drawn as CodeSpace's simulator draws it: its model (`codex.glb`, from
+`sim/assets/CodeX.glb`) standing 10 cm over the floor of the showroom, a black floor a metre
+square with a teal grid at 10 cm under a slate sky, lit as a studio (three's RoomEnvironment
+in place of CodeSpace's studio light). The picture stands it up whatever the tilt sliders
+say; the accelerometer reads them. Its screen is the program's 240 x 240 pixels on the
+model's active area, 27.72 mm square (the firmware drives a 1.54 inch ST7789), lit by the
+backlight; LEDs 0 to 3 light the model's LEDs under the screen (0 at the right, as the
+silkscreen numbers them), the NeoPixels its four RGB parts (0 and 1 on the left, 2 and 3 on
+the right), both with a glow at the realism levels that have effects. The model has no LEDs
+A and B (4 and 5): they are drawn as copies of LED 0 by the diode marks above keys A and B.
+Its keys go down while held, and a click on one presses it.
+
+`display.show()` draws as the firmware's C module does (`canvas_show`): a string in white
+from the top left corner at scale 2 over what is there, clearing the canvas first only for
+a different object than it showed last (and after any `clear()` or `fill()`), with no
+wrapping (past the right edge the text comes round on the left a row lower, as the device's
+pixel writes do); an image from the top left corner at the largest whole scale that fits.
+
 **Rooms** (`world/environment.js`). A room's physics is CodeSpace's impostors: axis-aligned
 boxes and upright cylinders (table legs, pillars), each meeting a device only in its band of
 heights, so a CodeBot drives under a table a CodeAIR hits. The top of any obstacle is also a
@@ -315,8 +333,9 @@ REPL as terminal bytes, and `program-error` carries tracebacks as the hardware p
 fake serial protocol: the simulator does not pretend to be a REPL over raw bytes.
 
 "Connect" offers the simulated boards beside the USB ones. The simulated board's view sits
-in a panel beside the editors; CodeX's screen can go full screen for a class, with keyboard
-keys mapped to its buttons (arrows for up, down, left and right; A and B for its buttons).
+in a panel beside the editors; CodeX's view can go full screen for a class (F, or the bar's
+button), with keyboard keys mapped to its buttons (arrows for up, down, left and right; A
+and B for its buttons), its keys also in the bar and pressed by a click on the model.
 
 ## 6. Headless and tests
 
@@ -664,8 +683,8 @@ real CodeAIR: `fly_high` cannot fly. `cflib/high_level_commander.py` never impor
 so every command raises `NameError`; and `takeoff` and `land` pack with struct code `?`,
 which neither CircuitPython nor MicroPython has (`ValueError: bad typecode`).
 
-To check on a real CodeX: how `show()` scales and centres, how `print` wraps and scrolls,
-how long a full-screen update takes, the order of LEDs 0 to 3 and of the NeoPixels.
+To check on a real CodeX: how `print` wraps and scrolls, how long a full-screen update
+takes, where LEDs A and B sit.
 
 To check on real infrared: how far apart and how aimed two boards still see each other
 (here, always); the receiver's timing error (3% here); whether a CodeX sees its own emitter

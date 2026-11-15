@@ -28,6 +28,13 @@ const MODELS = {
   'codebot-body.glb': { source: 'BotBody.glb', simplify: 0.5 },
   'codebot-wheel.glb': { source: 'WheelAssy.glb' },
   'codeair.glb': { source: 'CodeAIR.glb', keep: /^Prop\d$/, simplify: 0.2, error: 0.005, flat: true, minPart: 0.008 },
+  // CodeX keeps apart what the figure moves or lights: the six keys, the four
+  // LEDs, the four NeoPixels, the display's active area and its glass.
+  // `rename`: nodes given a name the figure looks for.
+  'codex.glb': {
+    source: 'CodeX.glb', keep: /^(BTN_[UDLRAB]|LED_\d|Neo_\d|LCD_Active|LCD_Shield)$/,
+    rename: { 'CodeX_complete.002': 'LCD_Active' },
+  },
 }
 const TEXTURE_MAX = 1024
 
@@ -43,8 +50,9 @@ await MeshoptSimplifier.ready
 const dropNormals = (doc) => {
   for (const m of doc.getRoot().listMeshes()) for (const p of m.listPrimitives()) p.setAttribute('NORMAL', null)
 }
-for (const [name, { source, keep, simplify: ratio, error = 0.001, flat, minPart }] of Object.entries(MODELS)) {
+for (const [name, { source, keep, rename = {}, simplify: ratio, error = 0.001, flat, minPart }] of Object.entries(MODELS)) {
   const doc = await io.read(path.join(ROOT, 'sim/assets', source))
+  for (const n of doc.getRoot().listNodes()) if (rename[n.getName()]) n.setName(rename[n.getName()])
   for (const n of doc.getRoot().listNodes()) if (n.getCamera() || n.getExtension('KHR_lights_punctual')) n.dispose()
   doc.getRoot().listExtensionsUsed().filter((e) => e instanceof KHRDracoMeshCompression).forEach((e) => e.dispose())
   if (minPart) {

@@ -4,6 +4,8 @@ import _sim
 import colors
 from bitmap import Bitmap, _c
 
+_last_shown = None
+
 
 class Canvas(Bitmap):
     def __init__(self, width, height, x=0, y=0, scale=1, transparent_color=colors.TRANSPARENT):
@@ -47,13 +49,30 @@ class Canvas(Bitmap):
         self._children = []
         _sim.gfx_children(self._h, "")
 
+    # As the C module: show() clears the canvas only for a different object
+    # than it showed last (so showing the same string again draws over it),
+    # and any canvas's clear() or fill() makes it forget what it showed.
+    def clear(self):
+        global _last_shown
+        _last_shown = None
+        super().clear()
+
+    def fill(self, color):
+        global _last_shown
+        _last_shown = None
+        super().fill(color)
+
     def show(self, obj):
+        global _last_shown
         if isinstance(obj, Bitmap):
             _sim.gfx_show_image(self._h, obj._h)
         elif isinstance(obj, str):
+            if obj is not _last_shown:
+                self.clear()
             _sim.gfx_show_text(self._h, obj)
         else:
             raise TypeError("show() takes a str or an image")
+        _last_shown = obj
 
     def print(self, obj, color=colors.WHITE, cursor_x=None, cursor_y=None, scale=2, end="\n", background=colors.BLACK):
         if isinstance(obj, Bitmap):
