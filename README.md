@@ -1,14 +1,14 @@
-# LabBlocks
+# Codacious
 
 **A light, friendly, block-based coding playground for Firia Labs hardware.**
 
-(Formerly OpenCodeBot.)
+(Formerly LabBlocks, and before that OpenCodeBot.)
 
-LabBlocks lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
+Codacious lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No install, no accounts, no setup — just a
 web page and a USB cable.
 
-**▶ [Open LabBlocks](https://firialabs.github.io/opencodebot/)** — nothing to
+**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)** — nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
 It is a gentle on-ramp, not a replacement: everything it makes is real
@@ -58,7 +58,7 @@ not one a browser can open.
 
 ## Browser support
 
-LabBlocks talks to hardware through the
+Codacious talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).
