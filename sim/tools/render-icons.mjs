@@ -1,6 +1,6 @@
 // Renders the device icons (public/icons/dev-codebot.png, dev-codex.png,
 // dev-codeair.png) from the devices' 3D models, as the simulator draws them:
-//   node sim/tools/render-icons.mjs
+//   node sim/tools/render-icons.mjs [codebot] [codex] [codeair]
 // Needs the simulator's built models (npm run sim:assets) and Playwright's
 // Chromium. Run it again when a model changes; the PNGs are committed.
 import { createServer } from 'vite'
@@ -27,7 +27,9 @@ try {
   page.on('pageerror', (e) => console.error(`page error: ${e.message}`))
   await page.goto(`http://127.0.0.1:${port}/sim/tools/icons/index.html`)
   await page.waitForFunction(() => window.iconsReady, null, { timeout: 60000 })
-  for (const kind of ['codebot', 'codex', 'codeair']) {
+  // Name devices on the command line to render only those.
+  const kinds = process.argv.slice(2).length ? process.argv.slice(2) : ['codebot', 'codex', 'codeair']
+  for (const kind of kinds) {
     const url = await page.evaluate((k) => window.renderIcon(k), kind)
     const png = Buffer.from(url.split(',')[1], 'base64')
     const file = path.join(OUT, `dev-${kind}.png`)
