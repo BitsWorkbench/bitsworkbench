@@ -188,8 +188,12 @@ check(
   (await page.isHidden('.py-flyout')) && (await page.evaluate(() => document.activeElement.textContent.includes('Loops'))),
   'Escape closes the flyout and returns to the category',
 )
+// Each key waits for the focus the one before it moved (a slow runner may lag).
+const focusOn = (test) => page.waitForFunction(test, null, { timeout: 5000 }).catch(() => {})
 await page.keyboard.press('Enter')
+await focusOn(() => document.activeElement.classList.contains('snippet'))
 await page.keyboard.press('ArrowDown')
+await focusOn(() => document.activeElement.textContent.startsWith('while'))
 const focused = await page.evaluate(() => document.activeElement.textContent)
 await page.keyboard.press('Enter')
 now = await text()
