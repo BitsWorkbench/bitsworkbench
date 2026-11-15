@@ -92,11 +92,17 @@
             <nav class="py-palette" id="py-palette"></nav>
             <div class="code-main">
               <div class="python-bar">
+                <button id="btn-files" class="btn btn-small btn-ghost" type="button" aria-expanded="false" aria-controls="files-panel" data-i18n="files.button"></button>
                 <span class="python-bar-msg" id="python-bar-msg" data-i18n="text.barBlocks"></span>
+                <span class="file-tab" id="file-tab" hidden><span id="file-name"></span><span class="file-dirty" id="file-dirty" hidden data-i18n-attr="title=files.unsaved;aria-label=files.unsaved">●</span></span>
+                <button id="btn-file-save" class="btn btn-small btn-ghost" type="button" hidden data-i18n="files.save"></button>
                 <button id="btn-mode" class="btn btn-small" type="button" data-i18n="text.toText"></button>
               </div>
-              <pre id="python-view" class="python-view" tabindex="0" data-i18n-attr="aria-label=text.viewLabel"><code>&nbsp;</code></pre>
-              <div id="python-editor" class="python-editor" hidden></div>
+              <div class="code-body">
+                <aside id="files-panel" class="files-panel" hidden></aside>
+                <pre id="python-view" class="python-view" tabindex="0" data-i18n-attr="aria-label=text.viewLabel"><code>&nbsp;</code></pre>
+                <div id="python-editor" class="python-editor" hidden></div>
+              </div>
               <p id="python-editor-help" class="sr-only" data-i18n="text.editorHelp"></p>
             </div>
           </div>

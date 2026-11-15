@@ -30,7 +30,7 @@ waiting for them.
 | 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. |
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
-| 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. |
+| 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. In Chrome and Edge, open a folder on your computer to keep your Python files in, and open and save them there. |
 | 🧭 **Starter projects** | Five or six short example programs for each board, easiest first, each with a goal. Open one from the ⋯ menu and change it. |
 
 ## No device? Simulate one
@@ -139,12 +139,14 @@ src/
     generate.js        assembles imports and setup around the block code
     theme.js           colours and shapes
   workspace/   the Blockly workspace, saving and starter projects
+  files/       where a student's files live: store.js (the FileStore seam) and
+               local-folder.js (a folder on the computer, File System Access API)
   editor/      the Python editor for typed programs (CodeMirror 6)
     python-editor.js   the editor, behind a small surface the app uses
     snippets.js        each block's Python, for the palette beside the editor
     palette.js         that palette: categories, cards, drag (mouse and touch), click
     snippet-drop.js    where a dragged snippet lands, and the one change that puts it there
-  ui/          terminal, toasts, dialogs and the app shell
+  ui/          terminal, toasts, dialogs, the Files panel and the app shell
   i18n/        every string the app shows, one table per language
 ```
 

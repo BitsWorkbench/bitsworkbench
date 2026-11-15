@@ -80,6 +80,7 @@ export class BlockWorkspace extends EventTarget {
   clear() {
     this.workspace.clear()
     this.setMode('blocks')
+    this.dispatchEvent(new CustomEvent('replace'))
     this.dispatchEvent(new CustomEvent('change'))
   }
 
@@ -128,6 +129,8 @@ export class BlockWorkspace extends EventTarget {
     this.dispatchEvent(new CustomEvent('rename'))
     Blockly.serialization.workspaces.load(project.blocks, this.workspace)
     this.setMode(project.mode, typeof project.python === 'string' ? project.python : '')
+    // Another project in place of this one (a file the app had open is no longer it).
+    this.dispatchEvent(new CustomEvent('replace'))
     this.dispatchEvent(new CustomEvent('change'))
   }
 

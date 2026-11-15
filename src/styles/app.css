@@ -384,6 +384,73 @@ kbd {
   flex-direction: column;
 }
 .code-pane[hidden], .blockly-root[hidden] { display: none; }
+.code-body { flex: 1 1 auto; min-height: 0; display: flex; }
+.code-body > .python-view, .code-body > .python-editor { min-width: 0; }
+
+/* The Files panel: a folder on the computer, beside the Python. */
+.files-panel {
+  flex: 0 0 auto;
+  width: 220px;
+  max-width: 45%;
+  overflow-y: auto;
+  padding: 10px;
+  background: var(--paper-2);
+  border-right: 1px solid var(--line);
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.files-panel[hidden] { display: none; }
+.files-note { margin: 0; color: var(--ink-soft); line-height: 1.45; }
+.files-pick { position: relative; cursor: pointer; display: inline-flex; align-items: center; }
+.files-head { display: flex; align-items: center; gap: 6px; width: 100%; }
+.files-folder { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-head button {
+  flex: 0 0 auto;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-sm);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.files-tree, .files-sub { list-style: none; margin: 0; padding: 0; width: 100%; }
+.files-sub { padding-left: 14px; }
+.files-sub[hidden] { display: none; }
+.files-item {
+  display: block;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.files-item:hover { background: rgba(76, 77, 79, 0.08); }
+.files-item.is-current { background: var(--green-soft); font-weight: 700; }
+.files-item.is-other { color: var(--ink-soft); cursor: default; }
+.files-empty { color: var(--ink-soft); padding: 3px 6px; }
+.files-form { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.files-form[hidden] { display: none; }
+.files-name { width: 100%; padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: 6px; font: inherit; font-family: var(--font-mono); }
+.files-error { margin: 0; color: #b3261e; min-height: 0; }
+.files-error:empty { display: none; }
+.files-form-actions { display: flex; gap: 6px; justify-content: flex-end; }
+/* The open file's name in the Python bar, with a dot while it is not saved. */
+.file-tab { display: inline-flex; align-items: center; flex: 0 1 auto; min-width: 0; max-width: 45%; font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+#file-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-tab[hidden], #btn-file-save[hidden] { display: none; }
+.file-dirty { flex: 0 0 auto; color: #a3540a; margin-left: 4px; }
+/* With a file open, the bar's explanation gives up its room first. */
+.python-bar:has(.file-tab:not([hidden])) .python-bar-msg { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* The Python palette: the blocks' categories (drawn as Blockly draws them,
    see .blocklyToolboxCategory) and a flyout of snippets in their colours. */

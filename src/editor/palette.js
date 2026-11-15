@@ -52,8 +52,9 @@ export class SnippetPalette {
       this.use(this.snippetOf(card))
     })
     this.list.addEventListener('keydown', (e) => this.listKeys(e))
-    this.flyout.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return
+    // Escape anywhere in the palette (a card or a category) closes the flyout.
+    host.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || this.open < 0) return
       e.stopPropagation()
       const button = this.cats.querySelector(`.py-cat[data-i="${this.open}"]`)
       this.show(-1)

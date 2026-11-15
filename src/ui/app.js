@@ -15,10 +15,16 @@ import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
 import { PythonEditor } from '../editor/python-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
+import { createFileStore } from '../files/store.js'
+import { FilesPanel } from './files-panel.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
+const OPEN_FILE = 'opencodebot.openFile.v1'
+
+/** A path's last part: its file name. */
+const baseName = (path) => path.split('/').pop()
 
 const $ = (id) => document.getElementById(id)
 
@@ -44,6 +50,8 @@ export class App {
     if (!this.workspace.restore() && this.pickedTarget) {
       this.workspace.loadProject(STARTER_PROJECTS[this.pickedTarget] || { blocks: {} })
     }
+    // After the restore: bringing back the saved project does not close the open file.
+    this._bindFiles()
     this._showMode()
 
     this._greet()
@@ -648,6 +656,7 @@ export class App {
       clearTimeout(timer)
       timer = setTimeout(() => {
         this._refreshPython()
+        this._refreshFile()
         this.workspace.save()
       }, 250)
     })
@@ -762,6 +771,138 @@ export class App {
     $('python-bar-msg').textContent = t(text ? 'text.barText' : 'text.barBlocks')
     // Typed Python is shown as Python; going back to blocks shows the blocks.
     this._showView(text ? 'python' : 'blocks')
+  }
+
+  // ------------------------------------------------------------- files
+
+  /**
+   * A folder on the computer, in the Files panel beside the Python. The
+   * open file is { path, folder, saved }: where it is, and the text last
+   * opened or saved, so the bar can show when the program differs from it.
+   */
+  _bindFiles() {
+    this.files = createFileStore()
+    this.openFile = null
+    try {
+      this.openFile = JSON.parse(localStorage.getItem(OPEN_FILE)) || null
+    } catch {
+      // nothing remembered
+    }
+    this.filesPanel = new FilesPanel($('files-panel'), {
+      store: this.files,
+      open: (path) => this._openFromFolder(path),
+      create: (path) => this._createInFolder(path),
+      openSingle: (file) => this._openSingle(file),
+    })
+    this.filesPanel.setCurrent(this.openFile)
+    $('btn-files').addEventListener('click', () => this._toggleFiles())
+    $('btn-file-save').addEventListener('click', () => this._saveToFile())
+    // Another project in place of this one: the file is no longer the program.
+    this.workspace.addEventListener('replace', () => this._setOpenFile(null))
+    this._refreshFile()
+  }
+
+  async _toggleFiles(show = $('files-panel').hidden) {
+    $('files-panel').hidden = !show
+    $('btn-files').setAttribute('aria-expanded', String(show))
+    if (show) await this._renderFiles()
+  }
+
+  async _renderFiles() {
+    await this.filesPanel.render()
+  }
+
+  async _openFromFolder(path) {
+    let text
+    try {
+      text = await this.files.read(path)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.openFailed', { file: path }), detail: err.message })
+      return
+    }
+    await this._openText(text, baseName(path), path)
+  }
+
+  async _openSingle(file) {
+    if (!file) return
+    await this._openText(await file.text(), file.name, null)
+  }
+
+  /** Put a file's text in the Python editor (asking first if typed work would be lost). */
+  async _openText(text, name, path) {
+    const ws = this.workspace
+    const unsaved = ws.mode === 'text' && ws.pythonText.trim() && ws.pythonText !== this.openFile?.saved
+    if (unsaved) {
+      const ok = await showModal({
+        title: t('files.replaceTitle', { file: name }),
+        bodyHtml: t('files.replaceBodyHtml', { file: name }),
+        confirmText: t('files.replaceConfirm'),
+        cancelText: t('files.keep'),
+      })
+      if (!ok) return
+    }
+    ws.setMode('text', text)
+    ws.rename(name.replace(/\.py$/i, ''))
+    this._setOpenFile(path ? { path, folder: this.files.name, saved: text } : null)
+    this.pythonEditor.focus()
+  }
+
+  /** A new file in the folder, holding the program as it is now; it becomes the open file. */
+  async _createInFolder(path) {
+    const text = this._currentPython()
+    try {
+      await this.files.write(path, text)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
+      return
+    }
+    this._setOpenFile({ path, folder: this.files.name, saved: text })
+    toast({ kind: 'info', title: t('files.savedTitle'), detail: t('files.savedDetail', { file: path, folder: this.files.name }) })
+  }
+
+  /** Save the program to the open file; false when no file is open. */
+  async _saveToFile() {
+    const f = this.openFile
+    if (!f || !this.files) return false
+    // After a reload the folder must be allowed again (this runs from a click or a key).
+    if (this.files.name !== f.folder && (await this.files.reopen()) !== f.folder) {
+      toast({ kind: 'warn', title: t('files.saveFailed', { file: f.path }), detail: t('files.reopenDetail', { folder: f.folder }) })
+      return true
+    }
+    const text = this._currentPython()
+    try {
+      await this.files.write(f.path, text)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.saveFailed', { file: f.path }), detail: err.message })
+      return true
+    }
+    this._setOpenFile({ ...f, saved: text })
+    toast({ kind: 'info', title: t('files.savedTitle'), detail: t('files.savedDetail', { file: f.path, folder: f.folder }) })
+    if (!$('files-panel').hidden) this._renderFiles()
+    return true
+  }
+
+  _setOpenFile(file) {
+    this.openFile = file
+    try {
+      if (file) localStorage.setItem(OPEN_FILE, JSON.stringify(file))
+      else localStorage.removeItem(OPEN_FILE)
+    } catch {
+      // storage blocked: the file is forgotten on reload, nothing worse
+    }
+    this.filesPanel.setCurrent(file)
+    this._refreshFile()
+  }
+
+  /** The open file's name in the Python bar, with a dot while the program differs from it. */
+  _refreshFile() {
+    const f = this.openFile
+    $('file-tab').hidden = !f
+    $('btn-file-save').hidden = !f
+    if (!f) return
+    $('file-name').textContent = baseName(f.path)
+    $('file-tab').title = `${f.folder}/${f.path}`
+    $('file-dirty').hidden = this._currentPython() === f.saved
   }
 
   // -------------------------------------------------------------- menu
@@ -905,6 +1046,11 @@ export class App {
   }
 
   _saveFile() {
+    // With a file open from the folder, Save (and Ctrl+S) saves it there.
+    if (this.openFile && this.files) {
+      this._saveToFile()
+      return
+    }
     const name = fileNameFor(this.workspace.name, 'ocb')
     download(name, JSON.stringify(this.workspace.toProject(), null, 2), 'application/json')
     toast({ kind: 'info', title: t('saved.title'), detail: t('saved.detail', { file: name }) })

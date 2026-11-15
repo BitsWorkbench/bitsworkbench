@@ -98,6 +98,33 @@ export default {
   'text.editorLabel': 'Python program',
   'text.editorHelp': 'Tab indents. Press Escape, then Tab, to leave the editor.',
   'text.viewLabel': 'The Python your blocks make',
+  'files.button': '📁 Files',
+  'files.label': 'Files',
+  'files.intro': 'Pick a folder on your computer to keep your programs in. You can open and save the files in it here.',
+  'files.reopen': 'Open {name} again',
+  'files.openFolder': 'Open a folder',
+  'files.openOther': 'Open another folder',
+  'files.folderLabel': 'Files in {name}',
+  'files.newFile': 'New file',
+  'files.newName': 'Name for the new file (it holds your program as it is now)',
+  'files.cancel': 'Cancel',
+  'files.create': 'Create',
+  'files.badName': 'Use letters, numbers, spaces, - and _ in the name.',
+  'files.exists': '{name} is already in the folder. Pick another name.',
+  'files.empty': 'No files here yet.',
+  'files.unsupported': 'This browser cannot open a folder (Chrome and Edge can). You can still open a Python file, and save it with Download Python in the ⋯ menu.',
+  'files.openSingle': 'Open a Python file',
+  'files.save': 'Save',
+  'files.unsaved': 'Not saved yet',
+  'files.openFailed': 'Could not open {file}',
+  'files.saveFailed': 'Could not save {file}',
+  'files.reopenDetail': 'Allow the folder {folder} again from the Files panel, then save.',
+  'files.savedTitle': 'Saved',
+  'files.savedDetail': '{file} is saved in {folder}.',
+  'files.replaceTitle': 'Open {file}?',
+  'files.replaceBodyHtml': '<p>The Python you are writing is not saved in a file. Opening {file} puts it in place of what you wrote.</p>',
+  'files.replaceConfirm': 'Open it',
+  'files.keep': 'Keep mine',
   'palette.label': 'Python palette',
   'palette.hint': 'Drag it into your program, or press Enter to add it where the cursor is.',
   // The Python editor's own panels (find and replace, folding)
@@ -209,13 +236,16 @@ export default {
         its Python: drag one into your program, or click it to add it where the cursor is.
         Drag a loop or an <code>if</code> over some of your code and that code goes inside it
         (the part it will take is shaded as you drag).</li>
+      <li><strong>📁 Files</strong>, above the Python, opens a folder on your computer (in Chrome or Edge):
+        open the Python files in it, make a new one, and save with <strong>Save</strong> or
+        <kbd>Ctrl</kbd>+<kbd>S</kbd>. A dot next to the file's name means it has changes not saved yet.</li>
       <li><strong>🆕 New</strong> starts over. Click the project name next to it to rename your project.</li>
     </ul>
     <h3>Shortcuts</h3>
     <ul>
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: run your program</li>
       <li><kbd>Esc</kbd>: stop a running program</li>
-      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: save your project to a file</li>
+      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: save your project to a file (or, with a file open from your folder, save that file)</li>
     </ul>
     <h3>Writing Python</h3>
     <ul>
