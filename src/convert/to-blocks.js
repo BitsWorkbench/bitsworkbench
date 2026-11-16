@@ -40,6 +40,7 @@ export function pythonToBlocks(source, targetId) {
   const board = boardOf(source) || targetId
   const ctx = new Context(source, patterns(board))
   ctx.assigned = assignedNames(root)
+  ctx.lists = listNames(root)
 
   let top = statementsOf(root)
   // The header the blocks make: pulled out now, put back below if the
@@ -97,6 +98,16 @@ function assignedNames(node, names = new Set()) {
   return names
 }
 
+/** Variables the program sets to a list (`x = [...]`), whose `len(x)` is a list's length. */
+function listNames(node, names = new Set()) {
+  const [first, , value] = node.children || []
+  if (node.name === 'AssignStatement' && first?.name === 'VariableName' && unwrap(value || {}).name === 'ArrayExpression') {
+    names.add(first.text)
+  }
+  for (const c of node.children || []) listNames(c, names)
+  return names
+}
+
 /** `while True:` with no `break` of its own. */
 function isForever(s) {
   if (s.name !== 'WhileStatement') return false
@@ -135,6 +146,7 @@ class Context {
     this.variables = new Map()
     this.notes = new Map() // statement node -> [comment]
     this.assigned = new Set() // names the program gives a value: its variables
+    this.lists = new Set() // of those, the ones set to a list
   }
 
   text(node) {
@@ -261,12 +273,24 @@ class Context {
 
   value(u, check) {
     u = unwrap(u)
+    let byHand = null
     for (const p of this.pats.values) {
+      // A pattern with more fixed code than a hand-written form (a board's
+      // `ls.check()[0]`) is the more specific; after those, the hand-written
+      // forms, before the operators (`'a' + str(b)` is a join, not a sum).
+      if (p.size < HAND_SIZE && byHand === null) {
+        byHand = HAND_VALUE[u.name]?.call(this, u) || false
+        if (byHand) return byHand
+      }
       const binds = newBinds()
       if (!match(p.expr, u, binds, p, this)) continue
       if (!fits(p.output.check, check)) continue
       const block = this.build(p, binds)
       if (block) return block
+    }
+    if (byHand === null) {
+      byHand = HAND_VALUE[u.name]?.call(this, u)
+      if (byHand) return byHand
     }
     // A name the program gives a value somewhere is a variable.
     if (u.name === 'VariableName' && this.assigned.has(u.text)) {
@@ -298,6 +322,60 @@ class Context {
       }
     }
     if (Object.keys(inputs).length) block.inputs = inputs
+    return block
+  }
+
+  /** A join of these parts: text stays text, `str(x)` is x. */
+  join(parts) {
+    const inputs = {}
+    parts.forEach((p, k) => {
+      const inner = callArgs(p, 'str')
+      inputs[`ADD${k}`] = { block: this.value(inner?.length === 1 ? inner[0] : p) }
+    })
+    return { type: 'text_join', extraState: { itemCount: parts.length }, inputs }
+  }
+
+  /** The output check of a block made here (null: fits anywhere). */
+  outputOf(block) {
+    if (!this.outputs) {
+      this.outputs = { lists_create_with: ['Array'], text_join: ['String'] }
+      for (const p of this.pats.values) if (!(p.type in this.outputs)) this.outputs[p.type] = p.output.check
+    }
+    return this.outputs[block.type] ?? null
+  }
+
+  /**
+   * Where a list index points, as the list blocks say it: { where, at }, or
+   * null for one they do not (the blocks count from 1, Python from 0).
+   */
+  indexOf(node) {
+    const n = wholeNumber(node)
+    const num = (v) => ({ block: { type: 'math_number', fields: { NUM: v } } })
+    if (n === 0) return { where: 'FIRST' }
+    if (n === -1) return { where: 'LAST' }
+    if (n !== null) return n > 0 ? { where: 'FROM_START', at: num(n + 1) } : { where: 'FROM_END', at: num(-n) }
+    // What the blocks write for an index worked out: int(E - 1), and -int(E).
+    const inner = callArgs(node, 'int')
+    if (inner?.length === 1) {
+      const e = unwrap(inner[0])
+      if (e.name === 'BinaryExpression' && e.children[1]?.text === '-' && wholeNumber(e.children[2]) === 1) {
+        return { where: 'FROM_START', at: { block: this.value(e.children[0], ['Number']) } }
+      }
+    }
+    const u = unwrap(node)
+    if (u.name === 'UnaryExpression' && u.children[0]?.text === '-' && u.children.length === 2) {
+      const args = callArgs(u.children[1], 'int')
+      if (args?.length === 1) return { where: 'FROM_END', at: { block: this.value(args[0], ['Number']) } }
+    }
+    return null
+  }
+
+  /** A list block: get, take or remove (MODE), set or insert, at an index. */
+  listBlock(type, mode, index, list, to, statement = false) {
+    const block = { type, fields: { MODE: mode, WHERE: index.where }, inputs: { [type === 'lists_getIndex' ? 'VALUE' : 'LIST']: { block: this.value(list, ['Array']) } } }
+    if (index.at) block.inputs.AT = index.at
+    if (to) block.inputs.TO = { block: this.value(to) }
+    if (statement) block.extraState = { isStatement: true }
     return block
   }
 
@@ -401,6 +479,118 @@ const HAND = {
       inputs: { DELTA: withShadow(by, this.pats.shadows.math_change?.DELTA) },
     }
   },
+}
+
+/** About the most fixed code a hand-written value form has (`len(x)`, `x[0]`). */
+const HAND_SIZE = 6
+
+/** Blockly's own value blocks whose Python is not one fixed shape, by node kind. */
+const HAND_VALUE = {
+  /** `items[i]`: "get item i". */
+  MemberExpression(u) {
+    const sub = subscript(u)
+    const index = sub && this.indexOf(sub.index)
+    return index ? this.listBlock('lists_getIndex', 'GET', index, sub.list) : null
+  },
+
+  CallExpression(u) {
+    const method = methodCall(u)
+    // `items.pop(i)` and `items.pop()`: "get and remove item i" (the last).
+    if (method?.name === 'pop' && method.args.length <= 1) {
+      const index = method.args.length ? this.indexOf(method.args[0]) : { where: 'LAST' }
+      return index ? this.listBlock('lists_getIndex', 'GET_REMOVE', index, method.object) : null
+    }
+    // `random.choice(items)`: "get a random item".
+    if (method?.name === 'choice' && method.args.length === 1 && method.object.name === 'VariableName' && method.object.text === 'random') {
+      return this.listBlock('lists_getIndex', 'GET', { where: 'RANDOM' }, method.args[0])
+    }
+    // `len(x)`: the length of a list, or of a text.
+    const len = callArgs(u, 'len')
+    if (len?.length === 1) {
+      const of = this.value(len[0])
+      const arg = unwrap(len[0])
+      const list = this.outputOf(of)?.includes('Array') || (arg.name === 'VariableName' && this.lists.has(arg.text))
+      return { type: list ? 'lists_length' : 'text_length', inputs: { VALUE: { block: of } } }
+    }
+    // `str(x)` alone: a join of one.
+    const str = callArgs(u, 'str')
+    if (str?.length === 1) return this.join([u])
+    return null
+  },
+
+  /** `'a' + str(b) + 'c'`: "create text with" (a join), when any part is text. */
+  BinaryExpression(u) {
+    const parts = plusParts(u)
+    const texty = (p) => (unwrap(p).name === 'String' && decode(unwrap(p).text) !== null) || callArgs(p, 'str')?.length === 1
+    if (parts.length < 2 || !parts.some(texty)) return null
+    return this.join(parts)
+  },
+
+  /** `[a, b, c]`: "create list with". */
+  ArrayExpression(u) {
+    const items = u.children.filter((c) => !['[', ']', ','].includes(c.name))
+    if (items.some((c) => c.name === 'ArrayComprehensionExpression' || c.text === '*' || c.name === 'for')) return null
+    const block = { type: 'lists_create_with', extraState: { itemCount: items.length } }
+    if (items.length) block.inputs = Object.fromEntries(items.map((c, k) => [`ADD${k}`, { block: this.value(c) }]))
+    return block
+  },
+}
+
+/** Blockly's own statement blocks that are calls or assignments, by hand. */
+Object.assign(HAND, {
+  ExpressionStatement(s) {
+    const method = methodCall(s.children[0])
+    if (!method) return null
+    // `items.pop(i)` on its own: "remove item i".
+    if (method.name === 'pop' && method.args.length <= 1) {
+      const index = method.args.length ? this.indexOf(method.args[0]) : { where: 'LAST' }
+      return index ? this.listBlock('lists_getIndex', 'REMOVE', index, method.object, null, true) : null
+    }
+    // `items.insert(i, x)` and `items.append(x)`: "insert at".
+    if (method.name === 'insert' && method.args.length === 2) {
+      const index = this.indexOf(method.args[0])
+      return index ? this.listBlock('lists_setIndex', 'INSERT', index, method.object, method.args[1]) : null
+    }
+    if (method.name === 'append' && method.args.length === 1) {
+      return this.listBlock('lists_setIndex', 'INSERT', { where: 'LAST' }, method.object, method.args[0])
+    }
+    return null
+  },
+
+  /** `items[i] = x`: "set item i". */
+  AssignStatement(s) {
+    const [target, op, to] = s.children
+    const sub = target && op?.text === '=' && to && subscript(target)
+    const index = sub && this.indexOf(sub.index)
+    return index ? this.listBlock('lists_setIndex', 'SET', index, sub.list, to) : null
+  },
+})
+
+/** `list[index]` with one index: { list, index }, or null. */
+function subscript(node) {
+  node = unwrap(node)
+  if (node.name !== 'MemberExpression') return null
+  const [list, open, index, close] = node.children
+  if (open?.name !== '[' || close?.name !== ']' || node.children.length !== 4) return null
+  return { list, index }
+}
+
+/** `object.name(args)`: { object, name, args }, or null. */
+function methodCall(node) {
+  node = unwrap(node)
+  if (node.name !== 'CallExpression') return null
+  const [callee, list] = node.children
+  if (callee?.name !== 'MemberExpression' || callee.children[1]?.name !== '.' || list?.name !== 'ArgList') return null
+  const args = list.children.filter((c) => c.name !== '(' && c.name !== ')' && c.name !== ',')
+  if (args.some((a) => a.children?.some((c) => c.name === 'AssignOp'))) return null
+  return { object: callee.children[0], name: callee.children[2]?.text, args }
+}
+
+/** The parts of `a + b + c`, left to right. */
+function plusParts(node) {
+  node = unwrap(node)
+  if (node.name === 'BinaryExpression' && node.children[1]?.text === '+') return [...plusParts(node.children[0]), node.children[2]]
+  return [node]
 }
 
 /** A whole number written as one (`3`, `-1`), or null. */
