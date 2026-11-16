@@ -39,6 +39,48 @@ if (!(await reachable(new globalThis.URL('sim-assets/env/gym/world.json', URL).h
 }
 
 const problems = []
+
+// A board's NeoPixels as drawn (led.js neoPixel): each one's lens in the cup
+// in its part's top, as the model has it: a real cup found (shallower than
+// the part, narrower than it), the lens no wider than the cup, over the
+// part's middle, and from inside the part to just over its top face. A lens
+// sized to the whole part, or floating over it, fails.
+function lensesSeated() {
+  const f = [...window.openCodeBot.device.sim.view.figures.values()][0]
+  const out = []
+  f.pixels.forEach((p, n) => {
+    const { lens, part, mesh, facing } = p
+    if (!lens || !part) { out.push(`pixel ${n}: no lens from its part`); return }
+    const frame = mesh.parent
+    frame.updateMatrixWorld(true)
+    const inv = frame.matrixWorld.clone().invert()
+    const V = mesh.position.constructor
+    const lo = new V(Infinity, Infinity, Infinity), hi = new V(-Infinity, -Infinity, -Infinity)
+    part.traverse((o) => {
+      if (!o.isMesh) return
+      const pos = o.geometry.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        const v = new V().fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).applyMatrix4(inv)
+        lo.min(v); hi.max(v)
+      }
+    })
+    const g = mesh.geometry.parameters
+    const top = facing > 0 ? hi.y : lo.y
+    const face = mesh.position.y + facing * g.height / 2     // the lens's outer face
+    const inner = mesh.position.y - facing * g.height / 2
+    const off = Math.hypot(mesh.position.x - (lo.x + hi.x) / 2, mesh.position.z - (lo.z + hi.z) / 2)
+    const fails = [
+      !(lens.depth > 0 && lens.depth < hi.y - lo.y) && `cup depth ${lens.depth}`,
+      !(lens.side < 0.9 * lens.body) && `cup ${lens.side} as wide as the part ${lens.body}`,
+      !(g.width <= lens.side && g.depth <= lens.side) && `lens ${g.width} x ${g.depth} wider than its cup ${lens.side}`,
+      !(off < 0.1 * lens.body) && `lens ${off} off the part's middle`,
+      !(facing * (face - top) > 0 && facing * (face - top) < 0.25 * lens.depth) && `lens face ${face} not just over the top ${top}`,
+      !(inner >= lo.y && inner <= hi.y) && `lens base ${inner} outside the part`,
+    ].filter(Boolean)
+    if (fails.length) out.push(`pixel ${n}: ${fails.join('; ')}`)
+  })
+  return out
+}
 // OCB_CHROMIUM: use an installed Chromium when Playwright's own is missing.
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
 // One context, so a second page is another tab of the same browser.
@@ -559,6 +601,12 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', nu
 const green = await page.evaluate(() => window.openCodeBot.device.sim.view.screenRGB(120, 20))
 if (!(green[1] > 200 && green[0] < 50)) problems.push(`CodeX: the screen is ${green}, not green`)
 else console.log('sim-ui: CodeX drew, and the keyboard pressed its A button')
+{
+  const cxPixel = await page.evaluate(() => [...window.openCodeBot.device.sim.view.figures.values()][0].pixels[0].mat.emissive.toArray())
+  const cxLens = await page.evaluate(lensesSeated)
+  if (!(cxPixel[0] > 0.5 && cxPixel[1] < 0.1 && cxPixel[2] < 0.1) || cxLens.length) problems.push(`CodeX NeoPixels: lit ${cxPixel}; ${cxLens.join(' | ')}`)
+  else console.log('sim-ui: CodeX\'s NeoPixels lit red in the cup in each one\'s top')
+}
 await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codex.png` })
 
 // A click on the model's B key presses it (and does not turn the camera).
@@ -736,6 +784,9 @@ with recorder:
   if (!air.lit.every((c, n) => (n % 2 ? blueOf(c) : Math.max(...c) === 0)) || !greenOfAir(air.sta) || Math.min(...air.lens) < 0.5 || !blueOf(air.pixel) || !seated) {
     problems.push(`CodeAIR LEDs: drawn ${JSON.stringify(air)}`)
   } else console.log('sim-ui: CodeAIR\'s LEDs lit blue on the board and STA green, unlit ones pale')
+  const airLens = await page.evaluate(lensesSeated)
+  if (airLens.length) problems.push(`CodeAIR NeoPixels: ${airLens.join(' | ')}`)
+  else console.log('sim-ui: CodeAIR\'s NeoPixels lit in the cup in each one\'s top, above and below the arms')
   await page.evaluate(() => window.openCodeBot.device.stop())
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
   const landed = await page.evaluate(() => window.openCodeBot.device.sim.lastFrame.devices[0].z)

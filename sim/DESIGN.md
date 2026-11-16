@@ -179,8 +179,8 @@ if looked down on; tilted, the model turns its right or bottom edge away from th
 the way that edge going down looks from above (`codex-figure.js`), and the arrows stay put. Its screen is the program's 240 x 240 pixels on the
 model's active area, 27.72 mm square (the firmware drives a 1.54 inch ST7789), lit by the
 backlight; LEDs 0 to 3 light the model's LEDs under the screen (0 at the right, as the
-silkscreen numbers them), the NeoPixels its four RGB parts (0 and 1 on the left, 2 and 3 on
-the right), both with a glow at the realism levels that have effects. The model has no LEDs
+silkscreen numbers them), the NeoPixels the cups in its four RGB parts (0 and 1 on the left,
+2 and 3 on the right), both with a glow at the realism levels that have effects. The model has no LEDs
 A and B (4 and 5): they are drawn as copies of LED 0 by the diode marks above keys A and B.
 Its keys go down while held, and a click on one presses it.
 
@@ -209,8 +209,8 @@ LED (beside the power switch) green; the proximity emitters amber. CodeAIR's sit
 model's own parts, named by `build-models.mjs` from the CAD's part numbers: the eight BYTE LEDs
 blue (0 at the front), STA green, CHG amber (it lights while the battery charges on USB, and
 a simulated CodeAIR is never on USB, so it is drawn unlit), and the NeoPixels on the model's four on top and
-four underneath, each lens turned as its part is on the board (the arms' NeoPixels sit at
-about 34 degrees; `yawIn` reads the angle from the model). CodeBot's battery LED is off
+four underneath, each lit in the cup in its top and turned as its part is on the board (the
+arms' NeoPixels sit at about 34 degrees; `yawIn` reads the angle from the model). CodeBot's battery LED is off
 until a program turns it on, as botcore leaves it.
 
 **One lit look on every board** (`Light` in `led.js`, CodeX's LEDs and NeoPixels too): a lit
@@ -221,7 +221,17 @@ pale package under it, a channel clipping or the film curve each push orange tow
 and every colour toward white); its glow is a tint of the same colour laid over what is
 around it rather than light added to it (added light runs to white over the lit body and
 turns red toward yellow over a green board). CodeSpace's simulator likewise lights an LED in
-the program's colour as is, with a glow layer of that colour. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
+the program's colour as is, with a glow layer of that colour.
+
+**NeoPixels light in their cup** (`neoPixel` and `lensIn` in `led.js`, on CodeX and CodeAIR).
+A NeoPixel is a white body with a square cup in its top, where the LED and its clear lens
+sit. Lit, a clear solid fills that cup to just over its rim, in the program's colour, so the
+white rim still shows round it; unlit, the model's own cup shows. The cup's size and depth
+come from the part's geometry: its rim is the top face's inner edge (on both boards a 3.5 mm
+part with a 2.6 mm cup, 0.7 mm deep), turned as `yawIn` finds the part. The glow over a
+lit NeoPixel is faint and a little over twice the part's width, light from the lens rather
+than a cloud over the board; CodeBot's LEDs, 5.1 mm apart, have a smaller, fainter one, so
+each stays its own light and the digits printed by them stay readable. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
 shield, USB-C connector and motors) mirrors the studio light whatever the room: reflection
 only, so the painted parts keep the colours the room's own lights give them, and only parts
 that are metal (a plain metallic material or a palette's metal), never a printed board.

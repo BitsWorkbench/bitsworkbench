@@ -25,13 +25,17 @@ const BLACK = new THREE.Color(0, 0, 0)
 const GLOW = 0.85                // the glow's strength at its middle, lit full
 
 // A light's look: `mat` its body's material (a lens, or the part's own),
-// `halo` its glow; `rest` the body's colour unlit.
+// `halo` its glow; `rest` the body's colour unlit; `glow` the glow's
+// strength, 1 the most. A lens whose material is invisible unlit (a
+// NeoPixel's, over the part's own cup) shows only when lit.
 export class Light {
-  constructor(mat, halo, rest = mat.color.clone()) {
+  constructor(mat, halo, rest = mat.color.clone(), glow = 1) {
     this.mat = mat
     this.halo = halo
     this.rest = rest.clone()
     this.restOpacity = mat.opacity
+    this.restVisible = mat.visible
+    this.glow = glow
     this.color = new THREE.Color(1, 1, 1)
     this.level = 0
     this.show(this.color, 0)
@@ -55,8 +59,9 @@ export class Light {
     this.mat.color.copy(lit ? BLACK : this.rest)
     this.mat.opacity = lit ? 1 : this.restOpacity
     this.mat.toneMapped = !lit
+    this.mat.visible = lit || this.restVisible
     this.halo.material.color.copy(this.color)
-    this.halo.material.opacity = GLOW * k
+    this.halo.material.opacity = GLOW * this.glow * k
     this.halo.visible = lit
   }
 }
@@ -74,14 +79,16 @@ export function glowSprite(size) {
 
 export class Led extends Light {
   // size [x, y, z] in the parent's units; glow: the halo's width there;
-  // facing: 1 for an LED on a board's top, -1 for one on its underside.
-  constructor(parent, position, size, color, glow, facing = 1) {
+  // facing: 1 for an LED on a board's top, -1 for one on its underside;
+  // strength: the glow's, 1 the most; clear: a lens that shows only lit,
+  // the part's own look showing through unlit.
+  constructor(parent, position, size, color, glow, facing = 1, { strength = 1, clear = false } = {}) {
     const mat = new THREE.MeshStandardMaterial({
       color: LENS, transparent: true, opacity: 0.8, roughness: 0.35, metalness: 0,
-      emissive: 0x000000,
+      emissive: 0x000000, visible: !clear,
     })
     const halo = glowSprite(glow)
-    super(mat, halo, LENS)
+    super(mat, halo, LENS, strength)
     this.color.set(color)
     this.mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), mat)
     this.mesh.position.copy(position)
@@ -160,6 +167,75 @@ export function yawIn(frame, object) {
   let yaw = -best.angle
   yaw -= Math.round(yaw / q) * q
   return yaw
+}
+
+// A NeoPixel's lens, from its part's geometry in `frame` (an ancestor of
+// it): a NeoPixel is a white body with a square cup in its top face, where
+// the LED and its clear lens sit. Returns the cup's middle at the top face
+// (`centre`), its side there (`side`), its depth (`depth`), the part's turn
+// (`yaw`, as yawIn) and its outside (`body`, the side of its footprint), all
+// in the frame's units. facing: 1 for a part on a board's top, -1 for one
+// on its underside (its cup opens downward).
+//
+// The cup's rim is the top face's inner edge: of the top face's corners, the
+// nearest the middle (measured square-wise, along the part's sides) are on
+// it. Its floor is the level, below the top, of the corners inside the rim.
+export function lensIn(frame, part, facing = 1) {
+  const yaw = yawIn(frame, part)
+  frame.updateMatrixWorld(true)
+  const inv = new THREE.Matrix4().copy(frame.matrixWorld).invert()
+  const pts = []
+  part.traverse((o) => {
+    if (!o.isMesh) return
+    const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)
+    const pos = o.geometry.attributes.position
+    for (let i = 0; i < pos.count; i++) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(m))
+  })
+  // along the part's sides: u, w (three turns +x by yaw toward -z)
+  const c = Math.cos(yaw), s = Math.sin(yaw)
+  const uw = (p) => [c * p.x - s * p.z, s * p.x + c * p.z]
+  let u0 = Infinity, u1 = -Infinity, w0 = Infinity, w1 = -Infinity, y0 = Infinity, y1 = -Infinity
+  for (const p of pts) {
+    const [u, w] = uw(p)
+    u0 = Math.min(u0, u); u1 = Math.max(u1, u); w0 = Math.min(w0, w); w1 = Math.max(w1, w)
+    y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y)
+  }
+  const um = (u0 + u1) / 2, wm = (w0 + w1) / 2
+  const top = facing > 0 ? y1 : y0
+  const eps = (y1 - y0) * 0.01
+  const out = (p) => { const [u, w] = uw(p); return Math.max(Math.abs(u - um), Math.abs(w - wm)) }
+  let half = Infinity
+  for (const p of pts) if (Math.abs(p.y - top) < eps) half = Math.min(half, out(p))
+  let depth = 0
+  for (const p of pts) {
+    if (Math.abs(p.y - top) < eps || out(p) >= half * 0.98) continue
+    const d = Math.abs(top - p.y)
+    if (depth === 0 || d < depth) depth = d
+  }
+  // the middle back in the frame: (u, w) turned back by yaw
+  const centre = new THREE.Vector3(c * um + s * wm, top, -s * um + c * wm)
+  return { centre, side: 2 * half, depth, yaw, body: Math.min(u1 - u0, w1 - w0) }
+}
+
+// A NeoPixel lit over its cup: a clear solid that fills the cup to just over
+// its rim, so the white body shows round it, lit in the program's colour,
+// and a faint glow over it, a little over twice the part's width: light
+// from the lens, not a cloud over the board. Unlit, the part's own cup
+// shows. frame: the part's ancestor that the lens joins.
+export function neoPixel(frame, part, facing = 1) {
+  const lens = lensIn(frame, part, facing)
+  const side = lens.side * 0.98                 // inside the rim
+  const over = lens.depth * 0.08                // standing just over the top face
+  const h = lens.depth + over
+  const at = lens.centre.clone()
+  at.y += facing * (over - h / 2)
+  const led = new Led(frame, at, [side, h, side], 0xffffff, lens.body * 2.5, facing, { strength: 0.6, clear: true })
+  led.mesh.rotation.y = lens.yaw
+  led.halo.position.y = lens.centre.y + facing * over * 2
+  led.lens = lens
+  led.part = part
+  led.facing = facing
+  return led
 }
 
 // Metal that shines: the figure's materials mirror the studio light `env`
