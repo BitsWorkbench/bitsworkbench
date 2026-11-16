@@ -607,6 +607,18 @@ kbd {
 .python-editor .cm-activeLine { background: rgba(78, 183, 72, 0.06); }
 .python-editor .cm-activeLineGutter { background: rgba(78, 183, 72, 0.14); }
 .python-editor .cm-run-line { background: var(--gold-soft); outline: 1px solid var(--gold); }
+/* Lines that will become grey Python blocks: a quiet mark beside them. */
+.python-editor .cm-no-block-gutter { width: 10px; }
+.python-editor .cm-no-block-mark {
+  display: inline-block;
+  width: 4px;
+  height: 1.1em;
+  margin-left: 3px;
+  vertical-align: middle;
+  border-radius: 2px;
+  /* The Python blocks' grey, dark enough to see (3:1 on the editor's white). */
+  background: #8a8f98;
+}
 .python-editor[hidden], .python-view[hidden] { display: none; }
 .python-editor .k { color: #b0409a; font-weight: 700; }
 .python-editor .s { color: var(--green-deep); }

@@ -142,6 +142,28 @@ await page.click('#btn-mode')
 check((await mode()) === 'text', 'Edit as Python again')
 check((await editorText()) === typedBefore, 'Python only looked at in blocks comes back exactly as typed')
 
+// Lines that will become grey Python blocks have a quiet mark in the gutter,
+// worked out again once typing pauses.
+await page.evaluate(() => {
+  window.openCodeBot.pythonEditor.value = "print('one')\ntry:\n    print(1 / 0)\nexcept ZeroDivisionError:\n    pass\nprint(f'{2} two')\n"
+})
+const marked = () => page.evaluate(() => window.openCodeBot.pythonEditor.markedLines().join())
+await page.waitForFunction(() => window.openCodeBot.pythonEditor.markedLines().length > 0)
+check((await marked()) === '2,3,4,5,6', `a statement with no block, all its lines, and a line with a piece of Python are marked (${await marked()})`)
+check(
+  await page.evaluate(() => [...document.querySelectorAll('.cm-no-block-mark')].every((m) => m.title.includes('grey Python block'))),
+  'each mark says why',
+)
+await page.evaluate(() => {
+  const view = window.openCodeBot.pythonEditor.view
+  view.dispatch({ changes: { from: view.state.doc.length, insert: 'import math\n' } })
+})
+await page.waitForFunction(() => window.openCodeBot.pythonEditor.markedLines().includes(7))
+check((await marked()) === '2,3,4,5,6,7', 'a line typed with no block is marked once typing pauses')
+await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\n" })
+await page.waitForFunction(() => window.openCodeBot.pythonEditor.markedLines().length === 0)
+check(true, 'and the marks go when every line has a block')
+
 // Code that does not parse stays Python, with the cursor on the line to fix
 await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\nprint((\nprint('three')\n" })
 await page.click('#btn-mode')

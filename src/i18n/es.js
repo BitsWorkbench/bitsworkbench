@@ -149,6 +149,7 @@ export default {
   'editor.foldedCode': 'código plegado',
   'editor.unfold': 'desplegar',
   'editor.to': 'a',
+  'editor.noBlock': 'Esta línea aún no tiene bloque: se convierte en un bloque gris de Python.',
   'editor.selectionDeleted': 'Selección borrada',
   'editor.controlCharacter': 'Carácter de control',
   'text.startedTitle': 'Ahora estás escribiendo Python',

@@ -152,6 +152,7 @@ export default {
   'editor.foldedCode': 'folded code',
   'editor.unfold': 'unfold',
   'editor.to': 'to',
+  'editor.noBlock': 'No block for this line yet: it becomes a grey Python block.',
   'editor.selectionDeleted': 'Selection deleted',
   'editor.controlCharacter': 'Control character',
   'text.startedTitle': "You're writing Python now",

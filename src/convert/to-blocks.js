@@ -95,7 +95,12 @@ export function pythonToBlocks(source, targetId) {
   const made = new Set(madeLines(ctx.state(defBlocks, start, foreverBlock), board))
   const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')))
   start.unshift(...kept.map((s) => ctx.grey(s)))
-  return { ok: true, state: ctx.state(defBlocks, start, foreverBlock), targetId: board }
+  return {
+    ok: true,
+    state: ctx.state(defBlocks, start, foreverBlock),
+    targetId: board,
+    pythonLines: ctx.greyLines([...defBlocks, ...start, foreverBlock]),
+  }
 }
 
 /** Where the last statement's code ends (a body's last statement, in turn). */
@@ -230,6 +235,7 @@ class Context {
     this.functions = new Map() // Python name -> { name, params, returns }: functionsOf
     this.fn = null // the function whose body is being made into blocks
     this.loose = [] // comments with no code after them: workspace notes
+    this.greyAt = new WeakMap() // a grey Python block -> the code it holds
   }
 
   text(node) {
@@ -390,6 +396,29 @@ class Context {
     return block
   }
 
+  /**
+   * The lines (from 1) of the code these blocks hold as grey Python blocks,
+   * in order: the lines with no block of their own.
+   */
+  greyLines(blocks) {
+    const lines = new Set()
+    const walk = (b) => {
+      if (!b) return
+      const node = this.greyAt.get(b)
+      if (node) {
+        const end = node.from + this.source.slice(node.from, node.to).trimEnd().length
+        for (let l = lineAt(this.source, node.from); l <= lineAt(this.source, end); l++) lines.add(l)
+      }
+      for (const input of Object.values(b.inputs || {})) {
+        walk(input.block)
+        walk(input.shadow)
+      }
+      walk(b.next?.block)
+    }
+    blocks.forEach(walk)
+    return [...lines].sort((a, b) => a - b)
+  }
+
   /** A statement with no block: a grey Python block holding its text. */
   grey(s) {
     const lineStart = this.source.lastIndexOf('\n', s.from - 1) + 1
@@ -401,6 +430,7 @@ class Context {
       .map((l, k) => (k === 0 ? l : l.replace(new RegExp(`^ {0,${indent}}`), '')))
       .join('\n')
     const block = { type: 'ocb_python', fields: { CODE: text } }
+    this.greyAt.set(block, s)
     this.note(block, [s])
     return block
   }
@@ -432,7 +462,9 @@ class Context {
     if (u.name === 'VariableName' && this.assigned.has(u.text)) {
       return { type: 'variables_get', fields: { VAR: { id: this.variable(u.text) } } }
     }
-    return { type: 'ocb_python_value', fields: { CODE: this.text(u) } }
+    const grey = { type: 'ocb_python_value', fields: { CODE: this.text(u) } }
+    this.greyAt.set(grey, u)
+    return grey
   }
 
   /** The block a pattern matched, with its fields and inputs filled in. */
