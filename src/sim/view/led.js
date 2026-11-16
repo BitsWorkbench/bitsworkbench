@@ -62,6 +62,58 @@ export function boxIn(frame, object) {
   return box
 }
 
+// How far an object is turned about the vertical in `frame` (an ancestor of
+// it), from its own geometry: the turn of the smallest rectangle around its
+// footprint, in radians, between -pi/4 and pi/4 (a part's footprint repeats
+// every quarter turn). A part placed at an angle on a board, such as a
+// NeoPixel on a drone's arm, gets its lens at that angle.
+export function yawIn(frame, object) {
+  frame.updateMatrixWorld(true)
+  const inv = new THREE.Matrix4().copy(frame.matrixWorld).invert()
+  const pts = []
+  const v = new THREE.Vector3()
+  object.traverse((o) => {
+    if (!o.isMesh) return
+    const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)
+    const pos = o.geometry.attributes.position
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m)
+      pts.push([v.x, v.z])
+    }
+  })
+  // the footprint's convex hull (monotone chain); the smallest rectangle
+  // around it has a side along one of its edges
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const half = (list) => {
+    const h = []
+    for (const p of list) {
+      while (h.length >= 2 && cross(h[h.length - 2], h[h.length - 1], p) <= 0) h.pop()
+      h.push(p)
+    }
+    return h.slice(0, -1)
+  }
+  const hull = [...half(pts), ...half([...pts].reverse())]
+  let best = { area: Infinity, angle: 0 }
+  hull.forEach((a, i) => {
+    const b = hull[(i + 1) % hull.length]
+    const angle = Math.atan2(b[1] - a[1], b[0] - a[0])
+    const c = Math.cos(angle), s = Math.sin(angle)
+    let u0 = Infinity, u1 = -Infinity, w0 = Infinity, w1 = -Infinity
+    for (const [x, z] of hull) {
+      const u = c * x + s * z, w = -s * x + c * z
+      u0 = Math.min(u0, u); u1 = Math.max(u1, u); w0 = Math.min(w0, w); w1 = Math.max(w1, w)
+    }
+    const area = (u1 - u0) * (w1 - w0)
+    if (area < best.area - 1e-12) best = { area, angle }
+  })
+  // an edge along (cos a, sin a) in (x, z) is three's x axis turned by -a
+  const q = Math.PI / 2
+  let yaw = -best.angle
+  yaw -= Math.round(yaw / q) * q
+  return yaw
+}
+
 // Metal that shines: the figure's materials mirror the studio light `env`
 // (view.js), so a silver connector or shield reads as silver, not black, in
 // any room. Reflection only: the studio's diffuse light is left out, so the
