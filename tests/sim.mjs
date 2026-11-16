@@ -12,7 +12,7 @@ import { AIR } from '../src/sim/world/codeair.js'
 import { ROOMS } from '../src/sim/kinds.js'
 import { AutoRealism } from '../src/sim/view/realism.js'
 import * as THREE from 'three'
-import { yawIn } from '../src/sim/view/led.js'
+import { yawIn, Light } from '../src/sim/view/led.js'
 import { describe, change, compass } from '../src/sim/describe.js'
 import { loadEnvironment } from '../src/sim/headless.js'
 import { Engine } from '../src/sim/runtime/engine.js'
@@ -663,6 +663,35 @@ await test('Auto realism steps down when frames lag, up when they are comfortabl
   const fresh = new AutoRealism('low')
   for (let i = 0; i < 8; i++) fresh.measure(29)
   assert.equal(fresh.level, 'medium', 'Low running at its cap climbs')
+})
+
+await test('a lit NeoPixel keeps the colour the program set, bright or dim', async () => {
+  const light = new Light(new THREE.MeshStandardMaterial({ color: 0xf4ebb8, transparent: true, opacity: 0.8 }),
+    new THREE.Sprite(new THREE.SpriteMaterial()))
+  // what the screen shows of the lit body (it is not tone mapped): its
+  // emission in sRGB, as a hue and saturation
+  const seen = () => ({
+    c: light.mat.emissive.getRGB({}, THREE.SRGBColorSpace),
+    hsl: light.mat.emissive.getHSL({}, THREE.SRGBColorSpace),
+  })
+  const want = (r, g, b) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace).getHSL({}, THREE.SRGBColorSpace)
+  for (const [name, rgb] of Object.entries({ ORANGE: [255, 165, 0], PURPLE: [0x6a, 0x0d, 0xad], RED: [255, 0, 0], BLUE: [0, 0, 255] })) {
+    for (const scale of [1, 0.1]) {
+      light.rgb(...rgb.map((v) => Math.round(v * scale)))
+      const { c, hsl } = seen()
+      const w = want(...rgb)
+      assert.ok(Math.abs(hsl.h - w.h) < 0.02, `${name} at ${scale}: hue ${hsl.h.toFixed(3)}, want ${w.h.toFixed(3)}`)
+      assert.ok(hsl.s > 0.95 * w.s, `${name} at ${scale}: saturation ${hsl.s.toFixed(3)}, want ${w.s.toFixed(3)}`)
+      assert.ok(Math.max(c.r, c.g, c.b) <= 1 + 1e-6, `${name}: driven past full, a channel clips`)
+      assert.equal(light.mat.color.getHex(), 0, 'nothing pale under the light')
+      assert.equal(light.mat.toneMapped, false)
+      assert.ok(light.halo.material.color.equals(light.color), 'the glow is the same colour')
+      assert.notEqual(light.halo.material.blending, THREE.AdditiveBlending, 'the glow tints, it does not add up to white')
+    }
+  }
+  light.rgb(0, 0, 0)
+  assert.equal(light.mat.color.getHex(), 0xf4ebb8, 'off, the lens again')
+  assert.equal(light.halo.visible, false)
 })
 
 await test("an LED's lens turns with its part on the board", async () => {

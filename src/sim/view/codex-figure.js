@@ -14,7 +14,7 @@
 // Two rotation arrows beside the board (an arc under it for tiltX, one at its
 // right for tiltY) are what a drag tilts it by; they stay put as it turns.
 import * as THREE from 'three'
-import { haloTexture } from './led.js'
+import { Light, glowSprite } from './led.js'
 
 export const CODEX_HEIGHT = 0.10    // m, the board's centre above the floor
 
@@ -61,8 +61,8 @@ export class CodeXFigure {
     this.tiltNow = [0, 0]                   // [x, y], radians, from the snapshot
     this.arrows = []                        // { axis, mat, target }, after load
     this.keys = []                          // by number: { mesh, rest }
-    this.leds = []                          // by number: { mat, halo }
-    this.pixels = []                        // NeoPixels 0 to 3: { mat, halo }
+    this.leds = []                          // by number: each a Light (led.js)
+    this.pixels = []                        // NeoPixels 0 to 3: each a Light
     this.pick = []                          // meshes a click can press a key through
   }
 
@@ -191,21 +191,16 @@ export class CodeXFigure {
     return a.target.localToWorld(mid)
   }
 
-  // A light on the board: the part's own material, lit by emission, and a
-  // glow over it (`glow` mm across) that shows at a distance.
+  // A light on the board: the part itself lit in the program's colour (its
+  // own material, the look in led.js), and a glow over it (`glow` mm
+  // across) that shows at a distance.
   _light(mesh, glow) {
     const mat = mesh.material.clone()
-    mat.toneMapped = false                  // a lit LED stays its own colour, not the film's
     mesh.material = mat
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: haloTexture(), color: 0x000000, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, toneMapped: false,
-    }))
-    halo.scale.setScalar(glow)
+    const halo = glowSprite(glow)
     halo.position.copy(centre(mesh)).add(new THREE.Vector3(0, 1.2, 0))
-    halo.userData.realism = 'effects'       // drawn at the levels that have them (realism.js)
     mesh.parent.add(halo)
-    return { mat, halo }
+    return new Light(mat, halo)
   }
 
   // Where the camera starts: in front, a little to the right and above, as
@@ -268,25 +263,15 @@ export class CodeXFigure {
     s.leds?.forEach((on, n) => {
       const l = this.leds[n]
       if (!l) return
-      l.mat.emissive.copy(on ? LED_RED : BLACK)
-      l.halo.material.color.copy(on ? LED_RED : BLACK)
+      l.show(LED_RED, on ? 1 : 0)
     })
-    s.pixels?.forEach(([r, g, b], n) => {
-      const p = this.pixels[n]
-      if (!p) return
-      // a dim pixel still reads as lit, as it does to the eye
-      const lift = (v) => (v > 0 ? 0.25 + 0.75 * (v / 255) ** 0.5 : 0)
-      p.mat.emissive.setRGB(lift(r), lift(g), lift(b))
-      p.halo.material.color.setRGB(lift(r), lift(g), lift(b)).multiplyScalar(0.9)
-    })
+    s.pixels?.forEach(([r, g, b], n) => this.pixels[n]?.rgb(r, g, b))
     s.buttons?.forEach((down, n) => {
       const k = this.keys[n]
       if (k) k.mesh.position.y = k.rest - (down ? KEY_TRAVEL : 0)
     })
   }
 }
-
-const BLACK = new THREE.Color(0, 0, 0)
 
 // A mesh's centre, in its parent's frame.
 function centre(mesh) {
