@@ -729,6 +729,22 @@ with recorder:
   if (landed > 0.08) problems.push(`CodeAIR: stopped inside with recorder:, it did not land (at ${landed} m)`)
   else console.log('sim-ui: CodeAIR flew, and a stop landed it')
 
+  // A close look: the wheel brings the camera within 3 cm of the board, and
+  // the near plane comes in with it (nothing cut away).
+  {
+    const box = await (await page.$('.sim-canvas')).boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    for (let i = 0; i < 40; i++) { await page.mouse.wheel(0, -300); await page.waitForTimeout(20) }
+    const close = await page.waitForFunction(() => {
+      const v = window.openCodeBot.device.sim.view
+      const d = v.camera.position.distanceTo(v.controls.target)
+      return d < 0.035 && { d, near: v.camera.near, aimY: v.controls.target.y }
+    }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null)
+    if (!close || close.near > close.d * 0.2 || close.aimY > 0.03) problems.push(`CodeAIR: no close look at the board (${JSON.stringify(close)})`)
+    else console.log('sim-ui: the camera comes within 3 cm of CodeAIR\'s board')
+    await page.evaluate(() => window.openCodeBot.device.sim.setCamera('rotate'))
+  }
+
   // The boards page: a CodeX remote and a CodeAIR listener, each in its own
   // worker, and the app's CodeX (still on this page's tab) listening too.
   await page.evaluate(async () => {

@@ -19,6 +19,7 @@ import { settings } from '../settings.js'
 
 const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFigure }
 const SKY = 0xdfe8ef
+const ROBOT_CLOSEST = 0.12      // m, the nearest the camera comes to a robot
 
 export class SimView {
   // `buttons`, for a board whose buttons the view presses (every board):
@@ -69,7 +70,7 @@ export class SimView {
     this.camera.position.set(0.6, 0.5, 0.6)
     this.controls = new OrbitControls(this.camera, r.domElement)
     this.controls.enableDamping = true
-    this.controls.minDistance = 0.12
+    this.controls.minDistance = ROBOT_CLOSEST
     this.controls.maxDistance = 30
     this.controls.addEventListener('change', () => this._touch())
     // The cameras (camera-rig.js); the keyboard moves them with the view
@@ -189,6 +190,10 @@ export class SimView {
       this.camera.position.copy(h.target).addScaledVector(h.from, (h.size * 0.55) / Math.tan(half))
       this.controls.minDistance = h.minDistance
     } else {
+      // how near the camera may come: a figure's own (CodeAIR, small, comes
+      // closer, to its LEDs and buttons), or a robot's
+      this.controls.minDistance = fig.closest ?? ROBOT_CLOSEST
+      this.rig.aim = fig.aim ?? 0.04
       this._placeCamera(snap, true)
     }
     return fig
@@ -440,6 +445,10 @@ export class SimView {
     const cap = PRESETS[this.level].fps
     if (cap && this._gov.drawn && now - this._gov.drawn < 1000 / cap - 4) return
     this._gov.drawn = now
+    // the near plane follows the camera in, so a close look at a board's
+    // parts is not cut away, and stays as far out as it may for depth
+    const near = Math.min(0.01, Math.max(0.001, this.camera.position.distanceTo(this.controls.target) * 0.1))
+    if (near !== this.camera.near) { this.camera.near = near; this.camera.updateProjectionMatrix() }
     this.renderer.render(this.scene, this.camera)
     this._govern(now)
   }

@@ -334,6 +334,10 @@ it chases from; Universal flies freely from 1.5 m up (drag to look, arrows or W 
 Q and E down and up, the wheel forward and back), which shows the floor lines from above; and
 Attached rides behind the robot's middle, looking where it goes. The room menu has CodeSpace's
 mountain icon. Both icons are Material Icons (Apache License 2.0), as CodeSpace uses.
+Rotate and Chase come no nearer than 12 cm to CodeBot; to CodeAIR, which is small, they come
+within 3 cm and turn round its board's middle, so a student can look closely at its LEDs and
+buttons (a figure's `closest` and `aim`). The near plane follows the camera in, so nothing
+close is cut away.
 
 ### Realism: what the page draws, never what the world does
 
