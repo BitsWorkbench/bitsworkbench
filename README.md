@@ -27,7 +27,7 @@ waiting for them.
 |---|---|
 | 🔌 **Plug and play** | Detects which board you plugged in and shows only the blocks it can actually run. |
 | 🧩 **Friendly blocks** | Chunky, colourful, emoji-labelled blocks for screens, lights, motors, flight, sound, sensors and radio. |
-| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block. |
+| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block, and a grey mark beside the line says so while you type. Save a grey Python block to ⭐ My blocks (right-click it) to use it again in any project; your library stays in this browser. |
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. In Chrome and Edge, open a folder on your computer to keep your Python files in, and open and save them there. |

@@ -504,6 +504,9 @@ kbd {
 }
 .py-flyout[hidden] { display: none; }
 .py-snippets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+/* My blocks: each saved block's name above it, or a hint when there are none. */
+.py-snippets .snippet-name { display: block; margin: 0 0 4px 2px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.py-snippets .py-hint { max-width: 26ch; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
 /* A snippet: its Python on a shade of its category's colour. */
 .snippet {
   display: block;
