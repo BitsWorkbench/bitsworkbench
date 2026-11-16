@@ -692,6 +692,11 @@ export class App {
       label: t('text.editorLabel'),
       describedBy: 'python-editor-help',
       onChange: (text) => this.workspace.setPythonText(text),
+      // Lines that would become grey Python blocks; none while the code does not parse.
+      noBlockLines: (text) => {
+        const result = this.blocksFromPython(text)
+        return result.ok ? result.pythonLines : []
+      },
     })
     // Using a snippet from the read-only view starts writing Python (the blocks are kept).
     this.palette = new SnippetPalette($('py-palette'), {

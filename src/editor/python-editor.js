@@ -4,8 +4,8 @@
  * (value, change, focus, the paused line, snippets) and never touches
  * CodeMirror itself.
  */
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, Decoration } from '@codemirror/view'
-import { EditorState, StateEffect, StateField } from '@codemirror/state'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, Decoration, gutter, GutterMarker } from '@codemirror/view'
+import { EditorState, StateEffect, StateField, RangeSet } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, temporarilySetTabFocusMode } from '@codemirror/commands'
 import { syntaxHighlighting, HighlightStyle, indentOnInput, indentUnit, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
@@ -71,14 +71,50 @@ const runLine = StateField.define({
   provide: (f) => EditorView.decorations.from(f),
 })
 
+/**
+ * Lines with no block of their own (they become grey Python blocks): a quiet
+ * grey mark in a narrow gutter, with a tooltip. Set with an effect; an edit
+ * moves the marks with their lines until they are worked out again.
+ */
+const setNoBlock = StateEffect.define()
+class NoBlockMark extends GutterMarker {
+  toDOM() {
+    const mark = document.createElement('span')
+    mark.className = 'cm-no-block-mark'
+    mark.title = t('editor.noBlock')
+    return mark
+  }
+}
+const noBlockMark = new NoBlockMark()
+const noBlock = StateField.define({
+  create: () => RangeSet.empty,
+  update(marks, tr) {
+    marks = marks.map(tr.changes)
+    for (const e of tr.effects) {
+      if (!e.is(setNoBlock)) continue
+      const doc = tr.state.doc
+      marks = RangeSet.of(e.value.filter((l) => l >= 1 && l <= doc.lines).map((l) => noBlockMark.range(doc.line(l).from)))
+    }
+    return marks
+  },
+})
+const noBlockGutter = gutter({ class: 'cm-no-block-gutter', markers: (view) => view.state.field(noBlock) })
+
+/** How long typing pauses before the marks are worked out again (ms). */
+const NO_BLOCK_PAUSE = 400
+
 export class PythonEditor {
   /**
    * @param {HTMLElement} parent where the editor goes
-   * @param {{label: string, describedBy?: string, onChange?: (text: string) => void}} options
+   * @param {{label: string, describedBy?: string, onChange?: (text: string) => void,
+   *   noBlockLines?: (text: string) => number[]}} options noBlockLines gives the lines
+   *   of a program with no block of their own, to mark
    */
-  constructor(parent, { label, describedBy, onChange }) {
+  constructor(parent, { label, describedBy, onChange, noBlockLines }) {
     this.onChange = onChange
+    this.noBlockLines = noBlockLines
     this.extensions = [
+      noBlockGutter,
       lineNumbers(),
       foldGutter(),
       highlightActiveLineGutter(),
@@ -96,6 +132,7 @@ export class PythonEditor {
       syntaxHighlighting(colours),
       python(),
       runLine,
+      noBlock,
       snippetDrop,
       phrases(),
       keymap.of([
@@ -117,6 +154,7 @@ export class PythonEditor {
       }),
       EditorView.updateListener.of((u) => {
         if (u.docChanged && onChange) onChange(this.value)
+        if (u.docChanged) this._markLater()
       }),
     ]
     this.view = new EditorView({ parent, state: EditorState.create({ extensions: this.extensions }) })
@@ -136,6 +174,34 @@ export class PythonEditor {
     if (text === this.value) return
     this.view.setState(EditorState.create({ doc: text, selection: { anchor: text.length }, extensions: this.extensions }))
     this.onChange?.(text)
+    this._markLater()
+  }
+
+  /** Work out the lines with no block once typing pauses. */
+  _markLater() {
+    if (!this.noBlockLines) return
+    clearTimeout(this._markTimer)
+    this._markTimer = setTimeout(() => {
+      const text = this.value
+      let lines = []
+      try {
+        lines = this.noBlockLines(text) || []
+      } catch {
+        lines = []
+      }
+      // Typing went on meanwhile: the next pause marks it.
+      if (text === this.value) this.view.dispatch({ effects: setNoBlock.of(lines) })
+    }, NO_BLOCK_PAUSE)
+  }
+
+  /** The lines marked as having no block, for tests. */
+  markedLines() {
+    const lines = []
+    const doc = this.view.state.doc
+    this.view.state.field(noBlock).between(0, doc.length, (from) => {
+      lines.push(doc.lineAt(from).number)
+    })
+    return lines
   }
 
   /** The selected text (empty when nothing is selected). */
