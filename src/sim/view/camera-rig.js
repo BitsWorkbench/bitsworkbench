@@ -23,8 +23,9 @@ const UP = new THREE.Vector3(0, 1, 0)
 
 // Where a snapshot's robot is, in the view (three's y up, the world's y as -z),
 // and the way it faces.
-export function targetOf(s) {
-  return new THREE.Vector3(s.x, (s.z ?? 0) + 0.04, -s.y)
+// `aim`: how high above the floor under it the camera looks (m).
+export function targetOf(s, aim = 0.04) {
+  return new THREE.Vector3(s.x, (s.z ?? 0) + aim, -s.y)
 }
 const forwardOf = (s) => new THREE.Vector3(Math.cos(s.heading ?? 0), 0, -Math.sin(s.heading ?? 0))
 
@@ -38,6 +39,7 @@ export class CameraRig {
     this.chase = { ...CHASE }
     this.held = new Set()          // universal's movement keys held
     this._dragging = false
+    this.aim = 0.04                // m above the robot's floor the cameras turn round (view.js)
     controls.addEventListener('start', () => { this._dragging = true })
     controls.addEventListener('end', () => { this._dragging = false })
     // a drag in chase moves where it chases from
@@ -58,7 +60,7 @@ export class CameraRig {
   // The camera at its home for the robot at s (jump), or a step toward where
   // the mode wants it as the robot moves.
   place(s, jump) {
-    const t = targetOf(s)
+    const t = targetOf(s, this.aim)
     const c = this.controls
     if (this.mode === 'rotate') {
       if (!jump) return
