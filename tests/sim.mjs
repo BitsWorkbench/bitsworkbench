@@ -207,6 +207,13 @@ print("pressed")`,
   assert.equal(r.device.leds.ls, 4)
 })
 
+await test('the battery LED is off until a program turns it on', async () => {
+  const off = await runHeadless({ source: 'print(1)' })
+  assert.equal(off.device.leds.pwr, false)
+  const on = await runHeadless({ source: 'from botcore import *\nleds.pwr(True)' })
+  assert.equal(on.device.leds.pwr, true)
+})
+
 await test('pause holds simulated time; step and resume continue', async () => {
   const env = Environment.empty()
   const world = new World(env)

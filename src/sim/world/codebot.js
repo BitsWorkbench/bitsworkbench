@@ -197,7 +197,7 @@ export class CodeBot {
     this.hits = new Hits()                         // knocks, for their sound
     this.accelBody = [0, 0]                      // filtered body-frame acceleration, m/s^2
     this.volts = this.p.nominalVolts
-    this.leds = { user: 0, ls: 0, prox: 0, pwr: true, usb: false }
+    this.leds = { user: 0, ls: 0, prox: 0, pwr: false, usb: false }
     this.tone = 0
     this.buttons = [false, false]
     this.pressedLatch = [false, false]
