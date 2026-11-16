@@ -27,7 +27,8 @@ async function reachable(url) {
 
 let server = null
 if (!(await reachable(BASE))) {
-  server = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' })
+  // On the port OCB_URL names: other checkouts on this machine may be using 4173.
+  server = spawn('npx', ['vite', 'preview', '--port', new URL(BASE).port || '4173', '--strictPort'], { stdio: 'ignore' })
   for (let i = 0; i < 40 && !(await reachable(BASE)); i++) await new Promise((r) => setTimeout(r, 250))
 }
 
@@ -220,16 +221,34 @@ await page.click('#btn-files')
 await page.click('#files-panel .files-item[data-store="browser"][data-path="main.py"]')
 await until(() => document.getElementById('modal')?.open)
 check(await page.evaluate(() => document.getElementById('modal')?.open), 'opening another file while the open one cannot be saved asks first')
-await page.click('#modal button[value="cancel"]')
+if (await page.evaluate(() => document.getElementById('modal')?.open)) await page.click('#modal button[value="cancel"]')
 await page.waitForTimeout(300)
 const stayed = await page.evaluate(() => ({ f: window.openCodeBot.openFile, py: window.openCodeBot._currentPython(), saved: JSON.parse(localStorage.getItem('opencodebot.project.v1')) }))
 check(stayed.f.store === 'folder' && stayed.f.path === 'main.py' && stayed.py === changed, 'Stay keeps the file open, with the change')
 check(await page.isVisible('#btn-save-again'), 'and the bar still says it is not saved')
 await page.evaluate(() => { delete window.openCodeBot.stores.folder.reopen }) // now the student allows it
-await page.click('#btn-files')
-await page.click('#btn-save-again')
+if (await page.isVisible('#files-panel')) await page.click('#btn-files')
+if (await page.isVisible('#btn-save-again')) await page.click('#btn-save-again')
 await until(() => document.getElementById('btn-save-again').hidden)
 check(!(await page.isVisible('#btn-save-again')) && (await readFile('main.py'))?.includes('print('), 'one click allows it, and the program is saved')
+
+// "Lose the changes": the student chooses to leave a file that cannot be saved.
+await page.evaluate(() => {
+  const folder = window.openCodeBot.stores.folder
+  folder.write = async () => { throw new Error('the disk is full') }
+  window.openCodeBot.workspace.workspace.newBlock('ocb_seconds_since_start').initSvg()
+})
+await until(() => !document.getElementById('btn-save-again').hidden)
+await page.click('#btn-files')
+await page.click('#files-panel .files-item[data-store="browser"][data-path="main.py"]')
+await until(() => document.getElementById('modal')?.open)
+if (await page.evaluate(() => document.getElementById('modal')?.open)) await page.click('#modal button[value="ok"]')
+await until(() => window.openCodeBot.openFile?.store === 'browser')
+const lost = await page.evaluate(() => ({ f: window.openCodeBot.openFile, failed: !document.getElementById('btn-save-again').hidden }))
+await page.evaluate(() => { delete window.openCodeBot.stores.folder.write })
+check(lost.f.store === 'browser' && lost.f.path === 'main.py' && !lost.failed, '"Lose the changes" opens the other file, and the bar is calm again')
+check(!(await readFile('main.py'))?.includes('time.monotonic'), 'and the folder\'s main.py was left as it was last saved')
+await page.click('#btn-files')
 
 // ------------------------------------------------------------ a browser with no folders
 const plain = await browser.newContext({ viewport: { width: 1280, height: 800 } })
@@ -281,6 +300,7 @@ const read2 = (path) => p2.evaluate(async (p) => {
 // The app never reads a file half written: a read waits for the save in progress.
 const whole = await p2.evaluate(async () => {
   const app = window.openCodeBot
+  if (!app._inTurn) return false // no queue to read in turn with
   const big = `# ${'x'.repeat(200000)}\n`
   const f = app.openFile
   app._setOpenFile({ ...f, saved: undefined })
@@ -298,36 +318,55 @@ const change = () => p2.evaluate(() => window.openCodeBot.workspace.workspace.ne
 // waiting change goes to the file it was made in, the example to its own.
 await p2.click('.files-item:has-text("robot.py")')
 await p2.waitForFunction(() => window.openCodeBot.openFile?.path === 'robot.py')
+// A slow computer opens the races: the store's `method` waits 1.5 s, longer
+// than an autosave's delay, so a save can come due in the middle.
+const slow = (method) => p2.evaluate((m) => {
+  const store = window.openCodeBot.stores.browser
+  const real = store[m].bind(store)
+  store[m] = async (...a) => { await new Promise((r) => setTimeout(r, 1500)); return real(...a) }
+}, method)
+const fast = (method) => p2.evaluate((m) => { delete window.openCodeBot.stores.browser[m] }, method)
+// While the example's file name is worked out, the change's autosave comes
+// due: it must go to robot.py, and the example only to its own file.
 await change()
+await slow('exists')
 const robotNow = await p2.evaluate(async () => {
-  await new Promise((r) => setTimeout(r, 300)) // the change's save is waiting
   const app = window.openCodeBot
   const py = app._currentPython()
   const project = { device: 'codex', blocks: { blocks: { languageVersion: 0, blocks: [{ type: 'ocb_on_start', x: 40, y: 40 }] } } }
   await app._openAsNewFile(project, 'example.py')
   return py
 })
-await p2.waitForTimeout(1200)
-check((await read2('robot.py')) === robotNow, 'a change waiting to be saved goes to its own file, not under an example opened meanwhile')
-check(!(await read2('example.py'))?.includes('seconds') && (await p2.evaluate(() => window.openCodeBot.openFile.path)) === 'example.py', 'and the example is in its own new file')
-// A save waiting when the open file is deleted does not bring it back.
+await fast('exists')
+await p2.waitForTimeout(1500)
+check((await read2('robot.py')) === robotNow, 'an autosave due while an example opens goes to the file it was made in, not the example over it')
+check(!(await read2('example.py'))?.includes('monotonic') && (await p2.evaluate(() => window.openCodeBot.openFile.path)) === 'example.py', 'and the example is in its own new file')
+// An autosave still writing when its file is deleted does not bring it back.
+await slow('write')
 await change()
+await p2.waitForTimeout(1100) // the autosave has started, and is writing
 await p2.hover('.files-row:has(.files-item[data-path="example.py"])')
 await p2.click('.files-row:has(.files-item[data-path="example.py"]) [data-act="delete"]')
 await p2.click('#modal button[value="ok"]')
-await p2.waitForTimeout(1500)
-check((await read2('example.py')) === null, 'a save waiting when its file is deleted does not write it back')
-// A save waiting when the open file is renamed goes to the new name only.
+await p2.waitForTimeout(3000)
+await fast('write')
+check((await read2('example.py')) === null, 'an autosave writing when its file is deleted does not write it back')
+// A change made while its file is being renamed: its autosave, due mid-rename,
+// lands in the new name only, never bringing back the old one.
 await p2.click('.files-item:has-text("robot.py")')
 await p2.waitForFunction(() => window.openCodeBot.openFile?.path === 'robot.py')
-await change()
-const robotLast = await p2.evaluate(() => window.openCodeBot._currentPython())
+await slow('write')
+await slow('rename')
 await p2.click('.files-row:has(.files-item[data-path="robot.py"]) [data-act="rename"]')
 await p2.fill('#files-name', 'rover')
 await p2.press('#files-name', 'Enter')
-await p2.waitForFunction(() => window.openCodeBot.openFile?.path === 'rover.py')
-await p2.waitForTimeout(1500)
-check((await read2('robot.py')) === null && (await read2('rover.py')) === robotLast, 'a save waiting when its file is renamed lands in the new name, with the change')
+await change()
+const robotLast = await p2.evaluate(() => window.openCodeBot._currentPython())
+await p2.waitForFunction(() => window.openCodeBot.openFile?.path === 'rover.py', null, { timeout: 8000 }).catch(() => {})
+await p2.waitForTimeout(4000)
+await fast('write')
+await fast('rename')
+check((await read2('robot.py')) === null && (await read2('rover.py')) === robotLast, 'an autosave writing when its file is renamed lands in the new name, with the change')
 // Names in any language.
 await p2.click('#files-panel .files-head [data-act="new-file"]')
 await p2.fill('#files-name', 'música')
@@ -352,6 +391,7 @@ const caseResult = await page.evaluate(async () => {
       async removeEntry(n) { if (!find(n)) throw new DOMException('no', 'NotFoundError'); kids.delete(n.toLowerCase()) },
     }
   }
+  window.__mockDir = dir
   const root = dir('Mock')
   ;(await root.getFileHandle('main.py', { create: true })).text = 'print("keep me")\n'
   const projects = await root.getDirectoryHandle('Projects', { create: true })
@@ -375,6 +415,37 @@ const caseResult = await page.evaluate(async () => {
 check(caseResult.main === 'print("keep me")\n', `renaming main.py to Main.py keeps it, in a folder that ignores case (${JSON.stringify(caseResult)})`)
 check(caseResult.a === 'print("a")\n' && caseResult.names.includes('projects'), 'and renaming the folder Projects to projects keeps what is in it')
 check(!!caseResult.clash && caseResult.taken, 'a name taken in another case counts as taken')
+// The new name cannot be written (the disk is full): the file is put back as it was.
+// And a rename cut short earlier leaves a hidden copy, restored when the folder opens.
+const rollback = await page.evaluate(async () => {
+  const root = window.__mockDir('Mock')
+  ;(await root.getFileHandle('main.py', { create: true })).text = 'print("keep me")\n'
+  const create = root.getFileHandle.bind(root)
+  root.getFileHandle = async (n, o = {}) => {
+    if (n === 'Main.py' && o.create) throw new DOMException('the disk is full', 'QuotaExceededError')
+    return create(n, o)
+  }
+  const store = new window.openCodeBot.stores.folder.constructor()
+  store.root = root
+  store.name = 'Mock'
+  let error = null
+  try { await store.rename('main.py', 'Main.py') } catch (e) { error = e }
+  root.getFileHandle = create
+  const after = { names: [...root.kids.values()].map((e) => e.name).join(), main: await store.read('main.py').catch(() => null), error: error?.message, taken: !!error?.taken }
+  // Left over from a rename cut short: lesson.py's only copy, and a copy of a file still there.
+  const left = window.__mockDir('Left')
+  ;(await left.getFileHandle('.renaming-1-lesson.py', { create: true })).text = 'print("lesson")\n'
+  ;(await left.getFileHandle('.renaming-2-main.py', { create: true })).text = 'print("older")\n'
+  ;(await left.getFileHandle('main.py', { create: true })).text = 'print("main")\n'
+  const again = new window.openCodeBot.stores.folder.constructor()
+  await again._use(left)
+  const listed = (await again.list('')).map((e) => e.name).join()
+  return { after, listed, lesson: await again.read('lesson.py').catch(() => null), recovered: await again.read('main-recovered.py').catch(() => null), main: await again.read('main.py').catch(() => null) }
+})
+check(rollback.after.main === 'print("keep me")\n' && rollback.after.names === 'main.py', `a case-only rename that cannot write the new name puts the file back (${JSON.stringify(rollback.after)})`)
+check(!!rollback.after.error && !rollback.after.taken, 'and says what went wrong, not that the name is taken')
+check(rollback.lesson === 'print("lesson")\n' && rollback.listed.includes('lesson.py'), `a copy left by a rename cut short is restored when the folder opens (${rollback.listed})`)
+check(rollback.recovered === 'print("older")\n' && rollback.main === 'print("main")\n', 'beside the file of that name if it is there (main-recovered.py), never over it')
 
 // ------------------------------------------------------------ two tabs
 const p3 = await plain.newPage()
@@ -387,7 +458,10 @@ const savedBefore = await p2.evaluate(() => localStorage.getItem('opencodebot.pr
 await p3.evaluate(() => window.openCodeBot.workspace.workspace.newBlock('ocb_seconds_since_start').initSvg())
 await p3.waitForTimeout(1200)
 check((await p2.evaluate(() => localStorage.getItem('opencodebot.project.v1'))) === savedBefore, 'and saves nothing over the first tab\'s work')
-await p3.click('#btn-use-tab')
+await p3.setInputFiles('#file-input', { name: 'imported.py', mimeType: 'text/x-python', buffer: Buffer.from('print("from the computer")\n') })
+await p3.waitForTimeout(800)
+check((await read2('imported.py')) === null, 'nor a file opened from the computer through the ⋯ menu')
+if (await p3.isVisible('#btn-use-tab')) await p3.click('#btn-use-tab')
 await p3.waitForFunction(() => !!window.openCodeBot && document.getElementById('tab-elsewhere').hidden, null, { timeout: 10000 }).catch(() => {})
 await p2.waitForSelector('#tab-elsewhere:not([hidden])', { timeout: 5000 }).catch(() => {})
 check(!(await p3.isVisible('#tab-elsewhere')) && (await p2.isVisible('#tab-elsewhere')), '"Use this tab instead" moves the editing there, and the first tab only shows')

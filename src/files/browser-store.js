@@ -62,7 +62,7 @@ export class BrowserStore {
 
   /** Rename (or move) a file or a folder, with all in it. */
   async rename(from, to) {
-    if (await this.exists(to)) throw new Error(`${to}: already there`)
+    if (await this.exists(to)) throw taken(to)
     await this._parents(to)
     const all = await tx('readonly', (s) => s.getAll())
     const moved = all.filter((e) => e.path === from || e.path.startsWith(`${from}/`))
@@ -83,6 +83,11 @@ export class BrowserStore {
       if (!(await this.exists(p))) await tx('readwrite', (s) => s.put({ path: p, kind: 'dir' }))
     }
   }
+}
+
+/** The error a rename gives when the new name is in use (`taken` tells it from a failure). */
+export function taken(path) {
+  return Object.assign(new Error(`${path}: already there`), { taken: true })
 }
 
 export function byKindThenName(a, b) {

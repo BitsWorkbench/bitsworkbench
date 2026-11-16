@@ -903,6 +903,7 @@ export class App {
    * saved, stay, unless the student chooses to leave its changes behind.
    */
   async _leaveFile() {
+    if (!this._canWrite()) return false
     if (await this._save(true)) return true
     const f = this.openFile
     return showModal({
@@ -942,6 +943,13 @@ export class App {
         return new Promise(() => {}) // held while this tab is open
       })
       .catch(() => this._setReadOnly(true)) // another tab took it
+  }
+
+  /** False, and says why, in a tab that only shows the program: nothing may be written from it. */
+  _canWrite() {
+    if (!this._readOnly) return true
+    toast({ kind: 'warn', title: t('tabs.elsewhereTitle'), detail: t('tabs.elsewhereBody') })
+    return false
   }
 
   _setReadOnly(on) {
@@ -1073,6 +1081,7 @@ export class App {
 
   /** Make a file (empty, and open it) or a folder; null, or what went wrong. */
   async _createEntry(storeKind, path, kind) {
+    if (!this._canWrite()) return t('tabs.elsewhereTitle')
     const store = this.stores[storeKind]
     if (await store.exists(path)) return t('files.exists', { name: baseName(path) })
     // A new file opens at once: the open one is saved first (or left by choice).
@@ -1089,6 +1098,7 @@ export class App {
 
   /** Rename a file or folder, in turn with saves, the open file following it; null, or what went wrong. */
   _renameEntry(storeKind, from, to) {
+    if (!this._canWrite()) return Promise.resolve(t('tabs.elsewhereTitle'))
     const store = this.stores[storeKind]
     clearTimeout(this._saveTimer)
     return this._inTurn(async () => {
@@ -1096,7 +1106,7 @@ export class App {
       try {
         await store.rename(from, to)
       } catch (err) {
-        return (await store.exists(to)) ? t('files.exists', { name: baseName(to) }) : err.message
+        return err.taken ? t('files.exists', { name: baseName(to) }) : err.message
       }
       const f = this.openFile
       if (f?.store === storeKind && (f.path === from || f.path.startsWith(`${from}/`))) {
@@ -1109,6 +1119,7 @@ export class App {
   }
 
   async _removeEntry(storeKind, path, kind) {
+    if (!this._canWrite()) return
     const ok = await showModal({
       title: t(kind === 'dir' ? 'files.deleteFolderTitle' : 'files.deleteTitle', { name: baseName(path) }),
       bodyHtml: t(kind === 'dir' ? 'files.deleteFolderBodyHtml' : 'files.deleteBodyHtml', { name: baseName(path) }),
@@ -1148,6 +1159,7 @@ export class App {
    * The program open in this browser can be copied into it, to go on there.
    */
   async _attachFolder(again) {
+    if (!this._canWrite()) return
     const folder = this.stores.folder
     const name = again ? await folder.reopen() : await folder.pickFolder()
     if (!name) return
@@ -1296,6 +1308,7 @@ export class App {
 
   /** Open a starter project, asking first if there are blocks to lose. */
   async _openExamples() {
+    if (!this._canWrite()) return
     let device = this.workspace.targetId || this.pickedTarget
     if (!EXAMPLE_DEVICES.includes(device)) device = EXAMPLE_DEVICES[0]
     let chosen = null
@@ -1362,6 +1375,10 @@ export class App {
   /** ⋯ Open a file: a Python file, or a project file from before files were Python, as a new file. */
   async _importFile(file) {
     if (!file) return
+    if (!this._canWrite()) {
+      $('file-input').value = ''
+      return
+    }
     try {
       const text = await file.text()
       if (/\.py$/i.test(file.name)) {

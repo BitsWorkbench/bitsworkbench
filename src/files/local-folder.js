@@ -5,9 +5,10 @@
  * The FileStore methods are described in store.js.
  */
 
-import { byKindThenName } from './browser-store.js'
+import { byKindThenName, taken } from './browser-store.js'
 
 const DB = 'opencodebot-files'
+const TEMP = '.renaming-' // a case-only rename's hidden copy, while it lasts
 const STORE = 'handles'
 const KEY = 'folder'
 
@@ -45,9 +46,10 @@ export class LocalFolderStore {
     return this._use(handle)
   }
 
-  _use(handle) {
+  async _use(handle) {
     this.root = handle
     this.name = handle.name
+    await this._recover().catch(() => {})
     return this.name
   }
 
@@ -86,18 +88,53 @@ export class LocalFolderStore {
     const entry = await this._entry(from)
     if (!entry) throw new Error(`${from}: not found`)
     const caseOnly = from.toLowerCase() === to.toLowerCase()
-    if (!caseOnly && (await this._entry(to, true))) throw new Error(`${to}: already there`)
+    if (!caseOnly && (await this._entry(to, true))) throw taken(to)
     if (caseOnly) {
       const parts = from.split('/')
-      const temp = [...parts.slice(0, -1), `.renaming-${Date.now()}-${parts.at(-1)}`].join('/')
+      const temp = [...parts.slice(0, -1), `${TEMP}${Date.now()}-${parts.at(-1)}`].join('/')
       await this._copy(entry, temp)
       await this.remove(from)
-      await this._copy(await this._entry(temp), to)
+      try {
+        await this._copy(await this._entry(temp), to)
+      } catch (err) {
+        // The new name could not be written: put it back as it was. If even
+        // that fails, the hidden copy is found and restored when the folder
+        // is next opened (_recover).
+        await this.remove(to).catch(() => {})
+        await this._copy(await this._entry(temp), from)
+        await this.remove(temp)
+        throw err
+      }
       await this.remove(temp)
       return
     }
     await this._copy(entry, to)
     await this.remove(from)
+  }
+
+  /**
+   * A rename cut short (the page closed, the disk full) can leave its hidden
+   * copy, the only one: put each back under its own name, or, if that name is
+   * in use, beside it as name-recovered. Nothing is thrown away.
+   */
+  async _recover(dir = '') {
+    const folder = await this._dir(dir)
+    const found = []
+    for await (const [name, entry] of folder.entries()) {
+      const m = name.match(/^\.renaming-\d+-(.+)$/)
+      if (m) found.push([name, m[1]])
+      else if (entry.kind === 'directory' && !name.startsWith('.')) await this._recover(dir ? `${dir}/${name}` : name)
+    }
+    for (const [temp, original] of found) {
+      const at = (n) => (dir ? `${dir}/${n}` : n)
+      let name = original
+      for (let i = 1; await this._entry(at(name), true); i++) {
+        const [, stem, ext = ''] = original.match(/^(.*?)(\.[^.]*)?$/)
+        name = `${stem}-recovered${i > 1 ? `-${i}` : ''}${ext}`
+      }
+      await this._copy(await this._entry(at(temp)), at(name))
+      await this.remove(at(temp))
+    }
   }
 
   async _copy(entry, to) {
