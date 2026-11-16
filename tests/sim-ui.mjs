@@ -291,6 +291,27 @@ const greenOf = ([r, g, b]) => g > 0.5 && r < g / 3 && b < g / 3
 if (!cbLeds || !redOf(cbLeds.user0) || !greenOf(cbLeds.ls0) || Math.min(...cbLeds.user1) < 0.5 || Math.max(...cbLeds.user1Glow) > 0) problems.push(`CodeBot LEDs: drawn ${JSON.stringify(cbLeds)}`)
 else console.log('sim-ui: CodeBot\'s LEDs lit red and green, unlit ones pale')
 
+// A click on the model's BTN-1 presses it, as the bar's button does (and the
+// camera stays put); while held it is drawn down.
+{
+  await page.evaluate(() => window.openCodeBot.device.run('from botcore import *\nwhile not buttons.was_pressed(1):\n    pass\n'))
+  await page.waitForTimeout(1000)
+  const at =await page.evaluate(() => window.openCodeBot.device.sim.view.keyPoint(1))
+  const cam = await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())
+  if (!at) problems.push('CodeBot: no BTN-1 on the model')
+  else {
+    const restY = await page.evaluate(() => [...window.openCodeBot.device.sim.view.figures.values()][0].keys.keys.get(1).meshes[0].position.y)
+    await page.mouse.move(at.x, at.y)
+    await page.mouse.down()
+    const down = await page.waitForFunction((y) => [...window.openCodeBot.device.sim.view.figures.values()][0].keys.keys.get(1).meshes[0].position.y < y, restY, { timeout: 3000 }).then(() => true, () => false)
+    await page.mouse.up()
+    if (!down) problems.push('CodeBot: BTN-1 was not drawn down while held')
+    await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 })
+      .then(() => console.log('sim-ui: a click on the CodeBot model pressed its BTN-1'), () => problems.push('CodeBot: a click on the model did not press BTN-1'))
+    if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== cam) problems.push('CodeBot: pressing a button on the model turned the camera')
+  }
+}
+
 // The other rooms, from the picker: each drawn, the robot at its start.
 await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
 for (const room of ['classroom', 'cafeteria', 'auditorium', 'gym']) {

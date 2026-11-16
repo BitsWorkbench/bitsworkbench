@@ -15,6 +15,7 @@
 // right for tiltY) are what a drag tilts it by; they stay put as it turns.
 import * as THREE from 'three'
 import { Light, glowSprite } from './led.js'
+import { Keys } from './keys.js'
 
 export const CODEX_HEIGHT = 0.10    // m, the board's centre above the floor
 
@@ -60,10 +61,9 @@ export class CodeXFigure {
     this.tilt.add(this.body)
     this.tiltNow = [0, 0]                   // [x, y], radians, from the snapshot
     this.arrows = []                        // { axis, mat, target }, after load
-    this.keys = []                          // by number: { mesh, rest }
+    this.keys = new Keys()                  // by number, a click presses them
     this.leds = []                          // by number: each a Light (led.js)
     this.pixels = []                        // NeoPixels 0 to 3: each a Light
-    this.pick = []                          // meshes a click can press a key through
   }
 
   async load(loader, base) {
@@ -84,17 +84,12 @@ export class CodeXFigure {
     })
 
     // The keys: their normals face inward, so they shade flat (normals from
-    // the surface as drawn); each has a round pick target a little wider.
+    // the surface as drawn); a click presses them (keys.js).
     KEYS_BY_NAME.forEach((name, n) => {
       const mesh = node(name)
       mesh.material = mesh.material.clone()
       mesh.material.flatShading = true
-      const target = new THREE.Mesh(new THREE.CylinderGeometry(KEY_REACH, KEY_REACH, 3, 16), new THREE.MeshBasicMaterial({ visible: false }))
-      target.position.copy(mesh.position)
-      target.userData.key = n
-      model.add(target)
-      this.pick.push(target)
-      this.keys[n] = { mesh, rest: mesh.position.y }
+      this.keys.add(n, [mesh], { reach: KEY_REACH, travel: KEY_TRAVEL })
     })
 
     // LEDs 0 to 3, and B and A copied from LED_0.
@@ -218,13 +213,12 @@ export class CodeXFigure {
 
   // Key n's centre in the world.
   keyCentre(n) {
-    return this.keys[n]?.mesh.getWorldPosition(new THREE.Vector3())
+    return this.keys.keyCentre(n)
   }
 
   // The key a ray meets, or -1.
   keyAt(raycaster) {
-    const hit = raycaster.intersectObjects(this.pick, false)[0]
-    return hit ? hit.object.userData.key : -1
+    return this.keys.keyAt(raycaster)
   }
 
   // A new picture for the screen: RGB565 pixels, top row first.
@@ -266,10 +260,7 @@ export class CodeXFigure {
       l.show(LED_RED, on ? 1 : 0)
     })
     s.pixels?.forEach(([r, g, b], n) => this.pixels[n]?.rgb(r, g, b))
-    s.buttons?.forEach((down, n) => {
-      const k = this.keys[n]
-      if (k) k.mesh.position.y = k.rest - (down ? KEY_TRAVEL : 0)
-    })
+    if (s.buttons) this.keys.show((n) => s.buttons[n])
   }
 }
 

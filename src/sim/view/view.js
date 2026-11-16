@@ -21,10 +21,11 @@ const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFi
 const SKY = 0xdfe8ef
 
 export class SimView {
-  // `buttons`, for a board whose keys the view presses (CodeX): { keys, onButton },
-  // keys from KeyboardEvent.key to a button's number, onButton(n, down). Its
-  // keys are then pressed by the keyboard (F goes full screen) and by a click
-  // on the model, and the arrow keys no longer turn the camera. With
+  // `buttons`, for a board whose buttons the view presses (every board):
+  // { keys, onButton, fullScreen }, keys from KeyboardEvent.key to a button's
+  // number, onButton(n, down). Its buttons are then pressed by a click on the
+  // model (the figure's keyAt, keys.js) and by those keys, which the camera
+  // then no longer takes; with fullScreen, F goes full screen. With
   // `onTilt(x, y)` too (radians, world/codex.js tiltX and tiltY), a drag on
   // the figure's rotation arrows tilts the board, as do Shift and the arrow
   // keys (5 degrees a press); Home sets it level.
@@ -235,7 +236,7 @@ export class SimView {
   // A key of the board's (true if it was one), or F for full screen.
   _buttonKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return false
-    if (e.key === 'f' || e.key === 'F') {
+    if (this.buttons.fullScreen && (e.key === 'f' || e.key === 'F')) {
       e.preventDefault()
       if (e.type !== 'keydown') return true
       if (document.fullscreenElement === this.host) document.exitFullscreen?.(); else this.fullScreen()
