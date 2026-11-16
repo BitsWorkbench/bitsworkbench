@@ -126,26 +126,36 @@ check((await mode()) === 'text', 'text mode survives a reload')
 check(await page.isVisible('#python-editor'), 'after a reload the typed Python is on screen')
 check((await editorText()).includes('typed by hand'), 'the typed code survives a reload')
 
-// Back to blocks (the 🧩 Blocks button) asks first, because typed changes would be lost
+// Back to blocks (the 🧩 Blocks button) turns the typed Python into blocks
+const typedBefore = await editorText()
 await page.click('#btn-view')
-check(await page.evaluate(() => document.getElementById('modal')?.open), 'going back with changes asks first')
-await page.click('#modal button[value="cancel"]')
-await page.waitForTimeout(100)
-check((await mode()) === 'text', '"Keep my Python" stays in text mode')
-check((await shows()).python, 'and the typed Python stays on screen')
-await page.click('#btn-view')
-await page.click('#modal button[value="ok"]')
-await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks', null, { timeout: 3000 }).catch(() => {})
-check((await mode()) === 'blocks', 'confirming goes back to blocks')
+await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks')
+check(!(await page.evaluate(() => document.getElementById('modal')?.open)), 'going back with typed changes does not ask')
 check((await shows()).blocks, 'the blocks are on screen again')
-check((await page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length)) > 0, 'the blocks were kept')
+const kinds = await page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).map((b) => b.type))
+check(kinds.includes('controls_repeat_ext') && kinds.includes('ocb_print'), 'the typed loop came back as blocks')
+check(!kinds.includes('ocb_python'), 'with nothing left over as Python')
 
-// Untouched code goes back without a question
+// Only looked at in blocks: Edit as Python gives back exactly what was typed
 await page.click('#btn-view')
 await page.click('#btn-mode')
+check((await mode()) === 'text', 'Edit as Python again')
+check((await editorText()) === typedBefore, 'Python only looked at in blocks comes back exactly as typed')
+
+// Code that does not parse stays Python, with the cursor on the line to fix
+await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\nprint((\nprint('three')\n" })
 await page.click('#btn-mode')
-check(!(await page.evaluate(() => document.getElementById('modal')?.open)), 'unchanged Python goes back without asking')
-check((await mode()) === 'blocks', 'and is back in blocks mode')
+check((await mode()) === 'text', 'Python with a mistake does not go back to blocks')
+check(await page.isVisible('.toast >> text=Fix the Python first'), 'and says so')
+check(
+  await page.evaluate(() => window.openCodeBot.pythonEditor.selectedText.startsWith('print((')),
+  'with the line to fix selected',
+)
+
+// Fixed, it goes back
+await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\n" })
+await page.click('#btn-mode')
+check((await mode()) === 'blocks', 'fixed Python goes back to blocks')
 
 // --- Typed Python counts as work, even with no blocks on the canvas -------
 // A student clears the blocks, switches to Python and types. Nothing that

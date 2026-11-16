@@ -1,6 +1,10 @@
 /** Blocks every board shares: starting, waiting, repeating, printing. */
 import { Order } from 'blockly/python'
+import { registerFieldMultilineInput } from '@blockly/field-multilineinput'
+import { parser } from '@lezer/python'
 import { msg, defineBlocks, value, body } from './define.js'
+
+registerFieldMultilineInput()
 import { need } from './context.js'
 
 export const COLOR_CHOICES = [
@@ -127,14 +131,42 @@ defineBlocks([
     },
   },
 
+  // Python with no block of its own: typed into the block, or kept from
+  // Python that came back to blocks. Any number of lines.
   {
     json: {
       type: 'ocb_python',
-      args0: [{ type: 'field_input', name: 'CODE', text: 'print("hi")' }],
+      args0: [{ type: 'field_multilinetext', name: 'CODE', text: 'print("hi")', spellcheck: false }],
       previousStatement: null,
       nextStatement: null,
-      style: 'basics_blocks',
+      style: 'python_blocks',
     },
     python: (block) => `${block.getFieldValue('CODE')}\n`,
   },
+  {
+    json: {
+      type: 'ocb_python_value',
+      args0: [{ type: 'field_input', name: 'CODE', text: 'max(1, 2)', spellcheck: false }],
+      output: null,
+      style: 'python_blocks',
+    },
+    // Bracketed where the code around it binds tighter, unless it is one
+    // piece already (a name, a call, a string): `2 * (a + b)` stays right.
+    python: (block) => {
+      const code = block.getFieldValue('CODE')
+      return [code, isAtom(code) ? Order.ATOMIC : Order.NONE]
+    },
+  },
+])
+
+/** One piece of Python that never needs brackets around it. */
+function isAtom(code) {
+  const top = parser.parse(code).topNode.firstChild?.firstChild
+  return !!top && top.from === 0 && top.to === code.trim().length && ATOMS.has(top.name)
+}
+
+const ATOMS = new Set([
+  'VariableName', 'CallExpression', 'MemberExpression', 'SubscriptExpression', 'Number', 'String',
+  'FormatString', 'Boolean', 'None', 'ParenthesizedExpression', 'ArrayExpression', 'DictionaryExpression',
+  'TupleExpression', 'SetExpression', 'ArrayComprehensionExpression', 'DictionaryComprehensionExpression',
 ])

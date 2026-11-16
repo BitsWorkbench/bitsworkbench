@@ -260,7 +260,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 | Package | Licence |
 | --- | --- |
-| Blockly, `@blockly/block-plus-minus` | Apache-2.0 |
+| Blockly, `@blockly/block-plus-minus`, `@blockly/field-multilineinput` | Apache-2.0 |
 | Three.js | MIT |
 | xterm.js, `@xterm/addon-fit` | MIT |
 | CodeMirror 6 (`@codemirror/*`), Lezer (`@lezer/*`), and their helpers `style-mod`, `w3c-keyname`, `crelt` | MIT |

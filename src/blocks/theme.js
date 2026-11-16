@@ -16,6 +16,8 @@ export const HUE = {
   lists: '#c9a227',
   variables: '#d06e3f',
   functions: '#8894a8',
+  // Python with no block of its own: plain grey, so it reads as "not a block yet".
+  python: '#b4b8bf',
 }
 
 /** The style names Blockly's built-in blocks use, and the category each belongs to. */

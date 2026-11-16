@@ -9,7 +9,7 @@ import { pythonGenerator } from 'blockly/python'
 import { resetNeeds, allNeeds } from './context.js'
 import { getTarget } from '../device/targets.js'
 
-const DEVICE_IMPORT = {
+export const DEVICE_IMPORT = {
   codex: 'from codex import *',
   codebot: 'from botcore import *',
   codeair: 'from codeair import *',
@@ -17,7 +17,7 @@ const DEVICE_IMPORT = {
 
 const NEED_FOR_DEVICE = { codex: 'codex', codebot: 'botcore', codeair: 'codeair' }
 
-const BANNER = '# Made with Codacious 💚 Blocks in, Python out.'
+export const BANNER = '# Made with Codacious 💚 Blocks in, Python out.'
 
 export function generatePython(workspace, targetId) {
   resetNeeds()

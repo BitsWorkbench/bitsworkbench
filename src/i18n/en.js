@@ -155,11 +155,9 @@ export default {
   'editor.selectionDeleted': 'Selection deleted',
   'editor.controlCharacter': 'Control character',
   'text.startedTitle': "You're writing Python now",
-  'text.startedDetail': 'Run sends the code you type. Your blocks are kept for when you go back.',
-  'text.backTitle': 'Go back to blocks?',
-  'text.backBodyHtml': '<p>The Python you typed cannot be turned back into blocks, so your typed changes will be lost.</p><p>To keep them, press <b>Keep my Python</b>, then Download Python from the ⋯ menu.</p>',
-  'text.backConfirm': 'Back to blocks',
-  'text.keep': 'Keep my Python',
+  'text.startedDetail': 'Run sends the code you type. Back to blocks turns your Python into blocks.',
+  'text.notParsedTitle': 'Fix the Python first',
+  'text.notParsedDetail': 'Line {line} has a mistake, so it cannot become blocks yet. The cursor is on it.',
 
   'new.title': 'Start a new project?',
   'new.bodyHtml': '<p>Your current blocks will be cleared. This cannot be undone.</p><p>To keep them, press <b>Keep my blocks</b>, then Save project from the ⋯ menu.</p>',
@@ -351,6 +349,7 @@ export default {
   'cat.lists': '📋 Lists',
   'cat.variables': '📦 Variables',
   'cat.functions': '🧰 Functions',
+  'cat.python': '🐍 Python',
   'cat.screen': '🖥️ Screen',
   'cat.lights': '✨ Lights',
   'cat.sound': '🎵 Sound',
@@ -619,7 +618,9 @@ export default {
   'block.ocb_seconds_since_start.message0': '⏱ seconds since start',
   'block.ocb_seconds_since_start.tooltip': 'How long your program has been running.',
   'block.ocb_python.message0': '🐍 run Python %1',
-  'block.ocb_python.tooltip': 'Escape hatch: write one line of Python yourself.',
+  'block.ocb_python.tooltip': 'Python with no block of its own. Type any Python here, as many lines as you like.',
+  'block.ocb_python_value.message0': '🐍 %1',
+  'block.ocb_python_value.tooltip': 'A piece of Python with no block of its own.',
 
   // CodeBot blocks
   'block.codebot_drive.message0': '🤖 drive %1 at %2 %% power',

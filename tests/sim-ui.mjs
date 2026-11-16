@@ -447,9 +447,8 @@ if (!first.n || !first.block || !second.n || second.n === first.n || !second.blo
   const line2 = await selected()
   await page.evaluate(() => window.openCodeBot.device.stop())
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
-  // back to blocks for what follows (the typed changes are let go)
+  // back to blocks for what follows (the typed Python becomes blocks)
   await page.click('#btn-mode')
-  await page.click('#modal button[value="ok"]')
   await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks', null, { timeout: 5000 })
   if (!ranTyped || line1 !== 'sleep(2)' || line2 !== "print('typed one')" || !marked1) {
     problems.push(`text mode: ${JSON.stringify({ out: out.slice(-200), line1, line2, marked1 })}`)
