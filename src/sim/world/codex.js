@@ -41,6 +41,17 @@ export class CodeX {
     for (const v of this.voices) v.gate = false
   }
 
+  // The reset button held down: the board is held in reset, its LEDs,
+  // NeoPixels, sound and backlight off, until it is let go.
+  holdReset(down) {
+    this.resetHeld = down
+    if (!down) return
+    this.programEnded()
+    this.ioOut = 0
+    this.pixels = this.pixels.map(() => [0, 0, 0])
+    this.brightness = 0
+  }
+
   press(n, down) {
     if (down === this.buttons[n]) return
     this.buttons[n] = down
@@ -85,7 +96,7 @@ export class CodeX {
       leds: [0, 1, 2, 3, 4, 5].map((i) => !!((this.ioOut >> (i + 2)) & 1)),
       pixels: this.pixels.map((p) => [...p]),
       brightness: this.brightness,
-      buttons: [...this.buttons],
+      buttons: [...this.buttons], reset: !!this.resetHeld,
       sound: this.sounding(),
       screenVersion: this.screen.version,
       tilt: [this.tiltX, this.tiltY],
