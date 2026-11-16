@@ -223,6 +223,7 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
     'range(5) counts 0 to 4 by 1; range(10, 0, -2) counts 10 down to 1 by 2',
   )
   check(r.back.includes('for i in range(5):') && r.back.includes('for n in range(10, 0, -2):'), 'and both make the same range again')
+  check(r.back.includes('x += 2\nx -= 1\n') && !r.back.includes('isinstance'), '"change by" writes x += 2 and x -= 1, as typed')
   const each = await from('for word in words:\n    print(word)\n')
   check(each.shape[0].inputs.DO.type === 'controls_forEach' && each.shape[0].inputs.DO.fields.VAR === 'word', 'for word in words is "for each word in list"')
   const notVar = await from('print(RED)\n')

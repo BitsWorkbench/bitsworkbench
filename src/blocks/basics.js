@@ -1,5 +1,5 @@
 /** Blocks every board shares: starting, waiting, repeating, printing. */
-import { Order } from 'blockly/python'
+import { Order, pythonGenerator } from 'blockly/python'
 import { registerFieldMultilineInput } from '@blockly/field-multilineinput'
 import { parser } from '@lezer/python'
 import { msg, defineBlocks, value, body } from './define.js'
@@ -158,6 +158,16 @@ defineBlocks([
     },
   },
 ])
+
+// Blockly's "change x by" writes `x = (x if isinstance(x, Number) else 0) + 1`
+// so a variable never set counts as 0. Codacious is blocks that grow into
+// real Python: it writes what a student would, and comes back from it.
+pythonGenerator.forBlock.math_change = (block, gen) => {
+  const name = gen.getVariableName(block.getFieldValue('VAR'))
+  const delta = value(gen, block, 'DELTA', '0', Order.NONE)
+  // "change by -1" is `x -= 1`, as it would be typed.
+  return /^-\d+(\.\d+)?$/.test(delta) ? `${name} -= ${delta.slice(1)}\n` : `${name} += ${delta}\n`
+}
 
 /** One piece of Python that never needs brackets around it. */
 function isAtom(code) {
