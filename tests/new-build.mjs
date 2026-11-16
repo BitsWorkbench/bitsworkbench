@@ -2,9 +2,9 @@
  * After a deploy, a page still on the old build reloads onto the new one
  * (src/ui/new-build.js): here, a part that fails to load reloads the page
  * once, the student's work is still there after it, and a second failure
- * within the minute does not reload again. The service worker's own takeover
- * needs two builds to show, and is not tested here. Run with `npm run build`
- * first.
+ * within the minute does not reload again. A stale page with its stylesheet,
+ * view and worker gone needs two builds to show, and is not tested here. Run
+ * with `npm run build` first.
  */
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'

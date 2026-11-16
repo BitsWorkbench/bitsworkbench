@@ -91,10 +91,11 @@ npm run preview  # serve dist/ locally
   does, then pulls the network and reloads, so the "works offline" promise
   cannot quietly break.
 - **`tests/new-build.mjs`**: after a deploy, a page still on the build its
-  service worker kept loses the parts it loads late (the simulator's). The page
-  saves the work and reloads once onto the new build (`src/ui/new-build.js`);
-  this checks that reload, that the work survives it, and that it never repeats
-  within a minute.
+  service worker kept can lose the parts it loads late (the simulator's view,
+  worker and styles). Only then, when the page is already broken, it saves the
+  work and reloads once onto the new build (`src/ui/new-build.js`); a deploy
+  alone never reloads a working page. This checks that reload, that the work
+  survives it, and that it never repeats within a minute.
 - **`tests/privacy.mjs`**: walks the app (the palette, a run, the simulator in
   every room, the boards page) recording every request, from the page, its
   workers and its service worker, and fails on any that goes anywhere but the
