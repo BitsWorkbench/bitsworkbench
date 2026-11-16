@@ -101,12 +101,7 @@ for (const device of DEVICES) {
   await page.evaluate((deviceId) => {
     window.openCodeBot._pickTarget(deviceId)
   }, device)
-  await page.waitForTimeout(300)
-  // Switching boards asks whether to start fresh; say yes.
-  if (await page.evaluate(() => document.getElementById('modal')?.open)) {
-    await page.click('#modal button[value="ok"]')
-  }
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(800)
   await page.screenshot({ path: `${SHOT_DIR}/ocb-${device}.png` })
 }
 

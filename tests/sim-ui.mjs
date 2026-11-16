@@ -460,7 +460,6 @@ if (!first.n || !first.block || !second.n || second.n === first.n || !second.blo
 await page.click('#btn-sim')                                   // stop simulating CodeBot
 await page.evaluate(() => { window.openCodeBot._pickTarget('codex') })
 await page.waitForTimeout(300)
-if (await page.evaluate(() => document.getElementById('modal')?.open)) await page.click('#modal button[value="ok"]')
 await page.click('#btn-sim')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && window.openCodeBot.device.targetId === 'codex', null, { timeout: 20000 })
 await page.evaluate(() => {
@@ -603,7 +602,6 @@ if (FLIGHT) {
   await page.click('#btn-sim')
   await page.evaluate(() => { window.openCodeBot._pickTarget('codeair') })
   await page.waitForTimeout(300)
-  if (await page.evaluate(() => document.getElementById('modal')?.open)) await page.click('#modal button[value="ok"]')
   await page.click('#btn-sim')
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && window.openCodeBot.device.targetId === 'codeair', null, { timeout: 20000 })
   await page.evaluate(() => {
@@ -763,7 +761,6 @@ while True:
   await page.evaluate(() => window.openCodeBot.device.disconnect())
   await page.evaluate(() => { window.openCodeBot._pickTarget('codeair') })
   await page.waitForTimeout(300)
-  if (await page.evaluate(() => document.getElementById('modal')?.open)) await page.click('#modal button[value="ok"]')
   await page.click('#btn-sim')
   await page.waitForTimeout(500)
   if (!(await page.evaluate(() => document.body.innerText.includes('Flight simulation is coming')))) problems.push('no flight: picking CodeAIR did not say flight simulation is coming')
