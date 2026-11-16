@@ -22,14 +22,6 @@
           </div>
         </div>
 
-        <div class="project-bar">
-          <button id="btn-new" class="btn btn-ghost btn-new" data-i18n-attr="title=btn.newTitle">
-            <span class="btn-emoji" aria-hidden="true">🆕</span><span class="btn-text" data-i18n="btn.new"></span>
-          </button>
-          <input id="project-name" class="project-name" type="text" maxlength="60" spellcheck="false"
-                 data-i18n-attr="aria-label=project.nameLabel;title=project.nameTitle;placeholder=project.default" />
-        </div>
-
         <div class="topbar-center">
           <button id="device-chip" class="device-chip" aria-haspopup="listbox" aria-expanded="false">
             <span class="device-chip-dot" data-state="off"></span>
@@ -66,10 +58,8 @@
           <div class="menu-wrap">
             <button id="btn-menu" class="btn btn-ghost" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="title=btn.more;aria-label=btn.more">⋯</button>
             <div id="app-menu" class="app-menu" role="menu" hidden>
-              <button role="menuitem" data-action="new" data-i18n="menu.new"></button>
               <button role="menuitem" data-action="examples" data-i18n="menu.examples"></button>
-              <button role="menuitem" data-action="open" data-i18n="menu.open"></button>
-              <button role="menuitem" data-action="save" data-i18n="menu.save"></button>
+              <button role="menuitem" data-action="open" data-i18n="menu.import"></button>
               <hr />
               <button role="menuitem" data-action="export-py" data-i18n="menu.exportPy"></button>
               <button role="menuitem" data-action="copy-py" data-i18n="menu.copyPy"></button>
@@ -87,29 +77,44 @@
 
       <main class="workarea">
         <section class="blocks-pane" id="blocks-pane">
-          <div id="blockly-root" class="blockly-root"></div>
-          <div class="code-pane" id="code-pane" hidden>
-            <nav class="py-palette" id="py-palette"></nav>
-            <div class="code-main">
-              <div class="python-bar">
-                <button id="btn-files" class="btn btn-small btn-ghost" type="button" aria-expanded="false" aria-controls="files-panel" data-i18n="files.button"></button>
-                <span class="python-bar-msg" id="python-bar-msg" data-i18n="text.barBlocks"></span>
-                <span class="file-tab" id="file-tab" hidden><span id="file-name"></span><span class="file-dirty" id="file-dirty" hidden data-i18n-attr="title=files.unsaved;aria-label=files.unsaved">●</span></span>
-                <button id="btn-file-save" class="btn btn-small btn-ghost" type="button" hidden data-i18n="files.save"></button>
-                <button id="btn-mode" class="btn btn-small" type="button" data-i18n="text.toText"></button>
-              </div>
-              <div class="code-body">
-                <aside id="files-panel" class="files-panel" hidden></aside>
-                <pre id="python-view" class="python-view" tabindex="0" data-i18n-attr="aria-label=text.viewLabel"><code>&nbsp;</code></pre>
-                <div id="python-editor" class="python-editor" hidden></div>
-              </div>
-              <p id="python-editor-help" class="sr-only" data-i18n="text.editorHelp"></p>
-            </div>
+          <!-- The program's file on the left (it opens the file browser), and
+               the blocks/Python switch on the right, in both views. -->
+          <div class="editor-bar" id="editor-bar">
+            <button id="btn-files" class="file-button" type="button" aria-expanded="false" aria-controls="files-panel">
+              <span class="file-icon" aria-hidden="true">📁</span>
+              <span class="file-name" id="file-name"></span>
+              <span class="file-dirty" id="file-dirty" hidden data-i18n-attr="title=files.unsaved">●</span>
+            </button>
+            <button id="btn-save-again" class="btn btn-small save-again" type="button" hidden></button>
+            <button id="btn-view" class="view-switch" type="button" role="switch" aria-checked="false" data-i18n-attr="aria-label=view.label">
+              <span class="view-opt" data-view="blocks" data-i18n="view.blocks"></span>
+              <span class="view-opt" data-view="python" data-i18n="view.python"></span>
+            </button>
           </div>
-          <button id="btn-view" class="btn view-toggle" type="button" aria-controls="code-pane"></button>
-          <div class="blocks-hint" id="blocks-hint">
-            <img src="./icons/firia-bot-head.svg" alt="" width="44" height="44" />
-            <p data-i18n="blocks.hint"></p>
+          <div class="editor-body">
+            <aside id="files-panel" class="files-panel" hidden></aside>
+            <div class="editor-main">
+              <div id="blockly-root" class="blockly-root"></div>
+              <div class="code-pane" id="code-pane" hidden>
+                <nav class="py-palette" id="py-palette"></nav>
+                <div class="code-main">
+                  <div id="python-editor" class="python-editor"></div>
+                  <p id="python-editor-help" class="sr-only" data-i18n="text.editorHelp"></p>
+                </div>
+              </div>
+              <div class="blocks-hint" id="blocks-hint">
+                <img src="./icons/firia-bot-head.svg" alt="" width="44" height="44" />
+                <p data-i18n="blocks.hint"></p>
+              </div>
+            </div>
+            <!-- Another tab of this browser is the one editing: this one only shows. -->
+            <div class="tab-elsewhere" id="tab-elsewhere" role="alert" hidden>
+              <div class="tab-elsewhere-card">
+                <h2 data-i18n="tabs.elsewhereTitle"></h2>
+                <p data-i18n="tabs.elsewhereBody"></p>
+                <button id="btn-use-tab" class="btn" type="button" data-i18n="tabs.useHere"></button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -154,7 +159,7 @@
 
     <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
     <dialog id="modal" class="modal"></dialog>
-    <input type="file" id="file-input" accept=".ocb,.json" hidden />
+    <input type="file" id="file-input" accept=".py,.ocb,.json,text/x-python" hidden />
 
     <script type="module" src="/src/main.js"></script>
   </body>

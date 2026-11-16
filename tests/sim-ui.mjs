@@ -414,33 +414,34 @@ const runPaused = async () => {
 
 // Step by line: Run, Pause, then Step: the paused line is marked in the
 // Python and on its block; each step moves on a line.
-await page.evaluate(() => window.openCodeBot.device.sim.setSpeed(1))
+await page.evaluate(() => {
+  const sim = window.openCodeBot.device.sim
+  sim.setSpeed(1)
+  sim.addEventListener('line', (e) => { window.__line = e.detail.line })
+})
 const atRest = await shown()
 const whileRunning = await runPaused()
 const whilePaused = await shown()
+// The paused line, as the simulator reports it, and the block it is marked on.
 const marked = async () => page.evaluate(() => {
-  const el = document.querySelector('#python-view .py-line.is-current')
-  const ran = window.openCodeBot._ran
-  const n = el ? Number(el.dataset.n) : null
-  return { n, text: el?.textContent ?? null, block: n ? ran.blockAt[n] ?? null : null, state: window.openCodeBot.device.state }
+  const app = window.openCodeBot
+  const ran = app._ran
+  const n = window.__line ?? null
+  const block = n ? ran.blockAt[n] ?? null : null
+  return { n, text: n ? ran.code.split('\n')[n - 1] : null, block, lit: !!block && app.workspace.workspace.getBlockById(block)?.isHighlighted?.() !== false, state: app.device.state }
 })
-await page.waitForSelector('#python-view .py-line.is-current', { state: 'attached', timeout: 10000 }).catch(() => {})
+await page.waitForFunction(() => window.__line, null, { timeout: 10000 }).catch(() => {})
 // The imports come first, with no block; step on to the blocks' lines.
 const step = async () => {
   const before = (await marked()).n
   await page.click('#btn-step')
-  await page.waitForFunction((n) => {
-    const el = document.querySelector('#python-view .py-line.is-current')
-    return el && Number(el.dataset.n) !== n
-  }, before, { timeout: 5000 }).catch(() => {})
+  await page.waitForFunction((n) => window.__line && window.__line !== n, before, { timeout: 5000 }).catch(() => {})
   return marked()
 }
 let first = await marked()
 for (let i = 0; i < 8 && !first.block; i++) first = await step()
 const second = await step()
-await page.click('#btn-view') // the Python, with the marked line
 await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-step.png` })
-await page.click('#btn-view') // back to the blocks
 await page.evaluate(() => window.openCodeBot.device.stop())
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
 // Resumed, Step stays; stopped, Run alone (a program that runs on, so it is
@@ -470,7 +471,6 @@ if (!first.n || !first.block || !second.n || second.n === first.n || !second.blo
   // The sleep gives Pause a moment to land in.
   const typed = "from botcore import *\nfrom time import sleep\nsleep(2)\nprint('typed one')\nx = 2\nprint('typed', x * 3)\n"
   await page.click('#btn-view')
-  await page.click('#btn-mode')
   await page.evaluate((text) => { window.openCodeBot.pythonEditor.value = text }, typed)
   await page.evaluate(() => { window.__sim.out = '' })
   await page.click('#btn-run')
@@ -492,7 +492,7 @@ if (!first.n || !first.block || !second.n || second.n === first.n || !second.blo
   await page.evaluate(() => window.openCodeBot.device.stop())
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
   // back to blocks for what follows (the typed Python becomes blocks)
-  await page.click('#btn-mode')
+  await page.click('#btn-view')
   await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks', null, { timeout: 5000 })
   if (!ranTyped || line1 !== 'sleep(2)' || line2 !== "print('typed one')" || !marked1) {
     problems.push(`text mode: ${JSON.stringify({ out: out.slice(-200), line1, line2, marked1 })}`)

@@ -177,11 +177,12 @@ await page.locator('.py-snippets .py-hint').waitFor()
 check(true, 'and a hint once the library is empty')
 
 // --------------------------------------- the gutter marks, without typing
+await page.click('#btn-view') // back to the blocks
 await page.evaluate(() => {
   const app = window.openCodeBot
   app.workspace.replaceBlocks(app.blocksFromPython('import math\nprint(1)\n').state)
 })
-await page.click('#btn-mode')
+await page.click('#btn-view') // and to their Python
 await page.waitForFunction(() => window.openCodeBot.pythonEditor.markedLines().length > 0)
 const marked = await page.evaluate(() => {
   const ed = window.openCodeBot.pythonEditor

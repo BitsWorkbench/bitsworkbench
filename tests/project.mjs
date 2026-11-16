@@ -1,6 +1,8 @@
 /**
- * Projects from a teacher's point of view: start over with the New button,
- * rename a project, and find it again after a reload. Run after `npm run build`.
+ * Programs from a teacher's point of view: each is a Python file (main.py at
+ * first, in this browser), saved by itself, found again after a reload; an
+ * old project file opens as a new one; picking another board never asks.
+ * Run after `npm run build`.
  */
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
@@ -35,66 +37,64 @@ const modalOpen = () => page.evaluate(() => document.getElementById('modal')?.op
 const blockCount = () => page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length)
 
 await page.goto(BASE, { waitUntil: 'networkidle' })
-await page.evaluate(() => {
+await page.evaluate(async () => {
   localStorage.clear()
-  // Skip the welcome dialog; this test is about projects.
+  // Skip the welcome dialog; this test is about programs and their files.
   localStorage.setItem('opencodebot.welcomed.v1', '1')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('opencodebot-browser-files'); q.onsuccess = q.onerror = q.onblocked = r })
 })
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
 
-check(await page.isVisible('#btn-new'), 'New is a visible button, not hidden in a menu')
-check((await page.inputValue('#project-name')) === 'My project', 'a fresh project is called "My project"')
+const fileName = () => page.textContent('#file-name')
+const stored = (path) => page.evaluate((p) => window.openCodeBot.stores.browser.read(p).catch(() => null), path)
+const python = () => page.evaluate(() => window.openCodeBot._currentPython())
+check((await fileName()) === 'main.py', 'a first program is the file main.py, kept in this browser')
 check((await blockCount()) > 0, 'the CodeBot starter program is loaded')
+check((await page.title()).startsWith('main'), 'the browser tab shows the file')
+await page.waitForFunction(() => window.openCodeBot.openFile?.saved)
+check((await stored('main.py')) === (await python()), 'main.py holds the program as Python')
 
-// Rename
-await page.fill('#project-name', '  Line   Follower ')
-await page.press('#project-name', 'Enter')
-check((await page.inputValue('#project-name')) === 'Line Follower', 'renaming tidies the name')
-check((await page.title()).startsWith('Line Follower'), 'the browser tab shows the project name')
+// Work saves itself, a moment after a change.
+await page.evaluate(() => window.openCodeBot.workspace.workspace.newBlock('ocb_print').initSvg())
+await page.waitForFunction(() => !document.getElementById('file-dirty').hidden).catch(() => {})
+check(true, 'a change shows the dot while it waits to be saved')
+await page.waitForFunction(() => document.getElementById('file-dirty').hidden, null, { timeout: 4000 }).catch(() => {})
+check((await stored('main.py')) === (await python()), 'and then is saved, with no Save pressed')
 
-// Saved file is named after the project
-const [download] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Control+s')])
-check(download.suggestedFilename() === 'line-follower.ocb', `saved file is named after the project (${download.suggestedFilename()})`)
-const saved = JSON.parse(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'))
-check(saved.name === 'Line Follower', 'the saved file keeps the name')
+// Ctrl+S saves now, and says so; nothing downloads.
+let downloaded = false
+page.on('download', () => { downloaded = true })
+await page.keyboard.press('Control+s')
+await page.waitForSelector('.toast >> text=Saved', { timeout: 3000 }).catch(() => {})
+check((await page.isVisible('.toast >> text=Saved')) && !downloaded, 'Ctrl+S saves the file now')
 
-// Survives a reload
-await page.waitForTimeout(400) // autosave is debounced
+// It all comes back after a reload.
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
-check((await page.inputValue('#project-name')) === 'Line Follower', 'the name survives a reload')
+check((await fileName()) === 'main.py' && (await blockCount()) > 0, 'the file and its blocks come back after a reload')
 
-// Escape puts the old name back
-await page.fill('#project-name', 'Oops')
-await page.press('#project-name', 'Escape')
-check((await page.inputValue('#project-name')) === 'Line Follower', 'Escape cancels a rename')
+// An old project file opens as a new Python file, beside the open one.
+const project = { format: 'opencodebot', version: 1, name: 'Line Follower', device: 'codebot', blocks: { blocks: { languageVersion: 0, blocks: [{ type: 'ocb_on_start', x: 40, y: 40, inputs: { DO: { block: { type: 'ocb_print', inputs: { TEXT: { shadow: { type: 'text', fields: { TEXT: 'hi' } } } } } } } }] } } }
+await page.setInputFiles('#file-input', { name: 'line-follower.ocb', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) })
+await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'line-follower.py').catch(() => {})
+check((await fileName()) === 'line-follower.py', 'an old project file opens as line-follower.py')
+check((await stored('line-follower.py'))?.includes("print('hi')") && (await stored('main.py')) !== null, 'saved as Python, and main.py is kept')
 
-// New asks first, and "Keep my blocks" keeps them
-const before = await blockCount()
-await page.click('#btn-new')
-check(await modalOpen(), 'New asks before clearing blocks')
-await page.click('#modal button[value="cancel"]')
-check((await blockCount()) === before, '"Keep my blocks" keeps them')
+// Back to main.py, with nothing pressed but its name.
+await page.click('#btn-files')
+await page.click('#files-panel .files-item[data-path="main.py"]')
+await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'main.py')
+check((await blockCount()) > 2, 'main.py opens again as its blocks')
+await page.click('#btn-files')
 
-// New, confirmed, starts over
-await page.click('#btn-new')
-await page.click('#modal button[value="ok"]')
-await page
-  .waitForFunction(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length === 0, null, { timeout: 3000 })
-  .catch(() => {})
-check((await blockCount()) === 0, 'New clears the blocks')
-check((await page.inputValue('#project-name')) === 'My project', 'New resets the name')
-
-// With nothing to lose, New does not ask
-await page.click('#btn-new')
-check(!(await modalOpen()), 'New on an empty project does not ask')
+// An empty program, to start the board-switch checks from.
+await page.evaluate(() => window.openCodeBot.workspace.workspace.clear())
 
 // Picking another board never asks. The old board's starter, as it came,
 // becomes the new board's; a program of the student's stays, and a toast
 // names the blocks the new board cannot run.
-const python = () => page.evaluate(() => window.openCodeBot._blocksPython())
 const pick = async (id) => {
   await page.evaluate((b) => window.openCodeBot._pickTarget(b), id)
   await page.waitForTimeout(300)

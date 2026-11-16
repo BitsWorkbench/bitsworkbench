@@ -15,7 +15,7 @@ import { tags } from '@lezer/highlight'
 import { t } from '../i18n/index.js'
 import { snippetDrop, previewSnippet, dropSnippet, insertSnippet } from './snippet-drop.js'
 
-// The same colours as the blocks' read-only Python view (app.css .python-view).
+// The same colours as the Python palette's snippets (app.css .python-editor .k and on).
 const colours = HighlightStyle.define([
   { tag: [tags.keyword, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword, tags.operatorKeyword, tags.bool, tags.null, tags.self], class: 'k' },
   { tag: [tags.string, tags.special(tags.string)], class: 's' },

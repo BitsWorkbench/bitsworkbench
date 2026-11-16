@@ -53,35 +53,30 @@ const shows = () =>
 let view = await shows()
 check(view.blocks && !view.python, 'the blocks show at first, not the Python')
 check(!(await page.isVisible('.tab[data-tab="python"]')), 'there is no Python tab beside the device')
-const toggle = await page.locator('#btn-view').boundingBox()
-const palette = await page.locator('.blocklyToolbox').first().boundingBox()
-check(
-  toggle.x < palette.x + palette.width && toggle.y + toggle.height > palette.y + palette.height - 80,
-  'the blocks/Python button sits at the bottom left, under the palette',
-)
+// The editor bar: the file on its left, the blocks/Python switch on its right,
+// over the blocks and over the Python alike.
+const box = (sel) => page.locator(sel).first().boundingBox()
+const barLayout = async () => {
+  const [bar, file, toggle, main] = await Promise.all([box('#editor-bar'), box('#btn-files'), box('#btn-view'), box('.editor-main')])
+  return file.x < bar.x + 40 && toggle.x + toggle.width > bar.x + bar.width - 40 && bar.y + bar.height <= main.y + 1
+}
+check(await barLayout(), 'with the blocks, the bar sits over them: the file on the left, the switch on the right')
+check(!(await page.isVisible('#btn-mode')) && !(await page.isVisible('#btn-new')) && !(await page.isVisible('#project-name')), 'no Edit as Python, New or name field')
+check(/\.py$/.test(await page.textContent('#file-name')), 'the file name shows .py, even in blocks')
 await page.click('#btn-view')
 view = await shows()
 check(view.python && !view.blocks, '🐍 Python shows the Python in place of the blocks')
-check(!(await page.isVisible('#python-editor')), 'blocks mode shows read-only Python')
-check(await page.isVisible('#btn-view'), 'the button stays to go back')
+check((await mode()) === 'text' && (await page.isVisible('#python-editor')), 'and it is there to edit, always')
+check((await page.getAttribute('#btn-view', 'aria-checked')) === 'true', 'the switch says Python is showing')
+check(await barLayout(), 'with the Python, the same bar sits over it')
 await page.click('#btn-view')
 view = await shows()
-check(view.blocks && !view.python, '🧩 Blocks brings the blocks back')
+check(view.blocks && !view.python && (await mode()) === 'blocks', '🧩 Blocks brings the blocks back')
 
-// Into text mode
+// Into the Python
 await page.click('#btn-view')
-await page.click('#btn-mode')
-check((await mode()) === 'text', '"Edit as Python" switches to text mode')
-check(await page.isVisible('#python-editor'), 'the Python becomes editable')
 view = await shows()
 check(view.python && !view.blocks, 'the blocks are out of sight while writing Python')
-check(
-  await page.evaluate(() => {
-    const b = document.getElementById('btn-view').getBoundingClientRect()
-    return document.getElementById('btn-view').contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2))
-  }),
-  'the blocks/Python button is on top of the editor, not under its gutter',
-)
 const editorText = () => page.evaluate(() => window.openCodeBot.pythonEditor.value)
 const seeded = await editorText()
 check(seeded.includes('from botcore import *'), 'the editor starts with the blocks\' Python')
@@ -136,10 +131,9 @@ const kinds = await page.evaluate(() => window.openCodeBot.workspace.workspace.g
 check(kinds.includes('controls_repeat_ext') && kinds.includes('ocb_print'), 'the typed loop came back as blocks')
 check(!kinds.includes('ocb_python'), 'with nothing left over as Python')
 
-// Only looked at in blocks: Edit as Python gives back exactly what was typed
+// Only looked at in blocks: the Python view gives back exactly what was typed
 await page.click('#btn-view')
-await page.click('#btn-mode')
-check((await mode()) === 'text', 'Edit as Python again')
+check((await mode()) === 'text', 'the Python again')
 check((await editorText()) === typedBefore, 'Python only looked at in blocks comes back exactly as typed')
 
 // Lines that will become grey Python blocks have a quiet mark in the gutter,
@@ -166,7 +160,7 @@ check(true, 'and the marks go when every line has a block')
 
 // Code that does not parse stays Python, with the cursor on the line to fix
 await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\nprint((\nprint('three')\n" })
-await page.click('#btn-mode')
+await page.click('#btn-view')
 check((await mode()) === 'text', 'Python with a mistake does not go back to blocks')
 check(await page.isVisible('.toast >> text=Fix the Python first'), 'and says so')
 check(
@@ -176,7 +170,7 @@ check(
 
 // Fixed, it goes back
 await page.evaluate(() => { window.openCodeBot.pythonEditor.value = "print('one')\n" })
-await page.click('#btn-mode')
+await page.click('#btn-view')
 check((await mode()) === 'blocks', 'fixed Python goes back to blocks')
 
 // --- Typed Python counts as work, even with no blocks on the canvas -------
@@ -195,7 +189,6 @@ async function freshTyped(url, typed) {
   await p.waitForFunction(() => !!window.openCodeBot)
   await p.evaluate(() => window.openCodeBot.workspace.workspace.clear())
   await p.click('#btn-view')
-  await p.click('#btn-mode')
   await p.evaluate((text) => { window.openCodeBot.pythonEditor.value = text }, typed)
   return p
 }
@@ -207,15 +200,17 @@ const keeps = (p) =>
   )
 
 {
+  // A new file: the typed Python is saved in its own file first.
   const p = await freshTyped(BASE, TYPED)
-  await p.click('#btn-new')
-  const asked = await p.evaluate(() => document.getElementById('modal')?.open)
-  check(asked, 'New asks when only typed Python is there')
-  const keepLabel = asked ? await p.textContent('#modal button[value="cancel"]') : ''
-  check(keepLabel === 'Keep my program', `New's keep button says "Keep my program" (${keepLabel})`)
-  if (asked) await p.click('#modal button[value="cancel"]')
-  await p.waitForTimeout(100)
-  check(await keeps(p), '"Keep my program" on New keeps the typed Python')
+  const mine = await p.evaluate(() => window.openCodeBot.openFile.path)
+  await p.click('#btn-files')
+  await p.click('#files-panel .files-section[data-store="browser"] [data-act="new-file"]')
+  await p.fill('#files-name', 'another')
+  await p.press('#files-name', 'Enter')
+  await p.waitForFunction(() => window.openCodeBot.openFile.path === 'another.py')
+  check(!(await p.evaluate(() => document.getElementById('modal')?.open)), 'a new file does not ask')
+  const kept = await p.evaluate((path) => window.openCodeBot.stores.browser.read(path), mine)
+  check(kept === TYPED, `the typed Python is kept in ${mine}`)
   await p.close()
 }
 {
@@ -239,7 +234,7 @@ const keeps = (p) =>
   await p.close()
 }
 {
-  // A starter program has no name; it must not undo a rename.
+  // A starter program has no name; it keeps the file's.
   const p = await browser.newPage({ viewport: { width: 1280, height: 800 } })
   await p.goto(BASE, { waitUntil: 'networkidle' })
   await p.evaluate(() => {
@@ -250,13 +245,12 @@ const keeps = (p) =>
   await p.reload({ waitUntil: 'networkidle' })
   await p.waitForFunction(() => !!window.openCodeBot)
   await p.evaluate(() => window.openCodeBot.workspace.workspace.clear())
-  await p.fill('#project-name', 'Zoom Zoom')
-  await p.press('#project-name', 'Enter')
+  const file = await p.textContent('#file-name')
   await p.evaluate(() => window.openCodeBot._pickTarget('codex'))
   await p.waitForTimeout(300)
   const loaded = await p.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length)
   check(loaded > 0, 'an empty project gets the new device\'s starter program')
-  check((await p.inputValue('#project-name')) === 'Zoom Zoom', 'loading a starter keeps the name the student typed')
+  check((await p.textContent('#file-name')) === file, `loading a starter keeps the file (${file})`)
   await p.close()
 }
 

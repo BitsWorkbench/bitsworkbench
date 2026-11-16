@@ -186,17 +186,20 @@ check(
 )
 
 await page.click('#btn-view')
-await audit('the Python view')
-await page.click('#btn-mode')
-await audit('writing Python (text mode)')
+await audit('the Python view, to edit')
 await page.click('.py-cat >> nth=0')
 await audit('the Python palette open')
 await page.keyboard.press('Escape')
 await page.click('#btn-files')
-await page.waitForSelector('#files-panel [data-act="pick"]')
-await audit('the Files panel open')
+await page.waitForSelector('#files-panel [data-act="attach"]')
+await audit('the file browser open, in Python')
+await page.click('#files-panel .files-section[data-store="browser"] [data-act="new-file"]')
+await page.waitForSelector('#files-name')
+await audit('naming a new file')
+await page.keyboard.press('Escape')
+await page.click('#btn-view')
+await audit('the file browser open, with the blocks')
 await page.click('#btn-files')
-await page.click('#btn-mode')
 
 await page.click('#btn-menu')
 await audit('the ⋯ menu open')
@@ -280,11 +283,14 @@ const toastMs = await page.evaluate(() => {
 check(toastMs < 1, `animations are switched off for reduced motion (${toastMs}ms)`)
 await page.emulateMedia({ reducedMotion: 'no-preference' })
 
-// An empty project, with its "drag blocks here" hint showing.
-await page.click('#btn-new')
-await page.click('#modal button[value="ok"]')
+// A new, empty file, with its "drag blocks here" hint showing.
+await page.click('#btn-files')
+await page.click('#files-panel .files-section[data-store="browser"] [data-act="new-file"]')
+await page.fill('#files-name', 'empty')
+await page.press('#files-name', 'Enter')
 await page.waitForFunction(() => !document.getElementById('blocks-hint').hidden)
-await audit('empty project')
+await page.click('#btn-files')
+await audit('empty file')
 
 // The other boards' palettes have their own blocks.
 for (const [id, name] of [['codex', 'CodeX'], ['codeair', 'CodeAIR']]) {
