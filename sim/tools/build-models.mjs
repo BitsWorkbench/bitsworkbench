@@ -25,7 +25,12 @@ const ROOT = path.resolve(import.meta.dirname, '../..')
 // it flat. `minPart`: parts smaller than this share of the model's size go
 // (a board's resistors and capacitors, which no camera here comes near).
 const MODELS = {
-  'codebot-body.glb': { source: 'BotBody.glb', simplify: 0.5 },
+  // CodeBot keeps apart what a click presses: BTN-0 and BTN-1, each a
+  // plunger and its cap (BTN-0 on the left, by user LED 0).
+  'codebot-body.glb': {
+    source: 'BotBody.glb', simplify: 0.5, keep: /^BTN_\d(_cap)?$/,
+    rename: { 'Cylinder.006': 'BTN_0', 'Cylinder.007': 'BTN_0_cap', 'Cylinder.004': 'BTN_1', 'Cylinder.005': 'BTN_1_cap' },
+  },
   'codebot-wheel.glb': { source: 'WheelAssy.glb' },
   // CodeAIR keeps apart its propellers, and the parts the figure lights: the
   // NeoPixels (top and underside), the eight BYTE LEDs (0 at the front) and

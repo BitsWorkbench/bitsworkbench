@@ -184,6 +184,12 @@ the right), both with a glow at the realism levels that have effects. The model 
 A and B (4 and 5): they are drawn as copies of LED 0 by the diode marks above keys A and B.
 Its keys go down while held, and a click on one presses it.
 
+**Buttons on the model** (`src/sim/view/keys.js`). On every board a click on a button of the
+model presses it, the same as the bar's button: it goes down while held, and the camera
+does not turn. One mechanism serves them all: a figure lists the parts that go down for
+each button (CodeX's six keys; CodeBot's BTN-0 and BTN-1, each a plunger and its cap, kept
+apart by `build-models.mjs`), and the view finds the one under the pointer.
+
 **LEDs and metal on CodeBot and CodeAIR** (`src/sim/view/led.js`). An LED is drawn as
 CodeSpace's simulator draws it: a small clear package that shows its pale lens when unlit
 (never a black box) and its own colour when lit, with a glow at the realism levels that have
