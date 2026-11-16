@@ -7,7 +7,7 @@
 // its origin. The figure's root sits at the world pose: under the drone's
 // centre at the height of its underside, facing +x.
 import * as THREE from 'three'
-import { Led, boxIn, reflect } from './led.js'
+import { Led, boxIn, reflect, yawIn } from './led.js'
 
 const UNDERSIDE = 0.004          // the model's lowest point above its origin
 
@@ -47,13 +47,18 @@ export class CodeAIRFigure {
 
     reflect(gltf.scene, env)
     // Each LED seated on its part in the model: a lens over the part's top
-    // (or under a NeoPixel on the underside), as wide as its window.
+    // (or under a NeoPixel on the underside), as wide as its window and
+    // turned as the part is on the board (the NeoPixels sit at an angle on
+    // the arms).
     const node = (name) => gltf.scene.getObjectByName(name)
     const seat = (name, color, lens, glow, under) => {
-      const box = boxIn(this.body, node(name))
+      const part = node(name)
+      const box = boxIn(this.body, part)
       const at = box.getCenter(new THREE.Vector3())
       at.y = under ? box.min.y - lens[1] / 2 : box.max.y + lens[1] / 2
-      return new Led(this.body, at, lens, color, glow, under ? -1 : 1)
+      const led = new Led(this.body, at, lens, color, glow, under ? -1 : 1)
+      led.mesh.rotation.y = yawIn(this.body, part)
+      return led
     }
     for (let n = 0; n < 8; n++) this.leds.push(seat(`BYTE_${n}`, BLUE, [0.0012, 0.0003, 0.0007], 0.008))
     this.leds.push(seat('STA', GREEN, [0.0007, 0.0003, 0.0012], 0.008))

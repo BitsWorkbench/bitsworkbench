@@ -11,6 +11,8 @@ import { CB3 } from '../src/sim/world/codebot.js'
 import { AIR } from '../src/sim/world/codeair.js'
 import { ROOMS } from '../src/sim/kinds.js'
 import { AutoRealism } from '../src/sim/view/realism.js'
+import * as THREE from 'three'
+import { yawIn } from '../src/sim/view/led.js'
 import { describe, change, compass } from '../src/sim/describe.js'
 import { loadEnvironment } from '../src/sim/headless.js'
 import { Engine } from '../src/sim/runtime/engine.js'
@@ -661,6 +663,24 @@ await test('Auto realism steps down when frames lag, up when they are comfortabl
   const fresh = new AutoRealism('low')
   for (let i = 0; i < 8; i++) fresh.measure(29)
   assert.equal(fresh.level, 'medium', 'Low running at its cap climbs')
+})
+
+await test("an LED's lens turns with its part on the board", async () => {
+  const frame = new THREE.Group()
+  frame.rotation.y = Math.PI / 2            // a figure's model frame, itself turned
+  const part = (deg, w = 0.0035, l = 0.0035) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.001, l))
+    m.rotation.y = (deg * Math.PI) / 180
+    m.position.set(0.04, 0.017, -0.03)
+    frame.add(m)
+    return (yawIn(frame, m) * 180) / Math.PI
+  }
+  const near = (got, want) => assert.ok(Math.abs(got - want) < 0.01, `${got} for ${want}`)
+  near(part(34), 34)
+  near(part(-34), -34)
+  near(part(56), -34)                       // a square repeats every quarter turn
+  near(part(0, 0.0016, 0.0008), 0)
+  near(part(90, 0.0016, 0.0008), 0)
 })
 
 console.log('in words, for a screen reader')
