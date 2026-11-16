@@ -373,12 +373,22 @@ export class SimView {
     return this.rig.mode
   }
 
+  // Size the drawing to the view's box. Giving a canvas a size clears it, even
+  // the size it has, and the browser paints the cleared canvas unless it is
+  // drawn again first: so nothing happens at the size already drawn, and a
+  // new size is drawn at once, before the frame is painted (the view called
+  // from a ResizeObserver or a drag), not on a later animation frame. Otherwise
+  // the view flashes empty while its window is resized.
   resize() {
     const w = this.host.clientWidth || 1, h = this.host.clientHeight || 1
+    const size = `${w}x${h}@${this.renderer.getPixelRatio()}`
+    if (size === this._size) return
+    this._size = size
     this.renderer.setSize(w, h, false)
-    this._touch()
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
+    this._touch()
+    if (this.host.isConnected && this.host.clientWidth) this.renderer.render(this.scene, this.camera)
   }
 
   dispose() {
