@@ -59,10 +59,19 @@ await page.evaluate(() => {
     const shape = (b) => {
       if (!b) return null
       const out = { type: b.type }
-      if (b.extraState) out.extraState = b.extraState
+      // A function's parameters carry ids new at every load (argId), and
+      // fields named by them: the names are what say what the block is.
+      const argIds = new Set((b.extraState?.params || []).map((p) => p.argId).filter(Boolean))
+      if (b.extraState) {
+        out.extraState = argIds.size
+          ? { ...b.extraState, params: b.extraState.params.map(({ argId, ...p }) => p) }
+          : b.extraState
+      }
       if (b.fields) {
         out.fields = Object.fromEntries(
-          Object.entries(b.fields).map(([k, v]) => [k, v && typeof v === 'object' ? names[v.id] ?? v.name : v]),
+          Object.entries(b.fields)
+            .filter(([k]) => !argIds.has(k))
+            .map(([k, v]) => [k, v && typeof v === 'object' ? names[v.id] ?? v.name : v]),
         )
       }
       if (b.inputs) {
@@ -251,6 +260,65 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(r.back.endsWith(src.replace(/^items = /, 'items = ')) || r.back.includes(src), `and make the same Python again${r.back.includes(src) ? '' : ': ' + r.back.split('\n').slice(-8).join(' | ')}`)
   const idx = await from('items = [1]\nprint(items[i])\n')
   check(JSON.stringify(idx.shape).includes('"ocb_python_value"'), 'an index Python counts from 0 by a name (items[i]) stays Python, as the blocks count from 1')
+}
+{
+  // Functions, as the palette makes them: each kind of function block, made
+  // into Python and back, is itself again (Blockly puts them above the rest).
+  const num = (n) => ({ block: { type: 'math_number', fields: { NUM: n } } })
+  const get = (name) => ({ block: { type: 'variables_get', fields: { VAR: { id: `py-var-${name}` } } } })
+  const ifReturn = (value, cond, out) => ({
+    type: 'procedures_ifreturn',
+    extraState: `<mutation value="${value}"></mutation>`,
+    inputs: { CONDITION: { block: { type: 'logic_boolean', fields: { BOOL: cond } } }, ...(out ? { VALUE: out } : {}) },
+  })
+  const state = {
+    variables: ['a', 'b', 'x'].map((name) => ({ name, id: `py-var-${name}` })),
+    blocks: {
+      languageVersion: 0,
+      blocks: [
+        {
+          type: 'procedures_defnoreturn', x: 40, y: 40, fields: { NAME: 'do something' },
+          extraState: { params: [{ name: 'a', id: 'py-var-a' }, { name: 'b', id: 'py-var-b' }] },
+          icons: { comment: { text: 'Describe this function...', pinned: false } },
+          inputs: { STACK: { block: { type: 'math_change', fields: { VAR: { id: 'py-var-x' } }, inputs: { DELTA: get('a') }, next: { block: ifReturn(0, 'TRUE') } } } },
+        },
+        {
+          type: 'procedures_defreturn', x: 40, y: 300, fields: { NAME: 'twice' },
+          extraState: { params: [{ name: 'a', id: 'py-var-a' }] },
+          inputs: {
+            STACK: { block: ifReturn(1, 'FALSE', num(0)) },
+            RETURN: { block: { type: 'math_arithmetic', fields: { OP: 'MULTIPLY' }, inputs: { A: get('a'), B: num(2) } } },
+          },
+        },
+        { type: 'procedures_defnoreturn', x: 40, y: 500, fields: { NAME: 'nothing yet' } },
+        { type: 'procedures_defreturn', x: 40, y: 600, fields: { NAME: 'answer' }, inputs: { RETURN: num(42) } },
+        {
+          type: 'ocb_on_start', x: 40, y: 700,
+          inputs: { DO: { block: {
+            type: 'procedures_callnoreturn', extraState: { name: 'do something', params: ['a', 'b'] }, inputs: { ARG0: num(2), ARG1: get('x') },
+            next: { block: { type: 'procedures_callnoreturn', extraState: { name: 'nothing yet', params: [] },
+              next: { block: { type: 'ocb_print', inputs: { TEXT: { block: { type: 'procedures_callreturn', extraState: { name: 'twice', params: ['a'] }, inputs: { ARG0: { block: { type: 'procedures_callreturn', extraState: { name: 'answer', params: [] } } } } } } } } } } },
+          } } },
+        },
+      ],
+    },
+  }
+  const r = await page.evaluate((s) => window.rtTrip(s), state)
+  check(!r.line && r.before === r.after, `functions with and without a value, parameters, "if return" and calls come back as themselves${r.before === r.after ? '' : ': ' + r.after?.slice(0, 300)}`)
+  check(r.python === r.back, 'and make the same Python')
+  check(/def do_something\(a, b\):\n {4}global x\n/.test(r.python), `a block named "do something" is def do_something, with the global line Blockly writes`)
+
+  // Written by a student: no `global` line, a call before its def, a def
+  // the blocks cannot hold, and a function that clashes with a variable.
+  const typed = await from('def blink_twice(n):\n    count = n * 2\n    print(count)\n\nblink_twice(3)\nx = add(1, 2)\ndef add(a, b=0):\n    return a + b\n')
+  const t = types(typed.shape)
+  check(typed.shape[0].type === 'procedures_defnoreturn' && typed.shape[0].fields.NAME === 'blink twice', `a def is a function block named with spaces ("${typed.shape[0].fields?.NAME}")`)
+  check(t.includes('procedures_callnoreturn') && !t.includes('procedures_callreturn'), 'its call is a call block; a call of a def with a default stays Python')
+  check(typed.back.includes('def blink_twice(n):\n    global count, x\n    count = n * 2\n'), 'Blockly adds the global line a function block writes')
+  check(typed.back.includes('def add(a, b=0):\n    return a + b'), 'a def with a default stays Python, as typed')
+  const clash = await from('def shout():\n    pass\nx = 1\ndef x():\n    pass\n')
+  check(JSON.stringify(clash.shape).match(/procedures_defnoreturn/g)?.length === 1, 'a function named like a variable stays Python')
+  check(clash.back.includes('def x():\n    pass'), 'and keeps its name')
 }
 {
   // The program's frame: header left out, a last `while True:` is forever.
