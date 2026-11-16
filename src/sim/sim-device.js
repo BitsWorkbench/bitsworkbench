@@ -9,6 +9,7 @@ import { KINDS, ROOMS, MUSIC } from './kinds.js'
 import { FLIGHT } from 'virtual:sim-flight'
 import { Describer } from './describe.js'
 import { Speaker } from './sound.js'
+import { reloadIfStale } from '../ui/new-build.js'
 
 const enc = new TextEncoder()
 
@@ -66,8 +67,11 @@ export class SimDevice extends EventTarget {
     const assetsBase = new URL('sim-assets/', document.baseURI).href
     this.worker = new Worker(new URL('./runtime/worker.js', import.meta.url), { type: 'module' })
     this.worker.onmessage = (e) => this._onMessage(e.data)
-    this.worker.onerror = (e) => {
+    this.worker.onerror = async (e) => {
       console.error(e)
+      // A worker whose script would not load, on a page a deploy left behind:
+      // the page reloads onto the new build instead.
+      if (!e.message && (await reloadIfStale())) return
       this._notice('error', t('sim.stoppedTitle'), e.message || t('sim.stoppedDetail'))
     }
     this.targetId = targetId
