@@ -86,9 +86,6 @@ export default {
   'error.atLine': '(Python line {line})',
   'pick.otherTitle': 'A different device is plugged in',
   'pick.otherDetail': 'Unplug the {device} first, or press Connect again after swapping.',
-  'pick.switchTitle': 'Switch to {device}?',
-  'pick.switchBodyHtml': '<p>Your project uses {names} blocks, which a {device} cannot run.</p><p>Start a fresh project, or keep these blocks and switch anyway?</p>',
-  'pick.startFresh': 'Start fresh',
   'pick.keep': 'Keep my blocks',
   // Blocks or typed Python (the Python view)
   'text.barBlocks': 'These are the Python lines your blocks make.',

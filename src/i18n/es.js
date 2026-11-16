@@ -84,9 +84,6 @@ export default {
   'error.atLine': '(línea {line} de Python)',
   'pick.otherTitle': 'Hay otro dispositivo conectado',
   'pick.otherDetail': 'Primero desconecta el {device}, o presiona Conectar otra vez después de cambiarlo.',
-  'pick.switchTitle': '¿Cambiar a {device}?',
-  'pick.switchBodyHtml': '<p>Tu proyecto usa bloques de {names}, que un {device} no puede ejecutar.</p><p>¿Quieres empezar un proyecto nuevo, o conservar estos bloques y cambiar de todos modos?</p>',
-  'pick.startFresh': 'Empezar de nuevo',
   'pick.keep': 'Conservar mis bloques',
   // Bloques o Python escrito (la vista de Python)
   'text.barBlocks': 'Estas son las líneas de Python que forman tus bloques.',

@@ -29,7 +29,7 @@ test('placeholders, and {app} is the product name', () => {
 })
 test('numbers are formatted', () => assert.equal(t('status.sendingPct', { pct: 1234 }), 'Sending your program… 1,234%'))
 test('an Html key escapes its placeholders', () => {
-  assert.ok(t('pick.switchBodyHtml', { names: '<b>', device: 'CodeX' }).includes('&lt;b&gt;'))
+  assert.ok(t('files.replaceBodyHtml', { file: '<b>' }).includes('&lt;b&gt;'))
 })
 test('a missing key shows as itself', () => assert.equal(t('no.such.key'), 'no.such.key'))
 test('a list joins as the language does', () => assert.equal(listOf(['CodeX', 'CodeAIR']), 'CodeX and CodeAIR'))

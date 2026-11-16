@@ -91,6 +91,30 @@ check((await page.inputValue('#project-name')) === 'My project', 'New resets the
 await page.click('#btn-new')
 check(!(await modalOpen()), 'New on an empty project does not ask')
 
+// Picking another board never asks. The old board's starter, as it came,
+// becomes the new board's; a program of the student's stays, and a toast
+// names the blocks the new board cannot run.
+const python = () => page.evaluate(() => window.openCodeBot._blocksPython())
+const pick = async (id) => {
+  await page.evaluate((b) => window.openCodeBot._pickTarget(b), id)
+  await page.waitForTimeout(300)
+}
+await pick('codebot') // an empty project: the CodeBot starter
+check((await blockCount()) > 0 && (await python()).includes('botcore'), 'an empty project gets the starter')
+await pick('codex')
+check(!(await modalOpen()), 'picking another board does not ask')
+check((await python()).includes('codex'), 'the CodeBot starter, untouched, became the CodeX starter')
+await page.evaluate(() => {
+  const ws = window.openCodeBot.workspace.workspace
+  ws.newBlock('codex_pixels_off').initSvg()
+})
+const blockTypes = () => page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(true).map((b) => b.type).join())
+const mine = await blockTypes()
+await pick('codebot')
+check(!(await modalOpen()), 'picking another board with blocks of mine does not ask')
+check((await blockTypes()) === mine, 'my program stays as it was')
+check(await page.evaluate(() => [...document.querySelectorAll('.toast')].some((t) => /CodeX/.test(t.textContent))), 'a toast names the CodeX blocks a CodeBot cannot run')
+
 await browser.close()
 server?.kill()
 

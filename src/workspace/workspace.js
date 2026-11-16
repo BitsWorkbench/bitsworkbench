@@ -3,7 +3,7 @@
  * the student's work safe in localStorage between visits.
  */
 import * as Blockly from 'blockly/core'
-import { toolboxFor, cuteTheme } from '../blocks/index.js'
+import { toolboxFor, cuteTheme, generatePython } from '../blocks/index.js'
 import { t } from '../i18n/index.js'
 
 const STORAGE_KEY = 'opencodebot.project.v1'
@@ -76,6 +76,19 @@ export class BlockWorkspace extends EventTarget {
    */
   get isEmpty() {
     return this.hasNoBlocks && !(this.mode === 'text' && this.pythonText.trim())
+  }
+
+  /** The canvas holds its board's starter program as it came: nothing of the student's yet. */
+  get isStarter() {
+    const starter = STARTER_PROJECTS[this.targetId]
+    if (this.mode === 'text' || !starter) return false
+    const scratch = new Blockly.Workspace()
+    try {
+      Blockly.serialization.workspaces.load(starter.blocks, scratch)
+      return generatePython(scratch, this.targetId) === generatePython(this.workspace, this.targetId)
+    } finally {
+      scratch.dispose()
+    }
   }
 
   /** Swap the toolbox when the teacher (or a plugged-in board) picks a device. */

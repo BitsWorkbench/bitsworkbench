@@ -557,24 +557,17 @@ export class App {
       return
     }
 
-    // Blocks for the old board would just sit there unrunnable, so offer to
-    // start over — but never throw away work without asking.
-    // In text mode Run sends the typed Python, so blocks for another board
-    // are no reason to start over.
+    // Nothing asks, and nothing of the student's is thrown away: an empty
+    // canvas, or the old board's starter just as it came, becomes the new
+    // board's starter; any other program stays as it is (saved in this
+    // browser), for the student to keep or to swap for another file. Blocks
+    // the new board cannot run are named in a toast. (In text mode Run sends
+    // the typed Python, so blocks for another board do not matter.)
+    const startFresh = this.workspace.isEmpty || this.workspace.isStarter
     const strays =
-      this.workspace.mode === 'text'
+      startFresh || this.workspace.mode === 'text'
         ? []
         : [...devicesUsed(this.workspace.workspace)].filter((id) => id !== targetId)
-    let startFresh = this.workspace.isEmpty
-    if (strays.length) {
-      const device = getTarget(targetId)?.name
-      startFresh = await showModal({
-        title: t('pick.switchTitle', { device }),
-        bodyHtml: t('pick.switchBodyHtml', { names: deviceNames(strays), device }),
-        confirmText: t('pick.startFresh'),
-        cancelText: t('pick.keep'),
-      })
-    }
 
     this.pickedTarget = targetId
     localStorage.setItem(PICKED_DEVICE, targetId)
@@ -582,6 +575,12 @@ export class App {
     if (startFresh) {
       this.workspace.clear()
       this.workspace.loadProject(STARTER_PROJECTS[targetId] || { blocks: {} })
+    } else if (strays.length) {
+      toast({
+        kind: 'info',
+        title: t('switched.title', { device: getTarget(targetId)?.name }),
+        detail: t('switched.detail', { names: deviceNames(strays) }),
+      })
     }
     this._renderDevicePicker()
     this._refreshDeviceChip()
