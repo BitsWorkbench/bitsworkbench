@@ -10,6 +10,9 @@ import { pythonGenerator } from 'blockly/python'
 // Four spaces, so the code in the Python tab looks like the Python students
 // will go on to write by hand.
 pythonGenerator.INDENT = '    '
+// A block's comment is written as the student wrote it, not re-wrapped, so
+// it comes back the same from Python.
+pythonGenerator.COMMENT_WRAP = Infinity
 
 import './basics.js'
 import './codex.js'

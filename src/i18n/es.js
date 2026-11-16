@@ -152,11 +152,9 @@ export default {
   'editor.selectionDeleted': 'Selección borrada',
   'editor.controlCharacter': 'Carácter de control',
   'text.startedTitle': 'Ahora estás escribiendo Python',
-  'text.startedDetail': 'Ejecutar envía el código que escribes. Tus bloques se guardan para cuando regreses.',
-  'text.backTitle': '¿Volver a los bloques?',
-  'text.backBodyHtml': '<p>El Python que escribiste no se puede convertir otra vez en bloques, así que perderás tus cambios.</p><p>Para conservarlos, presiona <b>Conservar mi Python</b> y luego Descargar Python en el menú ⋯.</p>',
-  'text.backConfirm': 'Volver a los bloques',
-  'text.keep': 'Conservar mi Python',
+  'text.startedDetail': 'Ejecutar envía el código que escribes. Volver a los bloques convierte tu Python en bloques.',
+  'text.notParsedTitle': 'Primero corrige el Python',
+  'text.notParsedDetail': 'La línea {line} tiene un error, así que todavía no puede convertirse en bloques. El cursor está en ella.',
 
   'new.title': '¿Empezar un proyecto nuevo?',
   'new.bodyHtml': '<p>Se borrarán tus bloques actuales. Esto no se puede deshacer.</p><p>Para conservarlos, presiona <b>Conservar mis bloques</b> y luego Guardar proyecto en el menú ⋯.</p>',
@@ -350,6 +348,7 @@ export default {
   'cat.lists': '📋 Listas',
   'cat.variables': '📦 Variables',
   'cat.functions': '🧰 Funciones',
+  'cat.python': '🐍 Python',
   'cat.screen': '🖥️ Pantalla',
   'cat.lights': '✨ Luces',
   'cat.sound': '🎵 Sonido',
@@ -618,7 +617,9 @@ export default {
   'block.ocb_seconds_since_start.message0': '⏱ segundos desde el inicio',
   'block.ocb_seconds_since_start.tooltip': 'Cuánto tiempo lleva ejecutándose tu programa.',
   'block.ocb_python.message0': '🐍 ejecutar Python %1',
-  'block.ocb_python.tooltip': 'Salida de emergencia: escribe tú mismo una línea de Python.',
+  'block.ocb_python.tooltip': 'Python que no tiene un bloque propio. Escribe aquí cualquier Python, con tantas líneas como quieras.',
+  'block.ocb_python_value.message0': '🐍 %1',
+  'block.ocb_python_value.tooltip': 'Un trozo de Python que no tiene un bloque propio.',
 
   // Bloques de CodeBot
   'block.codebot_drive.message0': '🤖 conducir %1 al %2 %% de potencia',

@@ -50,6 +50,12 @@ block('codex_vibrate', { SECS: num(1) }),
 That is it. `npm test` will build your block in a headless browser and check it
 generates Python.
 
+You do not write the way back from Python to your block: `src/convert/patterns.js`
+reads it off your generator, running it with stand-ins in its inputs and once
+for each choice in its dropdowns. `tests/round-trip.mjs` checks that your
+block's Python turns back into your block. If it fails, two blocks probably
+make the same Python; give each its own.
+
 ### Things worth knowing
 
 - **Statement generators** return a string ending in `\n`. **Value generators**

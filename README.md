@@ -27,7 +27,7 @@ waiting for them.
 |---|---|
 | 🔌 **Plug and play** | Detects which board you plugged in and shows only the blocks it can actually run. |
 | 🧩 **Friendly blocks** | Chunky, colourful, emoji-labelled blocks for screens, lights, motors, flight, sound, sensors and radio. |
-| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. |
+| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block. |
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. In Chrome and Edge, open a folder on your computer to keep your Python files in, and open and save them there. |
@@ -97,7 +97,12 @@ npm run preview  # serve dist/ locally
   keeps that true.
 - **`tests/examples.mjs`**: opens every starter project from the ⋯ menu, in
   English and Spanish, checks it is a tidy block program for its board with a
-  goal, and runs its Python in the simulator.
+  goal, turns its Python back into blocks without losing a line, and runs its
+  Python in the simulator.
+- **`tests/round-trip.mjs`**: every block in every board's palette, with
+  every choice in its dropdowns, made into Python and turned back into
+  blocks, must be the same block making the same Python. Then Python with no
+  block, comments, and code that does not parse.
 
 ### Hosting on GitHub Pages
 

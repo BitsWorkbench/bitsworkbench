@@ -29,8 +29,10 @@ const basics = [
   block('ocb_wait_ms', { MS: num(500) }),
   block('ocb_print', { TEXT: str(t('sample.hello')) }),
   block('ocb_seconds_since_start'),
-  block('ocb_python'),
 ]
+
+/** Python with no block of its own, typed in or kept from Python turned back into blocks. */
+const python = [block('ocb_python'), block('ocb_python_value')]
 
 const logic = [
   block('controls_if'),
@@ -84,6 +86,7 @@ const generalTail = [
   SEP,
   { kind: 'category', name: t('cat.variables'), categorystyle: 'variables_category', custom: 'VARIABLE' },
   { kind: 'category', name: t('cat.functions'), categorystyle: 'functions_category', custom: 'PROCEDURE' },
+  category(t('cat.python'), 'python_category', python),
 ]
 
 // ---------------------------------------------------------------- CodeX

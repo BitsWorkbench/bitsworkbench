@@ -84,6 +84,17 @@ export class BlockWorkspace extends EventTarget {
     this.dispatchEvent(new CustomEvent('change'))
   }
 
+  /**
+   * The same project's program, as new blocks (typed Python turned back into
+   * blocks): the stacks are laid out in a column, in program order.
+   */
+  replaceBlocks(state) {
+    Blockly.serialization.workspaces.load(state, this.workspace)
+    this.workspace.cleanUp()
+    this.workspace.scrollCenter()
+    this.dispatchEvent(new CustomEvent('change'))
+  }
+
   /** Switch between blocks and typed Python. `text` seeds text mode. */
   setMode(mode, text = this.pythonText) {
     const next = mode === 'text' ? 'text' : 'blocks'

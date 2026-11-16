@@ -15,6 +15,7 @@ import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
 import { PythonEditor } from '../editor/python-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
+import { pythonToBlocks } from '../convert/to-blocks.js'
 import { createFileStore } from '../files/store.js'
 import { FilesPanel } from './files-panel.js'
 
@@ -707,7 +708,12 @@ export class App {
   }
 
   _toText() {
-    this.workspace.setMode('text', this._blocksPython())
+    // Python that came to blocks and was only looked at comes back exactly
+    // as it was typed; once the blocks change, the blocks' Python it is.
+    const back = this._typedBack
+    const python = this._blocksPython()
+    this.workspace.setMode('text', back && back.python === python ? back.text : python)
+    this._typedBack = null
     this.pythonEditor.focus()
     toast({
       kind: 'info',
@@ -716,20 +722,35 @@ export class App {
     })
   }
 
-  async _toBlocks() {
-    // Typed changes cannot be turned back into blocks, so ask before
-    // throwing them away. Untouched code needs no question.
-    const changed = this.workspace.pythonText.trim() !== this._blocksPython().trim()
-    if (changed) {
-      const ok = await showModal({
-        title: t('text.backTitle'),
-        bodyHtml: t('text.backBodyHtml'),
-        confirmText: t('text.backConfirm'),
-        cancelText: t('text.keep'),
-      })
-      if (!ok) return
+  /** Python as blocks for the picked board: { ok, state } or { ok: false, line }. */
+  blocksFromPython(text) {
+    return pythonToBlocks(text, this.workspace.targetId)
+  }
+
+  /**
+   * The typed Python, turned into blocks. Untouched Python keeps the blocks
+   * it came from, as they were; code that does not parse stays Python, with
+   * the cursor on the line to fix.
+   */
+  _toBlocks() {
+    const typed = this.workspace.pythonText
+    if (typed.trim() !== this._blocksPython().trim()) {
+      const result = this.blocksFromPython(typed)
+      if (!result.ok) {
+        this.pythonEditor.showLine(result.line)
+        this.pythonEditor.focus()
+        toast({
+          kind: 'error',
+          title: t('text.notParsedTitle'),
+          detail: t('text.notParsedDetail', { line: result.line }),
+        })
+        return false
+      }
+      this.workspace.replaceBlocks(result.state)
+      this._typedBack = { text: typed, python: this._blocksPython() }
     }
     this.workspace.setMode('blocks')
+    return true
   }
 
   /**

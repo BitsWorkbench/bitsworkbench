@@ -99,7 +99,8 @@ async function blockText(label) {
       for (const text of document.querySelectorAll('.blocklyBlock text.blocklyText')) {
         if (!text.getBoundingClientRect().width || !text.textContent.trim()) continue
         out.words++
-        const r = ratio(rgb(getComputedStyle(text).fill), behind(text.parentElement))
+        // (A many-line field's text sits one group deeper than its pill.)
+        const r = ratio(rgb(getComputedStyle(text).fill), behind(text.closest('.blocklyField') || text.parentElement))
         if (r < 4.5) out.bad.push(`"${text.textContent.trim()}" ${r.toFixed(2)}:1`)
       }
       const glyphs = '.blocklyBlock .blocklyDropdownField > image, .blocklyBlock .blocklyImageField > image'

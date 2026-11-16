@@ -21,6 +21,7 @@ const value = (code) => ({ code, line: false })
 /** Written by hand: what a student would type, not what an empty block makes. */
 const BY_HAND = {
   ocb_on_start: null, // a program's top level needs no block
+  ocb_python_value: null, // any piece of Python; nothing to show
   controls_whileUntil: line('while True:\n    pass'),
   controls_repeat_ext: line('for count in range(4):\n    pass'),
   controls_for: line('for i in range(1, 11):\n    pass'),
