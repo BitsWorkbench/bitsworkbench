@@ -617,7 +617,7 @@ export default {
   'block.ocb_forever.message0': '🔁 por siempre',
   'block.ocb_forever.tooltip': 'Estos bloques se repiten una y otra vez, hasta que presiones Detener.',
   'block.ocb_wait.message0': '⏳ esperar %1 segundos',
-  'block.ocb_wait.tooltip': 'Haz una pausa antes de ejecutar el siguiente bloque.',
+  'block.ocb_wait.tooltip': 'Haz una pausa antes de ejecutar el siguiente bloque. También sirven fracciones: 0.5 es medio segundo.',
   'block.ocb_wait_ms.message0': '⏳ esperar %1 milisegundos',
   'block.ocb_wait_ms.tooltip': 'Haz una pausa de una fracción de segundo. 1000 milisegundos = 1 segundo.',
   'block.ocb_print.message0': '💬 imprimir %1',

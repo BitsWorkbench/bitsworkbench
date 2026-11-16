@@ -58,6 +58,19 @@ for (const device of DEVICES) {
       }
     }
     walk(toolboxFor(deviceId).contents)
+    // Waits are in seconds, and the palette's shows a fraction works.
+    const waits = []
+    const findWaits = (items) => {
+      for (const item of items || []) {
+        if (item.type === 'ocb_wait' || item.type === 'ocb_wait_ms') waits.push(item)
+        if (item.contents) findWaits(item.contents)
+      }
+    }
+    findWaits(toolboxFor(deviceId).contents)
+    const waitProblem =
+      waits.length !== 1 || waits[0].type !== 'ocb_wait' || waits[0].inputs.SECS.shadow.fields.NUM !== 1.5
+        ? `palette wait: want one "wait 1.5 seconds", got ${JSON.stringify(waits)}`
+        : null
 
     const scratch = new Blockly.Workspace()
     const failures = []
@@ -75,6 +88,7 @@ for (const device of DEVICES) {
       }
     }
     scratch.dispose()
+    if (waitProblem) failures.push(waitProblem)
     return { count: types.length, generated, failures }
   }, device)
 
