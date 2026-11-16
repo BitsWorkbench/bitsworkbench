@@ -26,6 +26,10 @@ export class CodeAIRFigure {
     this.body.rotation.y = Math.PI / 2     // model forward (+z) to the figure's forward (+x)
     this.body.position.y = -UNDERSIDE
     this.tilt.add(this.body)
+    // the camera turns round the board's middle and may come within 3 cm of
+    // it, near enough to look at its LEDs and buttons (view.js)
+    this.aim = 0.012
+    this.closest = 0.03
     this.props = []
     this.leds = []                         // BYTE 0 to 7, then STA
     this.pixels = []
