@@ -187,8 +187,18 @@ Its keys go down while held, and a click on one presses it.
 **Buttons on the model** (`src/sim/view/keys.js`). On every board a click on a button of the
 model presses it, the same as the bar's button: it goes down while held, and the camera
 does not turn. One mechanism serves them all: a figure lists the parts that go down for
-each button (CodeX's six keys; CodeBot's BTN-0 and BTN-1, each a plunger and its cap, kept
-apart by `build-models.mjs`), and the view finds the one under the pointer.
+each button (CodeX's six keys and reset; CodeBot's BTN-0 and BTN-1, each a plunger and its
+cap; CodeAIR's BTN-0, BTN-1 and reset; all kept apart by `build-models.mjs`), and the view
+finds the one under the pointer that can be seen: a button the model hides is not pressed
+through it (CodeX's reset is on its back, by the power switch, so the face-on view never
+reaches it; a CodeAIR's buttons are on top, so seen from below they are out of reach).
+
+A board's reset button does what a real reset does. Held, the board is held in reset: its
+program is cut off at once, with no time to clean up, and everything it drives goes off (a
+CodeAIR in flight drops rather than lands; CodeX's LEDs, NeoPixels, sound and backlight go
+out). Let go, the board starts again and runs its program from the top, as a board runs the
+program saved on it, wherever it is: in the simulator that program is the one last run.
+CodeBot has no reset button.
 
 **LEDs and metal on CodeBot and CodeAIR** (`src/sim/view/led.js`). An LED is drawn as
 CodeSpace's simulator draws it: a small clear package that shows its pale lens when unlit

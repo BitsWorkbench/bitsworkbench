@@ -578,6 +578,19 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', nu
   .then(() => console.log('sim-ui: a click on the CodeX model pressed its B key'), () => problems.push('CodeX: a click on the model did not press button B'))
 if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== camBefore) problems.push('CodeX: pressing a key on the model turned the camera')
 
+// CodeX's reset is on its back: a click on the face over it does not reach it.
+{
+  await page.evaluate(() => window.openCodeBot.device.run('while True:\n    pass\n'))
+  await page.waitForTimeout(800)
+  const at = await page.evaluate(() => window.openCodeBot.device.sim.view.keyPoint('reset'))
+  await page.mouse.click(at.x, at.y)
+  await page.waitForTimeout(800)
+  const still = await page.evaluate(() => [window.openCodeBot.device.state, window.openCodeBot.device.sim.lastFrame.devices[0].reset])
+  if (still[0] !== 'running' || still[1]) problems.push(`CodeX: a click on the face reached the reset on its back (${still})`)
+  else console.log('sim-ui: CodeX\'s reset, on its back, is not pressed through the board')
+  await page.evaluate(() => window.openCodeBot.device.stop())
+}
+
 // Tilt: a drag on a rotation arrow tilts the CodeX (the model turns, the
 // accelerometer reads it, the camera stays); Shift and an arrow key tilt it
 // too, and Home sets it level. No sliders in the bar.
@@ -743,6 +756,66 @@ with recorder:
     if (!close || close.near > close.d * 0.2 || close.aimY > 0.03) problems.push(`CodeAIR: no close look at the board (${JSON.stringify(close)})`)
     else console.log('sim-ui: the camera comes within 3 cm of CodeAIR\'s board')
     await page.evaluate(() => window.openCodeBot.device.sim.setCamera('rotate'))
+  }
+
+  // A click on the model's BTN-0 presses it; a click on its reset holds the
+  // board in reset (LEDs off) and, let go, runs the program again from the top.
+  {
+    const before = problems.length
+    const click = async (n, holdMs = 150, whileHeld = null) => {
+      const at = await page.evaluate((k) => window.openCodeBot.device.sim.view.keyPoint(k), n)
+      if (!at) { problems.push(`CodeAIR: no ${n} button on the model`); return null }
+      await page.mouse.move(at.x, at.y)
+      await page.mouse.down()
+      await page.waitForTimeout(holdMs)
+      const held = whileHeld && await page.evaluate(whileHeld)
+      await page.mouse.up()
+      return held
+    }
+    await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.run(`from codeair import *
+print('top')
+leds.set_mask(255, 100)
+while not buttons.was_pressed(0):
+    pass
+print('pressed 0')
+while True:
+    pass
+`) })
+    await page.waitForFunction(() => window.__sim.out.includes('top'), null, { timeout: 5000 }).catch(() => {})
+    await page.waitForTimeout(500)
+    await click(0)
+    await page.waitForFunction(() => window.__sim.out.includes('pressed 0'), null, { timeout: 5000 })
+      .catch(() => problems.push('CodeAIR: a click on the model did not press BTN-0'))
+    const held = await click('reset', 600, () => {
+      const s = window.openCodeBot.device.sim.lastFrame.devices[0]
+      return { reset: s.reset, leds: s.leds.slice(0, 8).every((v) => v === 0), state: window.openCodeBot.device.state }
+    })
+    if (!held?.reset || !held.leds || held.state === 'running') problems.push(`CodeAIR: reset held did not hold the board in reset (${JSON.stringify(held)})`)
+    await page.waitForFunction(() => (window.__sim.out.match(/top/g) || []).length >= 2 && window.openCodeBot.device.state === 'running', null, { timeout: 8000 })
+      .catch(async () => problems.push(`CodeAIR: after reset the program did not start again (${JSON.stringify(await page.evaluate(() => [window.__sim.out, window.openCodeBot.device.state]))})`))
+    await page.evaluate(() => window.openCodeBot.device.stop())
+    // in flight, a reset cuts the motors: it drops, it does not land
+    await page.evaluate(() => window.openCodeBot.device.run(`from codeair import *
+from flight import *
+with recorder:
+    fly.take_off(0.5)
+    fly.steady(20)
+`))
+    await page.waitForFunction(() => (window.openCodeBot.device.sim.lastFrame?.devices[0].z ?? 0) > 0.45, null, { timeout: 15000 })
+      .catch(() => problems.push('CodeAIR: it never got to 0.45 m before the reset'))
+    // from above (Chase), where the board's top, and its reset, can be seen
+    await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
+    await page.waitForTimeout(800)
+    const fell = await click('reset', 900, () => {
+      const s = window.openCodeBot.device.sim.lastFrame.devices[0]
+      return { z: s.z, reset: s.reset, state: window.openCodeBot.device.state }
+    })
+    if (!(fell?.z < 0.05)) problems.push(`CodeAIR: a reset in flight did not drop it (${JSON.stringify(fell)})`)
+    await page.waitForTimeout(300)
+    await page.evaluate(() => window.openCodeBot.device.stop())
+    await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 }).catch(() => {})
+    await page.evaluate(() => window.openCodeBot.device.sim.setCamera('rotate'))
+    if (problems.length === before) console.log('sim-ui: a click on CodeAIR\'s BTN-0 pressed it; its reset restarted the program, and in flight dropped it')
   }
 
   // The boards page: a CodeX remote and a CodeAIR listener, each in its own

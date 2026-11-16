@@ -73,7 +73,9 @@ export class CodeBotFigure {
 
     reflect(b, env)
     reflect(wheel.scene, env)          // its clones share its materials
-    // BTN-0 and BTN-1: a click presses them (keys.js), 0.5 mm down
+    // BTN-0 and BTN-1: a click presses them (keys.js), 0.5 mm down; never
+    // through the robot, from below
+    this.keys.model = b
     for (const n of [0, 1]) {
       this.keys.add(n, [b.getObjectByName(`BTN_${n}`), b.getObjectByName(`BTN_${n}_cap`)], { reach: 0.045, travel: 0.005 })
     }

@@ -138,15 +138,18 @@ export class SimDevice extends EventTarget {
     if (this.state === State.RUNNING) {
       await this.stop()
     }
+    this._source = source             // the board's program, run again after a reset
     this._post({ t: 'run', source, stepFirst })
     this._setState(State.RUNNING, t('sim.running'))
     return true
   }
 
-  async stop() {
+  // hard: cut the program off at once, with no time to clean up (as a reset
+  // does; a CodeAIR does not land first)
+  async stop({ hard = false } = {}) {
     if (!this.worker || this.state !== State.RUNNING) return true
     const done = new Promise((r) => (this._stopped = r))
-    this._post({ t: 'stop' })
+    this._post({ t: 'stop', hard })
     await done
     return true
   }
@@ -171,7 +174,27 @@ export class SimDevice extends EventTarget {
     this._pace = null
     this._post({ t: 'speed', value })
   }
-  press(n, down) { this._post({ t: 'input', what: 'button', n, down }) }
+  press(n, down) {
+    if (n === 'reset') return this._reset(down)
+    this._post({ t: 'input', what: 'button', n, down })
+  }
+
+  // The board's reset button (CodeAIR's, CodeX's): held, the board is held
+  // in reset, its program stopped and everything it drives off; let go, it
+  // starts again and runs its program from the top, as a board runs the
+  // program saved on it, wherever it is. Presses run in turn.
+  _reset(down) {
+    this._resetting = (this._resetting ?? Promise.resolve()).then(async () => {
+      if (down) {
+        await this.stop({ hard: true })
+        this._post({ t: 'input', what: 'reset', down: true })
+      } else {
+        this._post({ t: 'input', what: 'reset', down: false })
+        if (this._source != null) await this.run(this._source)
+      }
+    })
+    return this._resetting
+  }
   tilt(x, y) { this._post({ t: 'input', what: 'tilt', x, y }) }
   setLight(lux) { this._post({ t: 'input', what: 'light', lux }) }
   reset() { this._post({ t: 'reset' }) }

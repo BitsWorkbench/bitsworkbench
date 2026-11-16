@@ -8,6 +8,7 @@
 // centre at the height of its underside, facing +x.
 import * as THREE from 'three'
 import { Led, boxIn, reflect, yawIn } from './led.js'
+import { Keys } from './keys.js'
 
 const UNDERSIDE = 0.004          // the model's lowest point above its origin
 
@@ -50,6 +51,12 @@ export class CodeAIRFigure {
     this.props.sort((a, b) => a.name.localeCompare(b.name))
 
     reflect(gltf.scene, env)
+    // BTN-0, BTN-1 and reset: a click presses them (keys.js); each a 4 mm
+    // switch, the whole part going down a quarter of a millimetre
+    this.keys = new Keys(gltf.scene)
+    for (const [n, name] of [[0, 'ButtonB0'], [1, 'ButtonB1'], ['reset', 'ButtonRST']]) {
+      this.keys.add(n, [gltf.scene.getObjectByName(name)], { reach: 0.0025, travel: 0.00025 })
+    }
     // Each LED seated on its part in the model: a lens over the part's top
     // (or under a NeoPixel on the underside), as wide as its window and
     // turned as the part is on the board (the NeoPixels sit at an angle on
@@ -88,6 +95,10 @@ export class CodeAIRFigure {
     this.root.add(this.shadow)
   }
 
+  // A button's centre in the world; the button a ray meets, or -1 (view.js).
+  keyCentre(n) { return this.keys?.keyCentre(n) }
+  keyAt(raycaster) { return this.keys?.keyAt(raycaster) ?? -1 }
+
   update(s) {
     this.root.position.set(s.x, s.z, -s.y)
     this.root.rotation.y = s.heading
@@ -104,5 +115,6 @@ export class CodeAIRFigure {
     // LEDs n is the driver's output 7 - n; the status LED its output 8
     this.leds.forEach((l, i) => l.set(s.leds[i < 8 ? 7 - i : 8] / 255))
     this.pixels.forEach((p, i) => p.rgb(...s.pixels[i]))
+    this.keys?.show((n) => (n === 'reset' ? s.reset : s.buttons?.[n]))
   }
 }

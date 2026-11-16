@@ -34,19 +34,20 @@ const MODELS = {
   'codebot-wheel.glb': { source: 'WheelAssy.glb' },
   // CodeAIR keeps apart its propellers, and the parts the figure lights: the
   // NeoPixels (top and underside), the eight BYTE LEDs (0 at the front) and
-  // the CHG and STA LEDs, named here from the CAD's part numbers.
+  // the CHG and STA LEDs, named here from the CAD's part numbers; and what a
+  // click presses: BTN-0, BTN-1 and reset.
   'codeair.glb': {
-    source: 'CodeAIR.glb', keep: /^(Prop\d|Pixel\db?|BYTE_\d|CHG|STA)$/, simplify: 0.2, error: 0.005, flat: true, minPart: 0.008,
+    source: 'CodeAIR.glb', keep: /^(Prop\d|Pixel\db?|BYTE_\d|CHG|STA|ButtonB[01]|ButtonRST)$/, simplify: 0.2, error: 0.005, flat: true, minPart: 0.008,
     rename: Object.fromEntries([
       ...[165, 166, 163, 168, 171, 161, 170, 167].map((n, i) => [`SHAPE_1431_IndexedFaceSet.${n}`, `BYTE_${i}`]),
       ['SHAPE_1431_IndexedFaceSet.162', 'CHG'], ['SHAPE_1431_IndexedFaceSet.164', 'STA'],
     ]),
   },
-  // CodeX keeps apart what the figure moves or lights: the six keys, the four
+  // CodeX keeps apart what the figure moves or lights: the six keys and reset, the four
   // LEDs, the four NeoPixels, the display's active area and its glass.
   // `rename`: nodes given a name the figure looks for.
   'codex.glb': {
-    source: 'CodeX.glb', keep: /^(BTN_[UDLRAB]|LED_\d|Neo_\d|LCD_Active|LCD_Shield)$/,
+    source: 'CodeX.glb', keep: /^(BTN_[UDLRAB]|ResetButton|LED_\d|Neo_\d|LCD_Active|LCD_Shield)$/,
     rename: { 'CodeX_complete.002': 'LCD_Active' },
   },
 }

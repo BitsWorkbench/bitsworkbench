@@ -363,6 +363,18 @@ export class CodeAIR {
     this.tone = 0
   }
 
+  // The reset button held down: the board is held in reset, everything it
+  // drives off at once (in flight, it drops), until it is let go. Where it
+  // is and how it moves carry on.
+  holdReset(down) {
+    this.resetHeld = down
+    if (!down) return
+    this.programEnded()
+    this.cf.reset()
+    this.pixels = this.pixels.map(() => [0, 0, 0])
+    this.leds.fill(0)
+  }
+
   snapshot() {
     return {
       id: this.id, kind: this.kind,
@@ -371,7 +383,7 @@ export class CodeAIR {
       propAngle: this.propAngle, motors: this.motors,
       pixels: this.pixels.map((px) => [...px]),
       leds: [...this.leds],
-      buttons: [...this.buttons],
+      buttons: [...this.buttons], reset: !!this.resetHeld,
       tone: this.tone,
       whine: whineVoices(this.rotors, this.p),
       hits: this.hits.snapshot(),

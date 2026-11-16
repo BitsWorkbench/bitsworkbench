@@ -305,7 +305,7 @@ export class SimView {
       aim(e)
       for (const f of this.figures.values()) {
         const n = f.keyAt?.(ray) ?? -1
-        if (n >= 0) return n
+        if (n !== -1) return n            // a button's number, or 'reset'
       }
       return -1
     }
@@ -315,7 +315,7 @@ export class SimView {
       if (e.button !== 0 || held) return
       const axis = arrowAt(e)
       const n = axis ? -1 : keyAt(e)
-      if (!axis && n < 0) return
+      if (!axis && n === -1) return
       e.stopImmediatePropagation()
       e.preventDefault()
       canvas.focus()
@@ -349,7 +349,7 @@ export class SimView {
       const axis = arrowAt(e)
       this._tiltFigure()?.hotArrow(axis)
       this._touch()
-      canvas.style.cursor = axis ? 'grab' : keyAt(e) >= 0 ? 'pointer' : ''
+      canvas.style.cursor = axis ? 'grab' : keyAt(e) !== -1 ? 'pointer' : ''
     })
   }
 
