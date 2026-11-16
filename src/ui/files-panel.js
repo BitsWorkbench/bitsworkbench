@@ -10,8 +10,9 @@
  */
 import { t, tHtml } from '../i18n/index.js'
 
-const NAME = /^[\w][\w\- ]*(\.[\w]+)?$/
-const DIR_NAME = /^[\w][\w\- ]*$/
+// Letters of any language (música.py), digits, _ - and spaces; one ending.
+const NAME = /^[\p{L}\p{N}_][\p{L}\p{N}_\- ]*(\.[\p{L}\p{N}_]+)?$/u
+const DIR_NAME = /^[\p{L}\p{N}_][\p{L}\p{N}_\- ]*$/u
 
 export class FilesPanel {
   /**

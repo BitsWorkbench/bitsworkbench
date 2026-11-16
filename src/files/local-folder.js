@@ -74,12 +74,28 @@ export class LocalFolderStore {
     await (await this._dir(parts.join('/'))).removeEntry(name, { recursive: true })
   }
 
-  /** Rename (or move) a file or a folder: a copy, then the old one removed, so it works for both everywhere. */
+  /**
+   * Rename (or move) a file or a folder: a copy, then the old one removed, so
+   * it works for both everywhere. Many computers' folders ignore case, so a
+   * name differing only in case is taken, and a rename that only changes case
+   * (main.py to Main.py) goes through a temporary name: a copy onto itself,
+   * then removing "the old one", would delete it.
+   */
   async rename(from, to) {
     await this._writable()
-    if (await this._entry(to)) throw new Error(`${to}: already there`)
     const entry = await this._entry(from)
     if (!entry) throw new Error(`${from}: not found`)
+    const caseOnly = from.toLowerCase() === to.toLowerCase()
+    if (!caseOnly && (await this._entry(to, true))) throw new Error(`${to}: already there`)
+    if (caseOnly) {
+      const parts = from.split('/')
+      const temp = [...parts.slice(0, -1), `.renaming-${Date.now()}-${parts.at(-1)}`].join('/')
+      await this._copy(entry, temp)
+      await this.remove(from)
+      await this._copy(await this._entry(temp), to)
+      await this.remove(temp)
+      return
+    }
     await this._copy(entry, to)
     await this.remove(from)
   }
@@ -95,7 +111,8 @@ export class LocalFolderStore {
     for await (const [name, child] of entry.entries()) await this._copy(child, `${to}/${name}`)
   }
 
-  async _entry(path) {
+  /** The file or folder at `path`, or null; `anyCase`: one whose name differs only in case counts. */
+  async _entry(path, anyCase = false) {
     const parts = path.split('/')
     const name = parts.pop()
     let dir
@@ -104,7 +121,8 @@ export class LocalFolderStore {
     } catch {
       return null
     }
-    for await (const [n, e] of dir.entries()) if (n === name) return e
+    const same = anyCase ? (n) => n.toLowerCase() === name.toLowerCase() : (n) => n === name
+    for await (const [n, e] of dir.entries()) if (same(n)) return e
     return null
   }
 
@@ -125,13 +143,9 @@ export class LocalFolderStore {
     await writable.close()
   }
 
+  /** Whether a file or folder is there, in any case: on many computers Main.py would be main.py. */
   async exists(path) {
-    try {
-      await this._file(path)
-      return true
-    } catch {
-      return false
-    }
+    return !!(await this._entry(path, true))
   }
 
   async _dir(path, create = false) {

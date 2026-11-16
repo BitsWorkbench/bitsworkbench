@@ -228,6 +228,8 @@ export class BlockWorkspace extends EventTarget {
   }
 
   save() {
+    // Another tab is the one editing: this one must not write over its work.
+    if (this.readOnly) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.toProject()))
     } catch {

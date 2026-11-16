@@ -27,6 +27,7 @@ const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
 const LAYOUTS = 'opencodebot.layouts.v1'
+const TAB_LOCK = 'opencodebot.editing'
 
 /** A path's last part: its file name. */
 const baseName = (path) => path.split('/').pop()
@@ -808,16 +809,35 @@ export class App {
     })
     $('btn-files').addEventListener('click', () => this._toggleFiles())
     $('btn-save-again').addEventListener('click', () => this._saveNow())
+    $('btn-use-tab').addEventListener('click', () => this._claimTab(true))
     if (!this.openFile) this._startFile()
     else this._setOpenFile(this.openFile)
+    this._claimTab()
   }
 
   /** The first time: the program as it is becomes main.py in this browser. */
   async _startFile() {
     const path = await this._freePath(this.stores.browser, '', 'main.py')
     const text = this._currentPython()
-    await this.stores.browser.write(path, text).catch(() => {})
-    this._setOpenFile({ store: 'browser', folder: null, path, saved: text })
+    let saved
+    try {
+      await this.stores.browser.write(path, text)
+      saved = text
+    } catch {
+      // not written: the dot shows, and the next save tries again
+    }
+    this._setOpenFile({ store: 'browser', folder: null, path, saved })
+  }
+
+  /**
+   * One file operation at a time, in order: saves, renames and deletes never
+   * overlap, so a save cannot land in the middle of a rename or a delete.
+   * Resolves with what `job` gives.
+   */
+  _inTurn(job) {
+    const run = (this._fileQueue || Promise.resolve()).then(job, job)
+    this._fileQueue = run.catch(() => {})
+    return run
   }
 
   /** The store a file is in, open and allowed (a folder after a reload is allowed again from a click); null if not. */
@@ -833,17 +853,25 @@ export class App {
   /** The program changed: save it to its file a moment later. */
   _fileChanged() {
     this._refreshFile()
+    if (this._readOnly) return
     clearTimeout(this._saveTimer)
     this._saveTimer = setTimeout(() => this._save(false), 750)
   }
 
   /**
-   * Save the program to its file, if it differs from what is there. `ask`
-   * (from a click or a key) may ask to allow the folder again. A save that
-   * fails says so in the bar, loudly, until one works.
+   * Save the program to its file, if it differs from what is there, in turn
+   * with other file operations. `ask` (from a click or a key) may ask to
+   * allow the folder again. A save that fails says so in the bar, loudly,
+   * until one works. Resolves true once the file holds the program.
    */
-  async _save(ask) {
+  _save(ask) {
     clearTimeout(this._saveTimer)
+    return this._inTurn(() => this._write(ask))
+  }
+
+  /** _save's work, for a job already in turn. */
+  async _write(ask) {
+    if (this._readOnly) return false
     const f = this.openFile
     if (!f) return true
     const text = this._currentPython()
@@ -870,6 +898,21 @@ export class App {
     return !problem
   }
 
+  /**
+   * Before another file takes the open one's place: save it. If it cannot be
+   * saved, stay, unless the student chooses to leave its changes behind.
+   */
+  async _leaveFile() {
+    if (await this._save(true)) return true
+    const f = this.openFile
+    return showModal({
+      title: t('files.unsavedTitle', { file: baseName(f.path) }),
+      bodyHtml: t('files.unsavedBodyHtml', { file: baseName(f.path) }),
+      confirmText: t('files.leaveAnyway'),
+      cancelText: t('files.stay'),
+    })
+  }
+
   /** Ctrl+S, or the bar's button after a failed save: save now, and say so. */
   async _saveNow() {
     if (await this._save(true)) {
@@ -882,8 +925,38 @@ export class App {
     return f.store === 'browser' ? t('files.thisBrowser') : f.folder
   }
 
+  /**
+   * One tab of this browser edits at a time: they share the saved program
+   * and the open file, so two would write over each other. The first holds
+   * a lock; another only shows the program, with a button to edit there
+   * instead, which takes the lock (the first tab then only shows).
+   */
+  _claimTab(take = false) {
+    if (!navigator.locks) return
+    navigator.locks
+      .request(TAB_LOCK, take ? { steal: true } : { ifAvailable: true }, (lock) => {
+        if (!lock) return this._setReadOnly(true)
+        // Taken from another tab: start again from what that tab saved.
+        if (take) location.reload()
+        else this._setReadOnly(false)
+        return new Promise(() => {}) // held while this tab is open
+      })
+      .catch(() => this._setReadOnly(true)) // another tab took it
+  }
+
+  _setReadOnly(on) {
+    this._readOnly = on
+    this.workspace.readOnly = on
+    if (on) clearTimeout(this._saveTimer)
+    $('tab-elsewhere').hidden = !on
+    $('btn-files').disabled = on
+    $('btn-view').disabled = on
+    if (on) this._toggleFiles(false)
+  }
+
   _setOpenFile(file) {
     this.openFile = file
+    if (this._readOnly) return this._refreshFile()
     try {
       if (file) localStorage.setItem(OPEN_FILE, JSON.stringify(file))
       else localStorage.removeItem(OPEN_FILE)
@@ -934,15 +1007,15 @@ export class App {
    * unchanged; else from its Python, which stays Python at a line that does
    * not parse). A file whose imports name another board switches to it.
    */
-  async _openRef(ref, { text } = {}) {
+  async _openRef(ref, { text, left = false } = {}) {
     const f = { store: ref.store, folder: ref.store === 'folder' ? this.stores.folder?.name : null, path: ref.path }
-    await this._save(true)
+    if (!left && !(await this._leaveFile())) return false
     const store = await this._storeFor(f, true)
     try {
       if (text === undefined) text = await store.read(f.path)
     } catch (err) {
       toast({ kind: 'error', title: t('files.openFailed', { file: baseName(f.path) }), detail: err.message })
-      return
+      return false
     }
     this._followBoard(text)
     this._typedBack = null
@@ -977,6 +1050,7 @@ export class App {
     }
     ws.save()
     this._refreshFile()
+    return true
   }
 
   /** The board a program's imports name, if it is not the one picked: switch to it (not while another board is on USB). */
@@ -1000,31 +1074,37 @@ export class App {
   async _createEntry(storeKind, path, kind) {
     const store = this.stores[storeKind]
     if (await store.exists(path)) return t('files.exists', { name: baseName(path) })
+    // A new file opens at once: the open one is saved first (or left by choice).
+    if (kind === 'file' && !(await this._leaveFile())) return t('files.notLeft')
     try {
       if (kind === 'dir') await store.mkdir(path)
       else await store.write(path, '')
     } catch (err) {
       return err.message
     }
-    if (kind === 'file') await this._openRef({ store: storeKind, path }, { text: '' })
+    if (kind === 'file') await this._openRef({ store: storeKind, path }, { text: '', left: true })
     return null
   }
 
-  async _renameEntry(storeKind, from, to) {
+  /** Rename a file or folder, in turn with saves, the open file following it; null, or what went wrong. */
+  _renameEntry(storeKind, from, to) {
     const store = this.stores[storeKind]
-    await this._save(true)
-    try {
-      await store.rename(from, to)
-    } catch (err) {
-      return (await store.exists(to)) ? t('files.exists', { name: baseName(to) }) : err.message
-    }
-    const f = this.openFile
-    if (f?.store === storeKind && (f.path === from || f.path.startsWith(`${from}/`))) {
-      const path = to + f.path.slice(from.length)
-      this._moveLayout(f, { ...f, path })
-      this._setOpenFile({ ...f, path })
-    }
-    return null
+    clearTimeout(this._saveTimer)
+    return this._inTurn(async () => {
+      await this._write(true)
+      try {
+        await store.rename(from, to)
+      } catch (err) {
+        return (await store.exists(to)) ? t('files.exists', { name: baseName(to) }) : err.message
+      }
+      const f = this.openFile
+      if (f?.store === storeKind && (f.path === from || f.path.startsWith(`${from}/`))) {
+        const path = to + f.path.slice(from.length)
+        this._moveLayout(f, { ...f, path })
+        this._setOpenFile({ ...f, path })
+      }
+      return null
+    })
   }
 
   async _removeEntry(storeKind, path, kind) {
@@ -1036,16 +1116,25 @@ export class App {
     })
     if (!ok) return
     const store = this.stores[storeKind]
-    try {
-      await store.remove(path)
-    } catch (err) {
-      toast({ kind: 'error', title: t('files.deleteFailed', { name: baseName(path) }), detail: err.message })
-      return
-    }
-    const f = this.openFile
-    if (f?.store === storeKind && (f.path === path || f.path.startsWith(`${path}/`))) {
+    clearTimeout(this._saveTimer)
+    // In turn with saves: none waiting can write the open file back after it is gone.
+    const gone = await this._inTurn(async () => {
+      try {
+        await store.remove(path)
+      } catch (err) {
+        toast({ kind: 'error', title: t('files.deleteFailed', { name: baseName(path) }), detail: err.message })
+        return false
+      }
+      const f = this.openFile
+      const open = f?.store === storeKind && (f.path === path || f.path.startsWith(`${path}/`))
+      if (open) {
+        this._saveFailed = false
+        this._setOpenFile(null)
+      }
+      return open
+    })
+    if (gone) {
       // The open file went: work on another Python file there, or a new main.py.
-      this._setOpenFile(null)
       const next = (await store.list('')).find((e) => e.kind === 'file' && /\.py$/i.test(e.name))
       if (next) await this._openRef({ store: storeKind, path: next.path })
       else await this._createEntry(storeKind, await this._freePath(store, '', 'main.py'), 'file')
@@ -1071,16 +1160,19 @@ export class App {
         cancelText: t('files.copyKeep'),
       })
       if (copy) {
-        await this._save(true)
-        const path = await this._freePath(folder, '', file)
-        const text = this._currentPython()
-        try {
-          await folder.write(path, text)
-          this._moveLayout(f, { store: 'folder', folder: name, path }, true)
-          this._setOpenFile({ store: 'folder', folder: name, path, saved: text })
-        } catch (err) {
-          toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
-        }
+        clearTimeout(this._saveTimer)
+        await this._inTurn(async () => {
+          await this._write(true)
+          const path = await this._freePath(folder, '', file)
+          const text = this._currentPython()
+          try {
+            await folder.write(path, text)
+            this._moveLayout(f, { store: 'folder', folder: name, path }, true)
+            this._setOpenFile({ store: 'folder', folder: name, path, saved: text })
+          } catch (err) {
+            toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
+          }
+        })
       }
     } else if (f?.store === 'folder' && f.folder === name && this._saveFailed) {
       await this._save(true)
@@ -1229,9 +1321,9 @@ export class App {
 
     const project = exampleProject(device, chosen)
     const goal = t(`example.${device}.${chosen}.goal`)
+    if (!(await this._openAsNewFile(project, fileNameFor(project.name, 'py')))) return
     this.pickedTarget = device
     localStorage.setItem(PICKED_DEVICE, device)
-    await this._openAsNewFile(project, fileNameFor(project.name, 'py'))
     this._renderDevicePicker()
     this._refreshDeviceChip()
     this.terminal.say(t('examples.opened', { name: project.name, goal }))
@@ -1244,27 +1336,26 @@ export class App {
    * that is taken, in the store the open file is in.
    */
   async _openAsNewFile(project, name) {
-    await this._save(true)
+    if (!(await this._leaveFile())) return false
     const ws = this.workspace
-    ws.loadProject({ ...project, name: undefined, mode: undefined, python: undefined })
-    ws.workspace.cleanUp()
     const f = this.openFile
     const kind = f?.store === 'folder' && this.stores.folder?.name === f.folder ? 'folder' : 'browser'
     const store = this.stores[kind]
     const dir = f && f.store === kind ? f.path.split('/').slice(0, -1).join('/') : ''
     const path = await this._freePath(store, dir, name)
-    const text = this._blocksPython()
-    const ref = { store: kind, folder: kind === 'folder' ? store.name : null, path }
-    try {
-      await store.write(path, text)
-    } catch (err) {
-      toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
-    }
+    // The new file is the open one before its program goes in, with no wait
+    // between: a save waiting its turn writes the new program to the new file,
+    // never over the one just left.
+    clearTimeout(this._saveTimer)
+    this._saveFailed = false
     this._typedBack = null
-    this._rememberLayout(ref, text)
-    this._setOpenFile({ ...ref, saved: text })
-    if (this.view === 'python') ws.setMode('text', text)
+    this._setOpenFile({ store: kind, folder: kind === 'folder' ? store.name : null, path })
+    ws.loadProject({ ...project, name: undefined, mode: undefined, python: undefined })
+    ws.workspace.cleanUp()
+    if (this.view === 'python') ws.setMode('text', this._blocksPython())
+    await this._save(true)
     if (!$('files-panel').hidden) await this._renderFiles()
+    return true
   }
 
   /** ⋯ Open a file: a Python file, or a project file from before files were Python, as a new file. */
@@ -1273,19 +1364,20 @@ export class App {
     try {
       const text = await file.text()
       if (/\.py$/i.test(file.name)) {
+        if (!(await this._leaveFile())) return
         const f = this.openFile
         const kind = f?.store === 'folder' && this.stores.folder?.name === f.folder ? 'folder' : 'browser'
         const path = await this._freePath(this.stores[kind], '', file.name)
         await this.stores[kind].write(path, text)
-        await this._openRef({ store: kind, path }, { text })
+        await this._openRef({ store: kind, path }, { text, left: true })
       } else {
         const project = JSON.parse(text)
         if (!project?.blocks) throw new Error(t('openFailed.notProject'))
+        if (!(await this._openAsNewFile(project, fileNameFor(project.name || file.name.replace(/\.\w+$/, ''), 'py')))) return
         if (project.device) {
           this.pickedTarget = project.device
           localStorage.setItem(PICKED_DEVICE, project.device)
         }
-        await this._openAsNewFile(project, fileNameFor(project.name || file.name.replace(/\.\w+$/, ''), 'py'))
         if (project.mode === 'text' && typeof project.python === 'string') {
           this.workspace.setMode('text', project.python)
           this._fileChanged()
