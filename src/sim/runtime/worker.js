@@ -172,7 +172,10 @@ self.onmessage = async (e) => {
         engine.userFiles[m.name] = m.contents
         post({ t: 'saved', name: m.name })
         break
-      case 'stop': engine.stop(); break
+      case 'stop':
+        engine.stop()
+        if (m.hard) engine.stop()     // at once: no time to clean up (a reset)
+        break
       case 'pause': engine.pause(); break
       case 'resume': engine.resume(); break
       case 'step': engine.step(); break
@@ -182,6 +185,7 @@ self.onmessage = async (e) => {
         if (m.what === 'button') device.press(m.n, m.down)
         if (m.what === 'tilt') { device.tiltX = m.x; device.tiltY = m.y }
         if (m.what === 'light') device.lux = m.lux
+        if (m.what === 'reset') { device.holdReset?.(m.down); frame(true) }
         break
       case 'reset':
         if (engine.running) return

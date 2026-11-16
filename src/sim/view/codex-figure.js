@@ -91,6 +91,10 @@ export class CodeXFigure {
       mesh.material.flatShading = true
       this.keys.add(n, [mesh], { reach: KEY_REACH, travel: KEY_TRAVEL })
     })
+    // Reset, on the back by the power switch: pressed where it can be seen,
+    // never through the board (the model hides it).
+    this.keys.model = model
+    this.keys.add('reset', [node('ResetButton')], { reach: KEY_REACH, travel: -KEY_TRAVEL })
 
     // LEDs 0 to 3, and B and A copied from LED_0.
     const led0 = node('LED_0')
@@ -260,7 +264,7 @@ export class CodeXFigure {
       l.show(LED_RED, on ? 1 : 0)
     })
     s.pixels?.forEach(([r, g, b], n) => this.pixels[n]?.rgb(r, g, b))
-    if (s.buttons) this.keys.show((n) => s.buttons[n])
+    if (s.buttons) this.keys.show((n) => (n === 'reset' ? s.reset : s.buttons[n]))
   }
 }
 

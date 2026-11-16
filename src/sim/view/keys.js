@@ -8,7 +8,10 @@ import * as THREE from 'three'
 import { boxIn } from './led.js'
 
 export class Keys {
-  constructor() {
+  // `model`: the board's model, so a button hidden behind its other parts
+  // (CodeX's reset, under the board) is not pressed through them.
+  constructor(model = null) {
+    this.model = model
     this.keys = new Map()      // number -> { meshes, rest }
     this.pick = []             // the invisible targets a click finds
   }
@@ -36,10 +39,19 @@ export class Keys {
     this.keys.set(n, { meshes, rest: meshes.map((m) => m.position.y), travel, centre, frame })
   }
 
-  // The button a ray meets, or -1.
+  // The button a ray meets, or -1: one the model hides is not met.
   keyAt(raycaster) {
     const hit = raycaster.intersectObjects(this.pick, false)[0]
-    return hit ? hit.object.userData.key : -1
+    if (!hit) return -1
+    const n = hit.object.userData.key
+    if (this.model) {
+      const own = this.keys.get(n).meshes
+      const isOwn = (o) => own.some((m) => m === o || m.getObjectById(o.id))
+      const front = raycaster.intersectObject(this.model, true)
+        .find((h) => h.object.userData.key === undefined && !isOwn(h.object))
+      if (front && front.distance < hit.distance) return -1
+    }
+    return n
   }
 
   // Button n's centre in the world.
