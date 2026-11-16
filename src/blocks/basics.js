@@ -63,6 +63,8 @@ defineBlocks([
     },
   },
 
+  // Not in the palette (waits are in seconds, fractions welcome); kept so a
+  // saved program that has one still loads and runs.
   {
     json: {
       type: 'ocb_wait_ms',

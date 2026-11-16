@@ -186,7 +186,7 @@ const codex = [
           wait(random(2, 5)),
           fill('GREEN', 60),
           setVar('start', b('ocb_seconds_since_start')),
-          until(b('codex_button_was_pressed', { BTN: 'BTN_A' }), [b('ocb_wait_ms', {}, { MS: 5 })]),
+          until(b('codex_button_was_pressed', { BTN: 'BTN_A' }), [wait(0.005)]),
           show(join(round(math(math(b('ocb_seconds_since_start'), '-', getVar('start')), '*', 1000)), t('example.text.ms'))),
           b('codex_pixels_off'),
         ],
@@ -269,7 +269,7 @@ const codeair = [
         variables: { count: t('example.var.count') },
         start: [
           airFill('BLUE'),
-          until(b('codeair_button_was', { NUM: '0' }), [b('ocb_wait_ms', {}, { MS: 50 })]),
+          until(b('codeair_button_was', { NUM: '0' }), [wait(0.05)]),
           countWith('count', 3, 1, 1, [beep(660, 100), wait(1)]),
           flight([takeOff(0.5), b('codeair_circle', { DIR: 'circle_left', RADIUS: 0.5 }), b('codeair_land')]),
           b('codeair_pixels_off'),

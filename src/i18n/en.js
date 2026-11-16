@@ -618,7 +618,7 @@ export default {
   'block.ocb_forever.message0': '🔁 forever',
   'block.ocb_forever.tooltip': 'These blocks repeat over and over, until you press Stop.',
   'block.ocb_wait.message0': '⏳ wait %1 seconds',
-  'block.ocb_wait.tooltip': 'Pause before running the next block.',
+  'block.ocb_wait.tooltip': 'Pause before running the next block. Fractions work too: 0.5 is half a second.',
   'block.ocb_wait_ms.message0': '⏳ wait %1 milliseconds',
   'block.ocb_wait_ms.tooltip': 'Pause for a fraction of a second. 1000 milliseconds = 1 second.',
   'block.ocb_print.message0': '💬 print %1',

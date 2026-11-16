@@ -25,8 +25,7 @@ const SEP = { kind: 'sep', gap: '28' }
 const basics = [
   block('ocb_on_start'),
   block('ocb_forever'),
-  block('ocb_wait', { SECS: num(1) }),
-  block('ocb_wait_ms', { MS: num(500) }),
+  block('ocb_wait', { SECS: num(1.5) }),
   block('ocb_print', { TEXT: str(t('sample.hello')) }),
   block('ocb_seconds_since_start'),
 ]
