@@ -74,8 +74,10 @@ async function fresh(p, folder) {
 await fresh(page, true)
 
 const text = () => page.evaluate(() => window.openCodeBot.pythonEditor.value)
+/** A file's text in the folder, once the app's file work in progress has settled (null if it is not there). */
 const readFile = (path) =>
   page.evaluate(async (path) => {
+    await window.openCodeBot?._fileQueue
     try {
       let d = await (await navigator.storage.getDirectory()).getDirectoryHandle('class-folder')
       const parts = path.split('/')
@@ -272,7 +274,25 @@ await p2.waitForFunction(() => window.openCodeBot.openFile?.path === 'screen.py'
 check((await p2.evaluate(() => window.openCodeBot.workspace.targetId)) === 'codex', 'a CodeX program switches the board to CodeX')
 
 // ------------------------------------------------------------ saves never land in the wrong place
-const read2 = (path) => p2.evaluate((p) => window.openCodeBot.stores.browser.read(p).catch(() => null), path)
+const read2 = (path) => p2.evaluate(async (p) => {
+  await window.openCodeBot._fileQueue
+  return window.openCodeBot.stores.browser.read(p).catch(() => null)
+}, path)
+// The app never reads a file half written: a read waits for the save in progress.
+const whole = await p2.evaluate(async () => {
+  const app = window.openCodeBot
+  const big = `# ${'x'.repeat(200000)}\n`
+  const f = app.openFile
+  app._setOpenFile({ ...f, saved: undefined })
+  app.workspace.setMode('text', big)
+  const saving = app._save(true)
+  const read = await app._inTurn(() => app.stores.browser.read(f.path))
+  await saving
+  app.workspace.setMode('blocks')
+  await app._save(true)
+  return read.length === big.length
+})
+check(whole, 'a file being saved is read whole, after the save, never half written')
 const change = () => p2.evaluate(() => window.openCodeBot.workspace.workspace.newBlock('ocb_seconds_since_start').initSvg())
 // A new file from blocks (an example, an old project) while a save waits: the
 // waiting change goes to the file it was made in, the example to its own.

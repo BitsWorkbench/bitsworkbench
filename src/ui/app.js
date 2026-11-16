@@ -1012,7 +1012,8 @@ export class App {
     if (!left && !(await this._leaveFile())) return false
     const store = await this._storeFor(f, true)
     try {
-      if (text === undefined) text = await store.read(f.path)
+      // In turn with saves: a file is never read while it is being written.
+      if (text === undefined) text = await this._inTurn(() => store.read(f.path))
     } catch (err) {
       toast({ kind: 'error', title: t('files.openFailed', { file: baseName(f.path) }), detail: err.message })
       return false
