@@ -8,6 +8,7 @@
 import { pythonGenerator } from 'blockly/python'
 import { resetNeeds, allNeeds } from './context.js'
 import { getTarget } from '../device/targets.js'
+import { notesPython } from './comments.js'
 
 export const DEVICE_IMPORT = {
   codex: 'from codex import *',
@@ -21,7 +22,8 @@ export const BANNER = '# Made with Codacious 💚 Blocks in, Python out.'
 
 export function generatePython(workspace, targetId) {
   resetNeeds()
-  const program = pythonGenerator.workspaceToCode(workspace).trim()
+  // The blocks' Python, then the notes on no block.
+  const program = [pythonGenerator.workspaceToCode(workspace).trim(), notesPython(workspace)].filter(Boolean).join('\n\n')
   const needs = allNeeds()
 
   const header = [BANNER]
