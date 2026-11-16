@@ -64,13 +64,13 @@ async function openPicker(device) {
   )
 }
 
-/** Pick one example and say yes to replacing the blocks (there always are some). */
-async function pick(id, title) {
+/** Pick one example: it opens as a new file, never asking (the open file is kept). */
+async function pick(id) {
+  const was = await page.evaluate(() => window.openCodeBot.openFile?.path)
   await page.click(`#modal [data-example="${id}"]`)
-  await page.waitForFunction(() => document.querySelector('#modal[open] button[value="cancel"]'))
-  await page.click('#modal button[value="ok"]')
   // The dialog shuts at once; its close event, which opens the example, comes a moment later.
-  await page.waitForFunction((name) => window.openCodeBot.workspace.name === name, title, { timeout: 5000 })
+  await page.waitForFunction((was) => window.openCodeBot.openFile?.path !== was, was, { timeout: 5000 })
+  return was
 }
 
 const programs = []
@@ -88,24 +88,26 @@ for (const device of ['codebot', 'codex', 'codeair']) {
   for (const ex of list) {
     warnings.length = 0
     await openPicker(device)
-    await pick(ex.id, ex.title)
-    const state = await page.evaluate(() => {
+    const was = await pick(ex.id)
+    const state = await page.evaluate(async (was) => {
       const app = window.openCodeBot
       const ws = app.workspace.workspace
       const tops = ws.getTopBlocks(false)
       return {
         target: app.workspace.targetId,
-        name: app.workspace.name,
+        file: app.openFile.path,
+        kept: !was || (await app.stores.browser.exists(was)),
+        saved: (await app.stores.browser.read(app.openFile.path)) === app._currentPython(),
         blocks: ws.getAllBlocks(false).length,
         types: [...new Set(ws.getAllBlocks(false).map((b) => b.type))],
         loose: tops.filter((b) => !['ocb_on_start', 'ocb_forever'].includes(b.type)).map((b) => b.type),
         python: app._currentPython(),
         mode: app.workspace.mode,
       }
-    })
+    }, was)
     const label = `${device} "${ex.title}"`
     check(state.target === device && state.mode === 'blocks', `${label}: opens as blocks for ${device}`)
-    check(state.name === ex.title, `${label}: the project takes the example's name (${state.name})`)
+    check(/^[a-z0-9-]+\.py$/.test(state.file) && state.kept && state.saved, `${label}: a new file named for it (${state.file}), saved, and the last one kept`)
     check(state.blocks >= 3 && state.loose.length === 0, `${label}: ${state.blocks} blocks, none loose ${state.loose.join(' ')}`)
     check(warnings.length === 0, `${label}: loads without warnings ${warnings.slice(0, 2).join('; ')}`)
     check(/\S/.test(state.python) && !/\bpass\n?$/.test(state.python.trim()), `${label}: makes Python`)
@@ -140,17 +142,11 @@ for (const device of ['codebot', 'codex', 'codeair']) {
   )
 }
 
-// Replacing work asks first, and keeping it keeps it.
+// An example never asks: the program open stays in its own file.
 await openPicker('codex')
 await page.click('#modal [data-example="hello"]')
-await page.waitForTimeout(100)
-const asked = await page.evaluate(() => document.getElementById('modal')?.open)
-check(asked, 'opening an example over existing blocks asks first')
-if (asked) await page.click('#modal button[value="cancel"]')
-check(
-  (await page.evaluate(() => window.openCodeBot.workspace.targetId)) === 'codeair',
-  'and "keep my blocks" keeps them',
-)
+await page.waitForTimeout(300)
+check(!(await page.evaluate(() => document.getElementById('modal')?.open)), 'opening an example over existing blocks does not ask')
 
 // In Spanish the picker, the names and the words in the program are Spanish.
 await fresh('es')

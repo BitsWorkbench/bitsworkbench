@@ -198,8 +198,8 @@ export class BlockWorkspace extends EventTarget {
     const next = cleanProjectName(name)
     if (next === this.name) return
     this.name = next
+    // The name is the open file's (the app sets it); the program is unchanged.
     this.dispatchEvent(new CustomEvent('rename'))
-    this.dispatchEvent(new CustomEvent('change'))
   }
 
   /** A project is the blocks plus the board they were written for. */

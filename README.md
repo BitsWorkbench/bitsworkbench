@@ -27,11 +27,11 @@ waiting for them.
 |---|---|
 | 🔌 **Plug and play** | Detects which board you plugged in and shows only the blocks it can actually run. |
 | 🧩 **Friendly blocks** | Chunky, colourful, emoji-labelled blocks for screens, lights, motors, flight, sound, sensors and radio. |
-| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). Download the `.py` any time, or switch to typing Python in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block, and a grey mark beside the line says so while you type. Save a grey Python block to ⭐ My blocks (right-click it) to use it again in any project; your library stays in this browser. |
+| 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). The 🧩 Blocks / 🐍 Python switch over the program shows it either way, and the Python is always yours to edit in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block, and a grey mark beside the line says so while you type. Save a grey Python block to ⭐ My blocks (right-click it) to use it again in any project; your library stays in this browser. |
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
-| 💾 **Nothing to lose** | Your blocks are saved in the browser as you go, and can be saved to a file. In Chrome and Edge, open a folder on your computer to keep your Python files in, and open and save them there. |
-| 🧭 **Starter projects** | Five or six short example programs for each board, easiest first, each with a goal. Open one from the ⋯ menu and change it. |
+| 💾 **Nothing to lose** | Every program is a Python `.py` file, even one made of blocks, and it saves itself as you go. Click its name over the program for your files: open another, make files and folders, rename or delete them. Files are kept in this browser, or in Chrome and Edge in a folder on your computer. A file made of blocks opens again just as you left it. |
+| 🧭 **Starter projects** | Five or six short example programs for each board, easiest first, each with a goal. Open one from the ⋯ menu: it becomes a new file, and the one you had stays. |
 
 ## No device? Simulate one
 
@@ -150,14 +150,15 @@ src/
     generate.js        assembles imports and setup around the block code
     theme.js           colours and shapes
   workspace/   the Blockly workspace, saving and starter projects
-  files/       where a student's files live: store.js (the FileStore seam) and
+  files/       where a student's files live: store.js (the FileStore seam),
+               browser-store.js (this browser's own storage, IndexedDB) and
                local-folder.js (a folder on the computer, File System Access API)
   editor/      the Python editor for typed programs (CodeMirror 6)
     python-editor.js   the editor, behind a small surface the app uses
     snippets.js        each block's Python, for the palette beside the editor
     palette.js         that palette: categories, cards, drag (mouse and touch), click
     snippet-drop.js    where a dragged snippet lands, and the one change that puts it there
-  ui/          terminal, toasts, dialogs, the Files panel and the app shell
+  ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language
 ```
 

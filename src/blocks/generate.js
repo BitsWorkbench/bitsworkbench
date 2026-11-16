@@ -18,6 +18,14 @@ export const DEVICE_IMPORT = {
 
 const NEED_FOR_DEVICE = { codex: 'codex', codebot: 'botcore', codeair: 'codeair' }
 
+/** The board a program's imports name (`from botcore import *` is a CodeBot), or null. */
+export function boardOfPython(text) {
+  for (const [board, module] of Object.entries(NEED_FOR_DEVICE)) {
+    if (new RegExp(`^\\s*(from\\s+${module}\\s+import|import\\s+${module}\\b)`, 'm').test(text)) return board
+  }
+  return null
+}
+
 export const BANNER = '# Made with Codacious 💚 Blocks in, Python out.'
 
 export function generatePython(workspace, targetId) {

@@ -24,15 +24,9 @@ export default {
   'btn.stepTitle': 'Run your program to its next line, and pause there',
   'run.controlsLabel': 'Run your program',
   'btn.more': 'More',
-  'btn.new': 'New',
-  'btn.newTitle': 'Start a new project',
   'project.default': 'My project',
-  'project.nameLabel': 'Project name',
-  'project.nameTitle': 'Click to rename your project',
   'project.pageTitle': '{name} · {app}',
-  'menu.new': '🆕 New project',
-  'menu.open': '📂 Open project…',
-  'menu.save': '💾 Save project',
+  'menu.import': '📂 Open a file from your computer…',
   'menu.exportPy': '🐍 Download Python',
   'menu.copyPy': '📋 Copy Python',
   'menu.examples': '🧭 Start from an example…',
@@ -44,10 +38,9 @@ export default {
   'blocks.hint': 'Drag blocks from the left to build your program!',
   'splitter.label': 'Resize panels. Use the arrow keys.',
   'term.title': 'Talk to device',
-  'view.toPython': '🐍 Python',
-  'view.toBlocks': '🧩 Blocks',
-  'view.toPythonLabel': 'Show the Python in place of the blocks',
-  'view.toBlocksLabel': 'Show the blocks in place of the Python',
+  'view.blocks': '🧩 Blocks',
+  'view.python': '🐍 Python',
+  'view.label': 'Show the program as Python',
   'term.clear': 'Clear the terminal',
   'term.hide': 'Close the terminal',
   'term.show': 'Open the terminal',
@@ -94,42 +87,58 @@ export default {
   'leave.toBoard': 'Connect a board',
   'leave.keepBoard': 'Keep the {device}',
   'leave.keepSim': 'Keep simulating',
-  'pick.keep': 'Keep my blocks',
   // Blocks or typed Python (the Python view)
-  'text.barBlocks': 'These are the Python lines your blocks make.',
-  'text.barText': 'You are writing Python. Run sends this code.',
-  'text.toText': '✏️ Edit as Python',
-  'text.toBlocks': '🧩 Back to blocks',
   'text.editorLabel': 'Python program',
   'text.editorHelp': 'Tab indents. Press Escape, then Tab, to leave the editor.',
-  'text.viewLabel': 'The Python your blocks make',
-  'files.button': '📁 Files',
   'files.label': 'Files',
-  'files.intro': 'Pick a folder on your computer to keep your programs in. You can open and save the files in it here.',
+  'files.buttonLabel': '{file}: show or hide your files',
+  'files.buttonTitle': '{place}. Click for your files.',
+  'files.intro': 'Keep your programs in a folder on this computer, where you can find them later. Until then they are kept in this browser.',
+  'files.thisBrowser': 'This browser',
+  'files.browserLabel': 'Files kept in this browser',
+  'files.newFolder': 'New folder',
+  'files.newFileIn': 'New file in {place}',
+  'files.newFolderIn': 'New folder in {place}',
+  'files.newFileHere': 'New file in this folder',
+  'files.newFileHereNamed': 'New file in {name}',
+  'files.rename': 'Rename',
+  'files.renameNamed': 'Rename {name}',
+  'files.delete': 'Delete',
+  'files.deleteNamed': 'Delete {name}',
+  'files.renameLabel': 'New name for {name}',
+  'files.renameDo': 'Rename',
+  'files.newFolderName': 'Name for the new folder',
+  'files.deleteTitle': 'Delete {name}?',
+  'files.deleteFolderTitle': 'Delete the folder {name}?',
+  'files.deleteBodyHtml': '<p>{name} will be gone for good. This cannot be undone.</p>',
+  'files.deleteFolderBodyHtml': '<p>The folder {name} and everything in it will be gone for good. This cannot be undone.</p>',
+  'files.deleteConfirm': 'Delete',
+  'files.deleteFailed': 'Could not delete {name}',
+  'files.copyTitle': 'Copy {file} into {folder}?',
+  'files.copyBodyHtml': '<p>Your program {file} is kept in this browser. Copy it into {folder} and keep working on it there?</p><p>The copy in this browser stays too.</p>',
+  'files.copyConfirm': 'Copy it there',
+  'files.copyKeep': 'Leave it in this browser',
+  'files.saveAgain': 'Not saved: try again',
+  'files.allowAgain': 'Not saved: allow {folder}',
+  'files.otherBoardTitle': 'This program is for a {device}',
+  'files.boardFromFile': 'This program is for a {device}, so its blocks are showing.',
   'files.reopen': 'Open {name} again',
-  'files.openFolder': 'Open a folder',
-  'files.openOther': 'Open another folder',
+  'files.openFolder': 'Use a folder on this computer',
+  'files.openOther': 'Use another folder',
   'files.folderLabel': 'Files in {name}',
   'files.newFile': 'New file',
-  'files.newName': 'Name for the new file (it holds your program as it is now)',
+  'files.newName': 'Name for the new file',
   'files.cancel': 'Cancel',
   'files.create': 'Create',
   'files.badName': 'Use letters, numbers, spaces, - and _ in the name.',
-  'files.exists': '{name} is already in the folder. Pick another name.',
+  'files.exists': '{name} is already there. Pick another name.',
   'files.empty': 'No files here yet.',
-  'files.unsupported': 'This browser cannot open a folder (Chrome and Edge can). You can still open a Python file, and save it with Download Python in the ⋯ menu.',
-  'files.openSingle': 'Open a Python file',
-  'files.save': 'Save',
   'files.unsaved': 'Not saved yet',
   'files.openFailed': 'Could not open {file}',
   'files.saveFailed': 'Could not save {file}',
-  'files.reopenDetail': 'Allow the folder {folder} again from the Files panel, then save.',
+  'files.reopenDetail': 'Allow the folder {folder} again: press the button in the bar.',
   'files.savedTitle': 'Saved',
   'files.savedDetail': '{file} is saved in {folder}.',
-  'files.replaceTitle': 'Open {file}?',
-  'files.replaceBodyHtml': '<p>The Python you are writing is not saved in a file. Opening {file} puts it in place of what you wrote.</p>',
-  'files.replaceConfirm': 'Open it',
-  'files.keep': 'Keep mine',
   'palette.label': 'Python palette',
   'palette.hint': 'Drag it into your program, or press Enter to add it where the cursor is.',
   // The Python editor's own panels (find and replace, folding)
@@ -160,17 +169,9 @@ export default {
   'editor.noBlock': 'No block for this line yet: it becomes a grey Python block.',
   'editor.selectionDeleted': 'Selection deleted',
   'editor.controlCharacter': 'Control character',
-  'text.startedTitle': "You're writing Python now",
-  'text.startedDetail': 'Run sends the code you type. Back to blocks turns your Python into blocks.',
   'text.notParsedTitle': 'Fix the Python first',
   'text.notParsedDetail': 'Line {line} has a mistake, so it cannot become blocks yet. The cursor is on it.',
 
-  'new.title': 'Start a new project?',
-  'new.bodyHtml': '<p>Your current blocks will be cleared. This cannot be undone.</p><p>To keep them, press <b>Keep my blocks</b>, then Save project from the ⋯ menu.</p>',
-  'new.bodyTextHtml': '<p>Your current program will be cleared. This cannot be undone.</p><p>To keep it, press <b>Keep my program</b>, then Save project from the ⋯ menu.</p>',
-  'new.keepText': 'Keep my program',
-  'new.confirm': 'Yes, start over',
-  'new.started': 'New project. Have fun!',
   'pySaved.title': 'Python saved',
   'pySaved.detail': 'Look in your Downloads folder for main.py.',
   'pyCopied.title': 'Python copied!',
@@ -191,7 +192,7 @@ export default {
   'welcome.bodyHtml': `
     <p>Hi! {app} lets you build programs for your Firia Labs device by
     snapping blocks together. No typing required, but the real Python is
-    always one press of <strong>🐍 Python</strong> (bottom left) away if you want to peek.</p>
+    always one press of <strong>🐍 Python</strong> (above your program, on the right) away if you want to peek.</p>
     <ol>
       <li><strong>Pick your device</strong> at the top: CodeBot, CodeX or CodeAIR.</li>
       <li><strong>Plug it in</strong> with a USB cable and press <strong>Connect</strong>.</li>
@@ -232,24 +233,25 @@ export default {
       <li>While the simulator is on, it shows above Talk to device. Drag the bar between them
         (or use the arrow keys on it) to resize them, and press <strong>▾</strong> to close
         Talk to device down to its title.</li>
-      <li><strong>🐍 Python</strong>, at the bottom left, shows exactly the code your blocks make,
-        in place of the blocks; <strong>🧩 Blocks</strong> brings them back. Press
-        <strong>✏️ Edit as Python</strong> there to type your own; going back to blocks then
-        drops your typed changes (they do not turn back into blocks), so it asks first.
+      <li><strong>🧩 Blocks | 🐍 Python</strong>, at the right of the bar over your program, shows it
+        as blocks or as Python. The Python is yours to edit; switching back turns it into blocks
+        (Python with no block of its own becomes a grey Python block). A line with a mistake keeps
+        you in Python, on that line, until it is fixed.
         The palette beside the Python has the same categories as the blocks', with each block as
         its Python: drag one into your program, or click it to add it where the cursor is.
         Drag a loop or an <code>if</code> over some of your code and that code goes inside it
         (the part it will take is shaded as you drag).</li>
-      <li><strong>📁 Files</strong>, above the Python, opens a folder on your computer (in Chrome or Edge):
-        open the Python files in it, make a new one, and save with <strong>Save</strong> or
-        <kbd>Ctrl</kbd>+<kbd>S</kbd>. A dot next to the file's name means it has changes not saved yet.</li>
-      <li><strong>🆕 New</strong> starts over. Click the project name next to it to rename your project.</li>
+      <li>Every program is a Python file, even one made of blocks. Its name is at the left of the bar:
+        click it for your files. There you can open another file, make files and folders, and rename
+        or delete them. Your work saves itself a moment after each change. Files are kept in this
+        browser, or (in Chrome or Edge) in a folder on your computer. A dot next to the name means a
+        change is not saved yet.</li>
     </ul>
     <h3>Shortcuts</h3>
     <ul>
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: run your program</li>
       <li><kbd>Esc</kbd>: stop a running program</li>
-      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: save your project to a file (or, with a file open from your folder, save that file)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: save now (it also saves by itself)</li>
     </ul>
     <h3>Writing Python</h3>
     <ul>
@@ -384,9 +386,6 @@ export default {
   'examples.boards': 'Board',
   'examples.listLabel': 'Examples for {device}',
   'examples.close': 'Close',
-  'examples.replaceTitle': 'Replace your program?',
-  'examples.replaceBodyHtml': '<p>Opening an example clears your current blocks. This cannot be undone.</p><p>To keep them, press <b>Keep my blocks</b>, then Save project from the ⋯ menu.</p>',
-  'examples.replace': 'Yes, open the example',
   'examples.opened': 'Opened “{name}”. Goal: {goal}',
   'example.text.done': 'Done!',
   'example.text.hello': 'Hello!',

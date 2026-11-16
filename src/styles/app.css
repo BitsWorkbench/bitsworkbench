@@ -84,27 +84,6 @@ kbd {
 }
 .brand-tag { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
 
-/* ----------------------------------------------------------- project bar */
-.project-bar { display: flex; align-items: center; gap: 4px; margin-left: 6px; min-width: 0; }
-.btn-new { font-size: 15px; padding: 0 12px; gap: 6px; font-weight: 600; color: var(--ink); }
-.project-name {
-  width: 15ch;
-  min-width: 8ch;
-  height: 36px;
-  padding: 0 10px;
-  border: 2px solid transparent;
-  border-bottom: 2px dashed var(--line-strong); /* reads as "you can type here" */
-  border-radius: var(--r-xs);
-  background: transparent;
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
-  text-overflow: ellipsis;
-}
-.project-name:hover { border-color: var(--line-strong); background: var(--surface); }
-.project-name:focus { outline: none; border-color: var(--green); background: var(--surface); }
-
 .topbar-center { position: relative; margin-left: 6px; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
@@ -260,8 +239,70 @@ kbd {
   background: var(--paper);
 }
 
-.blocks-pane { position: relative; min-width: 0; min-height: 0; }
+.blocks-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.editor-body { flex: 1 1 auto; min-height: 0; display: flex; }
+.editor-main { position: relative; flex: 1 1 auto; min-width: 0; }
 .blockly-root { position: absolute; inset: 0; }
+
+/* The editor bar, over the blocks or the Python: the program's file (which
+   opens the file browser) on the left, the blocks/Python switch on the right. */
+.editor-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 10px;
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--line);
+}
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.file-button:hover, .file-button[aria-expanded='true'] { background: var(--surface); border-color: var(--line-strong); }
+.file-icon { font-size: 17px; }
+.file-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-dirty { flex: 0 0 auto; color: #a3540a; }
+.file-dirty[hidden] { display: none; }
+/* A save that failed is loud: the bar turns coral, with the way to fix it. */
+.editor-bar.is-failed { background: var(--coral-soft); border-bottom-color: var(--coral-strong); }
+.editor-bar.is-failed .file-dirty { color: var(--coral-strong); }
+.save-again { background: var(--coral-strong); color: #fff; border: 0; }
+.save-again:hover { background: var(--coral-strong-dark); }
+.save-again[hidden] { display: none; }
+/* Blocks | Python: one switch, the side showing in green. */
+.view-switch {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.view-opt { padding: 4px 14px; border-radius: var(--r-pill); color: var(--ink-soft); white-space: nowrap; }
+.view-switch[aria-checked='false'] .view-opt[data-view='blocks'],
+.view-switch[aria-checked='true'] .view-opt[data-view='python'] { background: var(--green-strong); color: #fff; }
+.view-switch:hover .view-opt { color: var(--ink); }
+.view-switch:hover[aria-checked='false'] .view-opt[data-view='blocks'],
+.view-switch:hover[aria-checked='true'] .view-opt[data-view='python'] { color: #fff; }
 
 .blocks-hint {
   position: absolute;
@@ -358,18 +399,6 @@ kbd {
   font-weight: 600;
 }
 
-.python-view {
-  margin: 0;
-  padding: 14px 16px;
-  overflow: auto;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink);
-  background: var(--paper);
-  white-space: pre;
-  tab-size: 4;
-}
 /* The Python, in the editor area in place of the blocks (never both). */
 .code-pane {
   position: absolute;
@@ -384,13 +413,12 @@ kbd {
   flex-direction: column;
 }
 .code-pane[hidden], .blockly-root[hidden] { display: none; }
-.code-body { flex: 1 1 auto; min-height: 0; display: flex; }
-.code-body > .python-view, .code-body > .python-editor { min-width: 0; }
 
-/* The Files panel: a folder on the computer, beside the Python. */
+/* The file browser, at the left of the blocks or the Python: a folder on the
+   computer and this browser's own files. */
 .files-panel {
   flex: 0 0 auto;
-  width: 220px;
+  width: 250px;
   max-width: 45%;
   overflow-y: auto;
   padding: 10px;
@@ -404,24 +432,40 @@ kbd {
 }
 .files-panel[hidden] { display: none; }
 .files-note { margin: 0; color: var(--ink-soft); line-height: 1.45; }
-.files-pick { position: relative; cursor: pointer; display: inline-flex; align-items: center; }
-.files-head { display: flex; align-items: center; gap: 6px; width: 100%; }
+.files-attach { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; padding-bottom: 10px; border-bottom: 1px solid var(--line-strong); }
+.files-section { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.files-section + .files-section { padding-top: 10px; border-top: 1px solid var(--line-strong); }
+.files-head { display: flex; align-items: center; gap: 4px; width: 100%; }
 .files-folder { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.files-head button {
+.files-panel .btn-icon {
   flex: 0 0 auto;
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--ink);
   border-radius: var(--r-sm);
-  padding: 2px 8px;
+  font-size: 13px;
+  line-height: 1;
   cursor: pointer;
 }
+.files-panel .btn-icon:hover, .files-panel .btn-icon:focus-visible { background: var(--surface); border-color: var(--line-strong); }
+.files-head .btn-icon { border-color: var(--line-strong); background: var(--surface); }
 .files-tree, .files-sub { list-style: none; margin: 0; padding: 0; width: 100%; }
 .files-sub { padding-left: 14px; }
 .files-sub[hidden] { display: none; }
+/* A row: the file or folder, and its actions, shown on hover, focus or when current. */
+.files-row { display: flex; align-items: center; gap: 2px; border-radius: 6px; }
+.files-row:hover { background: rgba(76, 77, 79, 0.06); }
+.files-actions { display: flex; flex: 0 0 auto; opacity: 0; }
+.files-row:hover .files-actions, .files-row:focus-within .files-actions,
+.files-row:has(.is-current) .files-actions { opacity: 1; }
+@media (hover: none) { .files-actions { opacity: 1; } }
 .files-item {
   display: block;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 3px 6px;
   border: 0;
   border-radius: 6px;
@@ -444,13 +488,6 @@ kbd {
 .files-error { margin: 0; color: #b3261e; min-height: 0; }
 .files-error:empty { display: none; }
 .files-form-actions { display: flex; gap: 6px; justify-content: flex-end; }
-/* The open file's name in the Python bar, with a dot while it is not saved. */
-.file-tab { display: inline-flex; align-items: center; flex: 0 1 auto; min-width: 0; max-width: 45%; font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
-#file-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.file-tab[hidden], #btn-file-save[hidden] { display: none; }
-.file-dirty { flex: 0 0 auto; color: #a3540a; margin-left: 4px; }
-/* With a file open, the bar's explanation gives up its room first. */
-.python-bar:has(.file-tab:not([hidden])) .python-bar-msg { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* The Python palette: the blocks' categories (drawn as Blockly draws them,
    see .blocklyToolboxCategory) and a flyout of snippets in their colours. */
@@ -557,35 +594,7 @@ kbd {
   background: color-mix(in srgb, var(--c) 25%, transparent);
   box-shadow: inset 4px 0 0 var(--c);
 }
-/* Room at the foot for the blocks/Python button. */
-.code-pane .python-view { padding-bottom: 72px; }
-/* Bottom left, under the palette's categories, in both views. */
-.view-toggle {
-  position: absolute;
-  left: 10px;
-  bottom: 12px;
-  z-index: 76; /* over Blockly's toolbox (70) and the hint (75) */
-  height: 40px;
-  padding: 0 16px;
-  background: var(--surface);
-  color: var(--ink);
-  border: 2px solid var(--line-strong);
-  box-shadow: var(--shadow-sm);
-}
-.view-toggle:hover { background: var(--green-soft); }
-.python-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper-2);
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-.python-bar-msg { flex: 1 1 auto; }
 .btn-small { height: 32px; padding: 0 12px; font-size: 14px; flex: 0 0 auto; }
-.python-view { flex: 1 1 auto; min-height: 0; }
 /* The typed-Python editor (CodeMirror), in the same type and colours. */
 .python-editor {
   flex: 1 1 auto;
@@ -604,8 +613,7 @@ kbd {
   font-size: 13px;
   line-height: 1.6;
 }
-/* Room at the foot for the blocks/Python button. */
-.python-editor .cm-content { padding-bottom: 72px; color: var(--ink); }
+.python-editor .cm-content { padding-bottom: 24px; color: var(--ink); }
 .python-editor .cm-gutters { background: var(--paper-2); color: var(--ink-soft); border-right: 1px solid var(--line); }
 .python-editor .cm-activeLine { background: rgba(78, 183, 72, 0.06); }
 .python-editor .cm-activeLineGutter { background: rgba(78, 183, 72, 0.14); }
@@ -622,7 +630,7 @@ kbd {
   /* The Python blocks' grey, dark enough to see (3:1 on the editor's white). */
   background: #8a8f98;
 }
-.python-editor[hidden], .python-view[hidden] { display: none; }
+.python-editor[hidden] { display: none; }
 .python-editor .k { color: #b0409a; font-weight: 700; }
 .python-editor .s { color: var(--green-deep); }
 .python-editor .c { color: var(--ink-soft); font-style: italic; }
@@ -634,11 +642,6 @@ kbd {
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
-.python-view .k { color: #b0409a; font-weight: 700; }
-.python-view .s { color: var(--green-deep); }
-.python-view .c { color: var(--ink-soft); font-style: italic; }
-.python-view .n { color: #a3540a; }
-.python-view .py-line.is-current { display: inline-block; min-width: 100%; background: var(--gold-soft); outline: 1px solid var(--gold); }
 
 /* ------------------------------------------------------------- statusbar */
 .statusbar {
@@ -763,7 +766,6 @@ kbd {
   .blocks-hint { left: 16px; right: 16px; bottom: 14px; transform: none; justify-content: center; }
   .topbar { flex-wrap: wrap; padding: 8px 10px; gap: 8px; }
   .brand-tag { display: none; }
-  .project-name { width: 11ch; }
   .topbar-actions { width: 100%; flex-wrap: wrap; }
   /* The ⋯ button can wrap to the left edge, so the menu hangs from the top bar's right edge instead of the button's. */
   .menu-wrap { position: static; }

@@ -70,7 +70,8 @@ function plainWords() {
     if (typeof text !== 'string') return
     const s = text.trim()
     if (data.has(s.replace(/\s+/g, ' '))) return
-    let rest = s.replace(NAMES, '')
+    // File names (main.py) are the student's, never translated.
+    let rest = s.replace(NAMES, '').replace(/[\w-]+(\/[\w-]+)*\.py\b/g, '')
     if (VARS) rest = rest.replace(VARS, '$1')
     if (/[A-Za-z]/.test(rest)) found.add(`${where}: "${s.slice(0, 60)}"`)
   }
@@ -183,15 +184,23 @@ await page.click('#btn-stop')
 
 await page.click('#btn-view')
 await sweep('the Python view')
-await page.click('#btn-mode')
-await sweep('writing Python')
-await page.click('#btn-mode')
-
-await page.click('#btn-new')
+await page.click('#btn-files')
+await page.waitForSelector('#files-panel .files-tree')
+await sweep('the file browser')
+await page.click('#files-panel .files-section[data-store="browser"] [data-act="new-file"]')
+await page.fill('#files-name', 'bad/name')
+await page.press('#files-name', 'Enter')
+await sweep('naming a file, with a mistake')
+await page.fill('#files-name', 'empty')
+await page.press('#files-name', 'Enter')
+await page.waitForFunction(() => document.getElementById('file-name').textContent.startsWith('empty'))
+await page.click('#files-panel .files-row:has(.is-current) [data-act="delete"]')
 await page.waitForFunction(() => document.getElementById('modal')?.open)
-await sweep('the New dialog')
-await page.click('#modal button[value="ok"]')
-await sweep('an empty project')
+await sweep('deleting a file')
+await page.click('#modal button[value="cancel"]')
+await page.click('#btn-files')
+await page.click('#btn-view')
+await sweep('an empty file')
 
 await page.click('#btn-sim')
 // The board on USB gives way to the simulator once agreed to.

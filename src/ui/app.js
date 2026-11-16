@@ -4,8 +4,9 @@ import { State, createDevice, deviceKindFromUrl } from '../device/device-target.
 import '../device/device-manager.js'
 import '../device/loopback-device.js'
 import { SUPPORTED_TARGETS, getTarget } from '../device/targets.js'
-import { BlockWorkspace, STARTER_PROJECTS, DEFAULT_PROJECT_NAME, fileNameFor } from '../workspace/workspace.js'
-import { generatePython, generateWithLines, highlightPython, devicesUsed } from '../blocks/index.js'
+import * as Blockly from 'blockly/core'
+import { BlockWorkspace, STARTER_PROJECTS, fileNameFor } from '../workspace/workspace.js'
+import { generatePython, generateWithLines, devicesUsed, boardOfPython } from '../blocks/index.js'
 import { TerminalPanel } from './terminal.js'
 import { toast, showModal } from './notify.js'
 import { examplesFor, exampleProject, EXAMPLE_DEVICES } from '../examples/index.js'
@@ -16,7 +17,7 @@ import { SimPanel } from '../sim/sim-panel.js'
 import { PythonEditor } from '../editor/python-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
 import { pythonToBlocks } from '../convert/to-blocks.js'
-import { createFileStore } from '../files/store.js'
+import { createFileStores } from '../files/store.js'
 import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
@@ -25,6 +26,7 @@ const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
+const LAYOUTS = 'opencodebot.layouts.v1'
 
 /** A path's last part: its file name. */
 const baseName = (path) => path.split('/').pop()
@@ -66,7 +68,6 @@ export class App {
     this._renderDevicePicker()
     this._renderLanguages()
     this._refreshDeviceChip()
-    this._refreshPython()
     this._checkBrowser()
     this._maybeWelcome()
 
@@ -233,8 +234,7 @@ export class App {
   }
 
   // Mark the line a paused program is at (null: none): typed Python's line in
-  // the editor, while it still holds the program that runs; else on its block
-  // and in the Python tab, while that tab still shows the program that runs.
+  // the editor, while it still holds the program that runs; else on its block.
   _showLine(line) {
     const ws = this.workspace.workspace
     const id = line && this._ran?.blockAt[line]
@@ -242,14 +242,7 @@ export class App {
     if (this._ran?.text) {
       const editor = this.pythonEditor
       editor.showLine(line && editor.value === this._ran.code ? line : null)
-      return
     }
-    const view = $('python-view')
-    view.querySelector('.py-line.is-current')?.classList.remove('is-current')
-    if (!line || this._shownCode !== this._ran?.code) return
-    const el = view.querySelector(`.py-line[data-n="${line}"]`)
-    el?.classList.add('is-current')
-    el?.scrollIntoView({ block: 'nearest' })
   }
 
   async _stop() {
@@ -280,25 +273,8 @@ export class App {
     $('btn-step').addEventListener('click', () => this._step())
     $('btn-clear-term').addEventListener('click', () => this.terminal.clear())
     $('btn-term-toggle').addEventListener('click', () => this._setTermOpen(!this.termOpen))
-    $('btn-new').addEventListener('click', () => this._newProject())
-
-    // Project name: edit in place. Enter or leaving the field saves it,
-    // Escape puts the old name back.
-    const nameField = $('project-name')
-    nameField.value = this.workspace.name
-    nameField.addEventListener('change', () => {
-      this.workspace.rename(nameField.value)
-      nameField.value = this.workspace.name
-    })
-    nameField.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') nameField.blur()
-      if (e.key === 'Escape') {
-        nameField.value = this.workspace.name
-        nameField.blur()
-      }
-    })
+    // The browser tab shows the program's file.
     this.workspace.addEventListener('rename', () => {
-      nameField.value = this.workspace.name
       document.title = t('project.pageTitle', { name: this.workspace.name })
     })
 
@@ -325,7 +301,7 @@ export class App {
       }
     })
 
-    $('file-input').addEventListener('change', (e) => this._openFile(e.target.files?.[0]))
+    $('file-input').addEventListener('change', (e) => this._importFile(e.target.files?.[0]))
 
     // Escape closes an open menu and returns focus to the button that opened it.
     document.addEventListener('keydown', (e) => {
@@ -355,7 +331,7 @@ export class App {
         } else if (meta && e.key.toLowerCase() === 's') {
           e.preventDefault()
           e.stopPropagation()
-          this._saveFile()
+          this._saveNow()
         }
       },
       true,
@@ -680,37 +656,34 @@ export class App {
   _bindWorkspace() {
     let timer
     this.workspace.addEventListener('change', () => {
-      $('blocks-hint').hidden = !this.workspace.hasNoBlocks || this.view === 'python'
+      this._refreshHint()
       // Another board, another palette (rebuilt only when the board changed).
       if (this.view === 'python') this.palette.render(this.workspace.targetId)
       clearTimeout(timer)
       timer = setTimeout(() => {
-        this._refreshPython()
-        this._refreshFile()
         this.workspace.save()
+        this._fileChanged()
       }, 250)
     })
   }
 
-  /** The program Run sends: typed Python in text mode, else the blocks'. */
+  /**
+   * The program as Python, as its file keeps it: typed Python in text mode;
+   * else the blocks', except that Python turned into blocks and only looked
+   * at stays exactly as it was typed.
+   */
   _currentPython() {
     if (this.workspace.mode === 'text') return this.workspace.pythonText
-    return this._blocksPython()
+    const python = this._blocksPython()
+    const back = this._typedBack
+    return back && back.python === python ? back.text : python
   }
 
   _blocksPython() {
     return generatePython(this.workspace.workspace, this.workspace.targetId)
   }
 
-  _refreshPython() {
-    if (this.workspace.mode !== 'text') {
-      const code = this._blocksPython()
-      this._shownCode = code
-      // One span a line (the highlighter's spans never cross a line), so a
-      // paused program's line can be marked.
-      const lines = highlightPython(code).split('\n')
-      $('python-view').innerHTML = `<code>${lines.map((l, i) => `<span class="py-line" data-n="${i + 1}">${l}</span>`).join('\n')}</code>`
-    }
+  _refreshHint() {
     $('blocks-hint').hidden = !this.workspace.hasNoBlocks || this.view === 'python'
   }
 
@@ -727,22 +700,17 @@ export class App {
         return result.ok ? result.pythonLines : []
       },
     })
-    // Using a snippet from the read-only view starts writing Python (the blocks are kept).
     this.palette = new SnippetPalette($('py-palette'), {
       editor: () => this.pythonEditor,
-      beforeUse: () => {
-        if (this.workspace.mode !== 'text') this._toText()
-      },
+      beforeUse: () => {},
       myBlocks: () => this.myBlocks.list(),
     })
     this.myBlocks.addEventListener('change', () => this.palette.refresh())
-    $('btn-mode').addEventListener('click', () =>
-      this.workspace.mode === 'text' ? this._toBlocks() : this._toText(),
-    )
     $('btn-view').addEventListener('click', () => this._toggleView())
     this.workspace.addEventListener('mode', () => this._showMode())
   }
 
+  /** The Python view: the program as Python, there to edit. */
   _toText() {
     // Python that came to blocks and was only looked at comes back exactly
     // as it was typed; once the blocks change, the blocks' Python it is.
@@ -751,11 +719,6 @@ export class App {
     this.workspace.setMode('text', back && back.python === python ? back.text : python)
     this._typedBack = null
     this.pythonEditor.focus()
-    toast({
-      kind: 'info',
-      title: t('text.startedTitle'),
-      detail: t('text.startedDetail'),
-    })
   }
 
   /** Python as blocks for the picked board: { ok, state } or { ok: false, line }. */
@@ -790,153 +753,133 @@ export class App {
   }
 
   /**
-   * The editor area shows the blocks or the Python, never both. Typed Python
-   * (text mode) is always shown as Python; leaving it for the blocks goes
-   * through _toBlocks, which asks before typed changes are lost.
+   * The editor area shows the blocks or the Python, never both, and the
+   * Python is always there to edit: the switch turns the blocks into Python,
+   * or the Python back into blocks (staying in Python at a line that does
+   * not parse).
    */
-  async _toggleView() {
-    if (this.view === 'python') {
-      if (this.workspace.mode === 'text') return this._toBlocks()
-      this._showView('blocks')
-    } else {
-      this._showView('python')
-    }
+  _toggleView() {
+    if (this.workspace.mode === 'text') this._toBlocks()
+    else this._toText()
   }
 
-  _showView(view) {
-    this.view = view
-    const python = view === 'python'
+  /** Make the screen match the mode: Python is the Python view, blocks the blocks. */
+  _showMode() {
+    const python = this.workspace.mode === 'text'
+    if (python && this.pythonEditor.value !== this.workspace.pythonText) this.pythonEditor.value = this.workspace.pythonText
+    this.view = python ? 'python' : 'blocks'
     $('code-pane').hidden = !python
     $('blockly-root').hidden = python
     if (python) this.palette.render(this.workspace.targetId)
     $('blocks-pane').classList.toggle('is-python', python)
-    const toggle = $('btn-view')
-    toggle.textContent = t(python ? 'view.toBlocks' : 'view.toPython')
-    toggle.setAttribute('aria-label', t(python ? 'view.toBlocksLabel' : 'view.toPythonLabel'))
-    toggle.setAttribute('aria-expanded', String(python))
+    $('btn-view').setAttribute('aria-checked', String(python))
     if (!python) this.workspace.resize()
-    this._refreshPython()
-  }
-
-  /** Make the screen match the mode. */
-  _showMode() {
-    const text = this.workspace.mode === 'text'
-    if (text) this.pythonEditor.value = this.workspace.pythonText
-    $('python-editor').hidden = !text
-    $('python-view').hidden = text
-    $('btn-mode').textContent = t(text ? 'text.toBlocks' : 'text.toText')
-    $('python-bar-msg').textContent = t(text ? 'text.barText' : 'text.barBlocks')
-    // Typed Python is shown as Python; going back to blocks shows the blocks.
-    this._showView(text ? 'python' : 'blocks')
+    this._refreshHint()
   }
 
   // ------------------------------------------------------------- files
 
   /**
-   * A folder on the computer, in the Files panel beside the Python. The
-   * open file is { path, folder, saved }: where it is, and the text last
-   * opened or saved, so the bar can show when the program differs from it.
+   * The program is always a file: in this browser's own storage, or in a
+   * folder on the computer. The open file is { store, folder, path, saved }:
+   * which store ('browser' or 'folder'), the folder's name, where in it, and
+   * the text last read or written there. Work saves itself to it a moment
+   * after each change, and before another file opens or the board changes;
+   * the bar's dot shows while a save is waiting, or has failed.
    */
   _bindFiles() {
-    this.files = createFileStore()
+    this.stores = createFileStores()
     this.openFile = null
     try {
-      this.openFile = JSON.parse(localStorage.getItem(OPEN_FILE)) || null
+      const f = JSON.parse(localStorage.getItem(OPEN_FILE)) || null
+      // Remembered before there were two stores: a file in a folder.
+      this.openFile = f && !f.store ? { ...f, store: 'folder' } : f
     } catch {
       // nothing remembered
     }
     this.filesPanel = new FilesPanel($('files-panel'), {
-      store: this.files,
-      open: (path) => this._openFromFolder(path),
-      create: (path) => this._createInFolder(path),
-      openSingle: (file) => this._openSingle(file),
+      stores: this.stores,
+      open: (ref) => this._openRef(ref),
+      create: (store, path, kind) => this._createEntry(store, path, kind),
+      rename: (store, from, to) => this._renameEntry(store, from, to),
+      remove: (store, path, kind) => this._removeEntry(store, path, kind),
+      attach: () => this._attachFolder(false),
+      reopen: () => this._attachFolder(true),
     })
-    this.filesPanel.setCurrent(this.openFile)
     $('btn-files').addEventListener('click', () => this._toggleFiles())
-    $('btn-file-save').addEventListener('click', () => this._saveToFile())
-    // Another project in place of this one: the file is no longer the program.
-    this.workspace.addEventListener('replace', () => this._setOpenFile(null))
+    $('btn-save-again').addEventListener('click', () => this._saveNow())
+    if (!this.openFile) this._startFile()
+    else this._setOpenFile(this.openFile)
+  }
+
+  /** The first time: the program as it is becomes main.py in this browser. */
+  async _startFile() {
+    const path = await this._freePath(this.stores.browser, '', 'main.py')
+    const text = this._currentPython()
+    await this.stores.browser.write(path, text).catch(() => {})
+    this._setOpenFile({ store: 'browser', folder: null, path, saved: text })
+  }
+
+  /** The store a file is in, open and allowed (a folder after a reload is allowed again from a click); null if not. */
+  async _storeFor(f, ask) {
+    if (f.store === 'browser') return this.stores.browser
+    const folder = this.stores.folder
+    if (!folder) return null
+    if (folder.name === f.folder) return folder
+    if (ask && (await folder.remembered()) === f.folder && (await folder.reopen()) === f.folder) return folder
+    return null
+  }
+
+  /** The program changed: save it to its file a moment later. */
+  _fileChanged() {
     this._refreshFile()
+    clearTimeout(this._saveTimer)
+    this._saveTimer = setTimeout(() => this._save(false), 750)
   }
 
-  async _toggleFiles(show = $('files-panel').hidden) {
-    $('files-panel').hidden = !show
-    $('btn-files').setAttribute('aria-expanded', String(show))
-    if (show) await this._renderFiles()
-  }
-
-  async _renderFiles() {
-    await this.filesPanel.render()
-  }
-
-  async _openFromFolder(path) {
-    let text
-    try {
-      text = await this.files.read(path)
-    } catch (err) {
-      toast({ kind: 'error', title: t('files.openFailed', { file: path }), detail: err.message })
-      return
-    }
-    await this._openText(text, baseName(path), path)
-  }
-
-  async _openSingle(file) {
-    if (!file) return
-    await this._openText(await file.text(), file.name, null)
-  }
-
-  /** Put a file's text in the Python editor (asking first if typed work would be lost). */
-  async _openText(text, name, path) {
-    const ws = this.workspace
-    const unsaved = ws.mode === 'text' && ws.pythonText.trim() && ws.pythonText !== this.openFile?.saved
-    if (unsaved) {
-      const ok = await showModal({
-        title: t('files.replaceTitle', { file: name }),
-        bodyHtml: t('files.replaceBodyHtml', { file: name }),
-        confirmText: t('files.replaceConfirm'),
-        cancelText: t('files.keep'),
-      })
-      if (!ok) return
-    }
-    ws.setMode('text', text)
-    ws.rename(name.replace(/\.py$/i, ''))
-    this._setOpenFile(path ? { path, folder: this.files.name, saved: text } : null)
-    this.pythonEditor.focus()
-  }
-
-  /** A new file in the folder, holding the program as it is now; it becomes the open file. */
-  async _createInFolder(path) {
-    const text = this._currentPython()
-    try {
-      await this.files.write(path, text)
-    } catch (err) {
-      toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
-      return
-    }
-    this._setOpenFile({ path, folder: this.files.name, saved: text })
-    toast({ kind: 'info', title: t('files.savedTitle'), detail: t('files.savedDetail', { file: path, folder: this.files.name }) })
-  }
-
-  /** Save the program to the open file; false when no file is open. */
-  async _saveToFile() {
+  /**
+   * Save the program to its file, if it differs from what is there. `ask`
+   * (from a click or a key) may ask to allow the folder again. A save that
+   * fails says so in the bar, loudly, until one works.
+   */
+  async _save(ask) {
+    clearTimeout(this._saveTimer)
     const f = this.openFile
-    if (!f || !this.files) return false
-    // After a reload the folder must be allowed again (this runs from a click or a key).
-    if (this.files.name !== f.folder && (await this.files.reopen()) !== f.folder) {
-      toast({ kind: 'warn', title: t('files.saveFailed', { file: f.path }), detail: t('files.reopenDetail', { folder: f.folder }) })
-      return true
-    }
+    if (!f) return true
     const text = this._currentPython()
-    try {
-      await this.files.write(f.path, text)
-    } catch (err) {
-      toast({ kind: 'error', title: t('files.saveFailed', { file: f.path }), detail: err.message })
-      return true
+    this._rememberLayout(f, text)
+    if (text === f.saved && !this._saveFailed) return true
+    const store = await this._storeFor(f, ask)
+    let problem = store ? null : t('files.reopenDetail', { folder: f.folder })
+    if (store) {
+      try {
+        await store.write(f.path, text)
+      } catch (err) {
+        problem = err.message
+      }
     }
-    this._setOpenFile({ ...f, saved: text })
-    toast({ kind: 'info', title: t('files.savedTitle'), detail: t('files.savedDetail', { file: f.path, folder: f.folder }) })
-    if (!$('files-panel').hidden) this._renderFiles()
-    return true
+    if (this.openFile !== f) return !problem // another file opened meanwhile
+    if (problem) {
+      if (!this._saveFailed || ask) toast({ kind: 'error', title: t('files.saveFailed', { file: baseName(f.path) }), detail: problem })
+      this._saveFailed = true
+    } else {
+      this._saveFailed = false
+      this._setOpenFile({ ...f, saved: text })
+    }
+    this._refreshFile()
+    return !problem
+  }
+
+  /** Ctrl+S, or the bar's button after a failed save: save now, and say so. */
+  async _saveNow() {
+    if (await this._save(true)) {
+      const f = this.openFile
+      toast({ kind: 'info', title: t('files.savedTitle'), detail: t('files.savedDetail', { file: f.path, folder: this._placeName(f) }) })
+    }
+  }
+
+  _placeName(f) {
+    return f.store === 'browser' ? t('files.thisBrowser') : f.folder
   }
 
   _setOpenFile(file) {
@@ -947,36 +890,259 @@ export class App {
     } catch {
       // storage blocked: the file is forgotten on reload, nothing worse
     }
+    if (file) this.workspace.rename(baseName(file.path).replace(/\.py$/i, ''))
     this.filesPanel.setCurrent(file)
     this._refreshFile()
   }
 
-  /** The open file's name in the Python bar, with a dot while the program differs from it. */
+  /** The open file's name in the bar, with a dot while the program differs from it, and a loud button while saving fails. */
   _refreshFile() {
     const f = this.openFile
-    $('file-tab').hidden = !f
-    $('btn-file-save').hidden = !f
-    if (!f) return
-    $('file-name').textContent = baseName(f.path)
-    $('file-tab').title = `${f.folder}/${f.path}`
-    $('file-dirty').hidden = this._currentPython() === f.saved
+    $('file-name').textContent = f ? baseName(f.path) : ''
+    $('btn-files').title = f ? t('files.buttonTitle', { place: `${this._placeName(f)}/${f.path}` }) : t('files.label')
+    $('btn-files').setAttribute('aria-label', f ? t('files.buttonLabel', { file: baseName(f.path) }) : t('files.label'))
+    $('file-dirty').hidden = !f || (!this._saveFailed && this._currentPython() === f.saved)
+    const again = $('btn-save-again')
+    again.hidden = !this._saveFailed
+    again.textContent = f?.store === 'folder' ? t('files.allowAgain', { folder: f.folder }) : t('files.saveAgain')
+    $('editor-bar').classList.toggle('is-failed', !!this._saveFailed)
+  }
+
+  async _toggleFiles(show = $('files-panel').hidden) {
+    $('files-panel').hidden = !show
+    $('btn-files').setAttribute('aria-expanded', String(show))
+    this.workspace.resize()
+    if (show) await this._renderFiles()
+  }
+
+  async _renderFiles() {
+    await this.filesPanel.render()
+  }
+
+  /** A name like `name` that is not yet taken in `dir`: blink.py, then blink-2.py. */
+  async _freePath(store, dir, name) {
+    const [stem, ext] = name.match(/^(.*?)(\.[^.]*)?$/).slice(1)
+    for (let n = 1; ; n++) {
+      const path = `${dir ? `${dir}/` : ''}${n === 1 ? stem : `${stem}-${n}`}${ext || ''}`
+      if (!(await store.exists(path))) return path
+    }
+  }
+
+  /**
+   * Work on another file: this one is saved first; the other opens in the
+   * view the student is in (as blocks, the way it was left when its Python is
+   * unchanged; else from its Python, which stays Python at a line that does
+   * not parse). A file whose imports name another board switches to it.
+   */
+  async _openRef(ref, { text } = {}) {
+    const f = { store: ref.store, folder: ref.store === 'folder' ? this.stores.folder?.name : null, path: ref.path }
+    await this._save(true)
+    const store = await this._storeFor(f, true)
+    try {
+      if (text === undefined) text = await store.read(f.path)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.openFailed', { file: baseName(f.path) }), detail: err.message })
+      return
+    }
+    this._followBoard(text)
+    this._typedBack = null
+    this._saveFailed = false
+    const ws = this.workspace
+    const layout = this._layoutFor(f, text)
+    this._setOpenFile({ ...f, saved: text })
+    if (this.view === 'python') {
+      // The blocks behind it, for the way back: as it was left, or none yet.
+      if (layout) Blockly.serialization.workspaces.load(layout, ws.workspace)
+      else ws.workspace.clear()
+      ws.setMode('text', text)
+      this.pythonEditor.value = text
+      this.pythonEditor.focus()
+    } else if (layout) {
+      ws.setMode('blocks')
+      Blockly.serialization.workspaces.load(layout, ws.workspace)
+      this._typedBack = { text, python: this._blocksPython() }
+    } else {
+      const result = this.blocksFromPython(text)
+      if (result.ok) {
+        ws.setMode('blocks')
+        ws.workspace.clear()
+        ws.replaceBlocks(result.state)
+        ws.workspace.cleanUp()
+        this._typedBack = { text, python: this._blocksPython() }
+      } else {
+        ws.setMode('text', text)
+        this.pythonEditor.showLine(result.line)
+        toast({ kind: 'error', title: t('text.notParsedTitle'), detail: t('text.notParsedDetail', { line: result.line }) })
+      }
+    }
+    ws.save()
+    this._refreshFile()
+  }
+
+  /** The board a program's imports name, if it is not the one picked: switch to it (not while another board is on USB). */
+  _followBoard(text) {
+    const board = boardOfPython(text)
+    if (!board || board === this.workspace.targetId) return
+    const name = getTarget(board)?.name
+    if (this.device.isConnected && !this.device.simulating) {
+      toast({ kind: 'warn', title: t('files.otherBoardTitle', { device: name }), detail: t('pick.otherDetail', { device: getTarget(this.device.targetId)?.name }) })
+      return
+    }
+    this.pickedTarget = board
+    localStorage.setItem(PICKED_DEVICE, board)
+    this.workspace.setTarget(board)
+    this._renderDevicePicker()
+    this._refreshDeviceChip()
+    toast({ kind: 'info', title: t('switched.title', { device: name }), detail: t('files.boardFromFile', { device: name }) })
+  }
+
+  /** Make a file (empty, and open it) or a folder; null, or what went wrong. */
+  async _createEntry(storeKind, path, kind) {
+    const store = this.stores[storeKind]
+    if (await store.exists(path)) return t('files.exists', { name: baseName(path) })
+    try {
+      if (kind === 'dir') await store.mkdir(path)
+      else await store.write(path, '')
+    } catch (err) {
+      return err.message
+    }
+    if (kind === 'file') await this._openRef({ store: storeKind, path }, { text: '' })
+    return null
+  }
+
+  async _renameEntry(storeKind, from, to) {
+    const store = this.stores[storeKind]
+    await this._save(true)
+    try {
+      await store.rename(from, to)
+    } catch (err) {
+      return (await store.exists(to)) ? t('files.exists', { name: baseName(to) }) : err.message
+    }
+    const f = this.openFile
+    if (f?.store === storeKind && (f.path === from || f.path.startsWith(`${from}/`))) {
+      const path = to + f.path.slice(from.length)
+      this._moveLayout(f, { ...f, path })
+      this._setOpenFile({ ...f, path })
+    }
+    return null
+  }
+
+  async _removeEntry(storeKind, path, kind) {
+    const ok = await showModal({
+      title: t(kind === 'dir' ? 'files.deleteFolderTitle' : 'files.deleteTitle', { name: baseName(path) }),
+      bodyHtml: t(kind === 'dir' ? 'files.deleteFolderBodyHtml' : 'files.deleteBodyHtml', { name: baseName(path) }),
+      confirmText: t('files.deleteConfirm'),
+      cancelText: t('files.cancel'),
+    })
+    if (!ok) return
+    const store = this.stores[storeKind]
+    try {
+      await store.remove(path)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.deleteFailed', { name: baseName(path) }), detail: err.message })
+      return
+    }
+    const f = this.openFile
+    if (f?.store === storeKind && (f.path === path || f.path.startsWith(`${path}/`))) {
+      // The open file went: work on another Python file there, or a new main.py.
+      this._setOpenFile(null)
+      const next = (await store.list('')).find((e) => e.kind === 'file' && /\.py$/i.test(e.name))
+      if (next) await this._openRef({ store: storeKind, path: next.path })
+      else await this._createEntry(storeKind, await this._freePath(store, '', 'main.py'), 'file')
+    }
+    await this._renderFiles()
+  }
+
+  /**
+   * Use a folder on the computer (or the one used before, allowed again).
+   * The program open in this browser can be copied into it, to go on there.
+   */
+  async _attachFolder(again) {
+    const folder = this.stores.folder
+    const name = again ? await folder.reopen() : await folder.pickFolder()
+    if (!name) return
+    const f = this.openFile
+    if (f?.store === 'browser') {
+      const file = baseName(f.path)
+      const copy = await showModal({
+        title: t('files.copyTitle', { file, folder: name }),
+        bodyHtml: t('files.copyBodyHtml', { file, folder: name }),
+        confirmText: t('files.copyConfirm'),
+        cancelText: t('files.copyKeep'),
+      })
+      if (copy) {
+        await this._save(true)
+        const path = await this._freePath(folder, '', file)
+        const text = this._currentPython()
+        try {
+          await folder.write(path, text)
+          this._moveLayout(f, { store: 'folder', folder: name, path }, true)
+          this._setOpenFile({ store: 'folder', folder: name, path, saved: text })
+        } catch (err) {
+          toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
+        }
+      }
+    } else if (f?.store === 'folder' && f.folder === name && this._saveFailed) {
+      await this._save(true)
+    }
+    await this._renderFiles()
+  }
+
+  // Each file's blocks, as they were last laid out, kept in this browser
+  // while the file's Python is still what they make: a file made in blocks
+  // opens again just as it was left.
+  _layoutKey(f) {
+    return `${f.store}:${f.folder ?? ''}:${f.path}`
+  }
+
+  _layouts() {
+    try {
+      return JSON.parse(localStorage.getItem(LAYOUTS)) || {}
+    } catch {
+      return {}
+    }
+  }
+
+  _keepLayouts(all) {
+    // The 40 files most recently worked on.
+    const kept = Object.entries(all).sort((a, b) => b[1].at - a[1].at).slice(0, 40)
+    try {
+      localStorage.setItem(LAYOUTS, JSON.stringify(Object.fromEntries(kept)))
+    } catch {
+      // storage full or blocked: files open from their Python instead
+    }
+  }
+
+  _rememberLayout(f, text) {
+    if (this.workspace.mode === 'text' || this.workspace.hasNoBlocks) return
+    const all = this._layouts()
+    all[this._layoutKey(f)] = { python: text, blocks: Blockly.serialization.workspaces.save(this.workspace.workspace), at: Date.now() }
+    this._keepLayouts(all)
+  }
+
+  _layoutFor(f, text) {
+    const kept = this._layouts()[this._layoutKey(f)]
+    return kept && kept.python === text ? kept.blocks : null
+  }
+
+  _moveLayout(from, to, copy = false) {
+    const all = this._layouts()
+    const kept = all[this._layoutKey(from)]
+    if (!kept) return
+    all[this._layoutKey(to)] = kept
+    if (!copy) delete all[this._layoutKey(from)]
+    this._keepLayouts(all)
   }
 
   // -------------------------------------------------------------- menu
 
   async _menuAction(action) {
     switch (action) {
-      case 'new':
-        this._newProject()
-        break
       case 'examples':
         this._openExamples()
         break
       case 'open':
         $('file-input').click()
-        break
-      case 'save':
-        this._saveFile()
         break
       case 'export-py':
         download('main.py', this._currentPython(), 'text/x-python')
@@ -1013,25 +1179,6 @@ export class App {
       item.textContent = languageName(lang)
       group.append(item)
     }
-  }
-
-  /** Start over, asking first if there is anything to lose. */
-  async _newProject() {
-    if (!this.workspace.isEmpty) {
-      const text = this.workspace.mode === 'text'
-      const ok = await showModal({
-        title: t('new.title'),
-        bodyHtml: t(text ? 'new.bodyTextHtml' : 'new.bodyHtml'),
-        confirmText: t('new.confirm'),
-        cancelText: t(text ? 'new.keepText' : 'pick.keep'),
-      })
-      if (!ok) return
-    }
-    this.workspace.clear()
-    this.workspace.rename(DEFAULT_PROJECT_NAME)
-    this.terminal.say(t('new.started'))
-    $('project-name').focus()
-    $('project-name').select()
   }
 
   // ------------------------------------------------------------- examples
@@ -1080,45 +1227,73 @@ export class App {
     dialog.removeEventListener('click', onClick)
     if (!chosen) return
 
-    if (!this.workspace.isEmpty) {
-      const ok = await showModal({
-        title: t('examples.replaceTitle'),
-        bodyHtml: t('examples.replaceBodyHtml'),
-        confirmText: t('examples.replace'),
-        cancelText: t('pick.keep'),
-      })
-      if (!ok) return
-    }
     const project = exampleProject(device, chosen)
     const goal = t(`example.${device}.${chosen}.goal`)
-    this.workspace.clear()
-    this.workspace.loadProject(project)
-    this.workspace.workspace.cleanUp()
     this.pickedTarget = device
     localStorage.setItem(PICKED_DEVICE, device)
+    await this._openAsNewFile(project, fileNameFor(project.name, 'py'))
     this._renderDevicePicker()
     this._refreshDeviceChip()
     this.terminal.say(t('examples.opened', { name: project.name, goal }))
     toast({ kind: 'info', title: t('opened.title'), detail: goal })
   }
 
-  _saveFile() {
-    // With a file open from the folder, Save (and Ctrl+S) saves it there.
-    if (this.openFile && this.files) {
-      this._saveToFile()
-      return
+  /**
+   * A project of blocks (an example, or an old project file) as a new file,
+   * beside the open one, which is saved and kept: named `name`, or name-2 if
+   * that is taken, in the store the open file is in.
+   */
+  async _openAsNewFile(project, name) {
+    await this._save(true)
+    const ws = this.workspace
+    ws.loadProject({ ...project, name: undefined, mode: undefined, python: undefined })
+    ws.workspace.cleanUp()
+    const f = this.openFile
+    const kind = f?.store === 'folder' && this.stores.folder?.name === f.folder ? 'folder' : 'browser'
+    const store = this.stores[kind]
+    const dir = f && f.store === kind ? f.path.split('/').slice(0, -1).join('/') : ''
+    const path = await this._freePath(store, dir, name)
+    const text = this._blocksPython()
+    const ref = { store: kind, folder: kind === 'folder' ? store.name : null, path }
+    try {
+      await store.write(path, text)
+    } catch (err) {
+      toast({ kind: 'error', title: t('files.saveFailed', { file: path }), detail: err.message })
     }
-    const name = fileNameFor(this.workspace.name, 'ocb')
-    download(name, JSON.stringify(this.workspace.toProject(), null, 2), 'application/json')
-    toast({ kind: 'info', title: t('saved.title'), detail: t('saved.detail', { file: name }) })
+    this._typedBack = null
+    this._rememberLayout(ref, text)
+    this._setOpenFile({ ...ref, saved: text })
+    if (this.view === 'python') ws.setMode('text', text)
+    if (!$('files-panel').hidden) await this._renderFiles()
   }
 
-  async _openFile(file) {
+  /** ⋯ Open a file: a Python file, or a project file from before files were Python, as a new file. */
+  async _importFile(file) {
     if (!file) return
     try {
-      this.workspace.loadProject(JSON.parse(await file.text()))
-      this._renderDevicePicker()
-      this._refreshDeviceChip()
+      const text = await file.text()
+      if (/\.py$/i.test(file.name)) {
+        const f = this.openFile
+        const kind = f?.store === 'folder' && this.stores.folder?.name === f.folder ? 'folder' : 'browser'
+        const path = await this._freePath(this.stores[kind], '', file.name)
+        await this.stores[kind].write(path, text)
+        await this._openRef({ store: kind, path }, { text })
+      } else {
+        const project = JSON.parse(text)
+        if (!project?.blocks) throw new Error(t('openFailed.notProject'))
+        if (project.device) {
+          this.pickedTarget = project.device
+          localStorage.setItem(PICKED_DEVICE, project.device)
+        }
+        await this._openAsNewFile(project, fileNameFor(project.name || file.name.replace(/\.\w+$/, ''), 'py'))
+        if (project.mode === 'text' && typeof project.python === 'string') {
+          this.workspace.setMode('text', project.python)
+          this._fileChanged()
+        }
+        this._renderDevicePicker()
+        this._refreshDeviceChip()
+      }
+      if (!$('files-panel').hidden) await this._renderFiles()
       toast({ kind: 'info', title: t('opened.title') })
     } catch (err) {
       toast({ kind: 'error', title: t('openFailed.title'), detail: err.message })

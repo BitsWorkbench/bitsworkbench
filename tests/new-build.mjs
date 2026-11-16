@@ -41,10 +41,12 @@ await page.waitForFunction(() => !!window.openCodeBot)
 await page.keyboard.press('Escape')
 
 // The student's work, changed just now (the app saves it a moment later).
+const blocks = () => page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length)
 await page.evaluate(() => {
-  window.openCodeBot.workspace.name = 'kept across the reload'
+  window.openCodeBot.workspace.workspace.newBlock('ocb_seconds_since_start').initSvg()
   window.__sameLoad = true
 })
+const before = await blocks()
 
 // What the browser says when a part of the page is no longer on the server.
 const missingPart = () =>
@@ -56,8 +58,8 @@ const reloaded = page.waitForEvent('load', { timeout: 10000 }).then(() => true, 
 await missingPart()
 check(await reloaded, 'a part that fails to load reloads the page')
 await page.waitForFunction(() => !!window.openCodeBot)
-const name = await page.evaluate(() => window.openCodeBot.workspace.name)
-check(name === 'kept across the reload', `the work is still there after the reload (${name})`)
+const after = await blocks()
+check(after === before, `the work is still there after the reload (${after} blocks of ${before})`)
 
 await page.evaluate(() => {
   window.__sameLoad = true

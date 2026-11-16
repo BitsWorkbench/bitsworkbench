@@ -22,15 +22,9 @@ export default {
   'btn.stepTitle': 'Ejecuta tu programa hasta la siguiente línea y pausa ahí',
   'run.controlsLabel': 'Ejecutar tu programa',
   'btn.more': 'Más',
-  'btn.new': 'Nuevo',
-  'btn.newTitle': 'Empezar un proyecto nuevo',
   'project.default': 'Mi proyecto',
-  'project.nameLabel': 'Nombre del proyecto',
-  'project.nameTitle': 'Haz clic para cambiar el nombre de tu proyecto',
   'project.pageTitle': '{name} · {app}',
-  'menu.new': '🆕 Proyecto nuevo',
-  'menu.open': '📂 Abrir proyecto…',
-  'menu.save': '💾 Guardar proyecto',
+  'menu.import': '📂 Abrir un archivo de tu computadora…',
   'menu.exportPy': '🐍 Descargar Python',
   'menu.copyPy': '📋 Copiar Python',
   'menu.examples': '🧭 Empezar con un ejemplo…',
@@ -45,10 +39,9 @@ export default {
   'term.show': 'Abrir la terminal',
   'term.resizeLabel': 'Cambiar el tamaño de la terminal. Usa las flechas arriba y abajo.',
   'term.title': 'Consola',
-  'view.toPython': '🐍 Python',
-  'view.toBlocks': '🧩 Bloques',
-  'view.toPythonLabel': 'Mostrar el Python en lugar de los bloques',
-  'view.toBlocksLabel': 'Mostrar los bloques en lugar del Python',
+  'view.blocks': '🧩 Bloques',
+  'view.python': '🐍 Python',
+  'view.label': 'Mostrar el programa como Python',
   'term.clear': 'Limpiar la terminal',
   'term.hintHtml': 'Escribe aquí para hablar con tu dispositivo. <kbd>Ctrl</kbd>+<kbd>C</kbd> detiene un programa.',
   'term.greeting': '¡Hola! Esta es una consola de Python en vivo en tu dispositivo.',
@@ -92,42 +85,58 @@ export default {
   'leave.toBoard': 'Conectar una placa',
   'leave.keepBoard': 'Mantener el {device}',
   'leave.keepSim': 'Seguir simulando',
-  'pick.keep': 'Conservar mis bloques',
   // Bloques o Python escrito (la vista de Python)
-  'text.barBlocks': 'Estas son las líneas de Python que forman tus bloques.',
-  'text.barText': 'Estás escribiendo Python. Ejecutar envía este código.',
-  'text.toText': '✏️ Editar como Python',
-  'text.toBlocks': '🧩 Volver a los bloques',
   'text.editorLabel': 'Programa de Python',
   'text.editorHelp': 'Tab agrega sangría. Presiona Esc y luego Tab para salir del editor.',
-  'text.viewLabel': 'El Python que forman tus bloques',
-  'files.button': '📁 Archivos',
   'files.label': 'Archivos',
-  'files.intro': 'Elige una carpeta de tu computadora para guardar tus programas. Aquí puedes abrir y guardar sus archivos.',
+  'files.buttonLabel': '{file}: mostrar u ocultar tus archivos',
+  'files.buttonTitle': '{place}. Haz clic para ver tus archivos.',
+  'files.intro': 'Guarda tus programas en una carpeta de esta computadora, donde puedas encontrarlos después. Mientras tanto se guardan en este navegador.',
+  'files.thisBrowser': 'Este navegador',
+  'files.browserLabel': 'Archivos guardados en este navegador',
   'files.reopen': 'Abrir {name} otra vez',
-  'files.openFolder': 'Abrir una carpeta',
-  'files.openOther': 'Abrir otra carpeta',
+  'files.openFolder': 'Usar una carpeta de esta computadora',
+  'files.openOther': 'Usar otra carpeta',
   'files.folderLabel': 'Archivos en {name}',
   'files.newFile': 'Archivo nuevo',
-  'files.newName': 'Nombre del archivo nuevo (guarda tu programa tal como está ahora)',
+  'files.newFolder': 'Carpeta nueva',
+  'files.newFileIn': 'Archivo nuevo en {place}',
+  'files.newFolderIn': 'Carpeta nueva en {place}',
+  'files.newFileHere': 'Archivo nuevo en esta carpeta',
+  'files.newFileHereNamed': 'Archivo nuevo en {name}',
+  'files.rename': 'Cambiar nombre',
+  'files.renameNamed': 'Cambiar el nombre de {name}',
+  'files.delete': 'Borrar',
+  'files.deleteNamed': 'Borrar {name}',
+  'files.renameLabel': 'Nombre nuevo para {name}',
+  'files.renameDo': 'Cambiar nombre',
+  'files.newName': 'Nombre del archivo nuevo',
+  'files.newFolderName': 'Nombre de la carpeta nueva',
   'files.cancel': 'Cancelar',
   'files.create': 'Crear',
   'files.badName': 'Usa letras, números, espacios, - y _ en el nombre.',
-  'files.exists': '{name} ya está en la carpeta. Elige otro nombre.',
+  'files.exists': '{name} ya existe. Elige otro nombre.',
   'files.empty': 'Todavía no hay archivos aquí.',
-  'files.unsupported': 'Este navegador no puede abrir una carpeta (Chrome y Edge sí pueden). Aún puedes abrir un archivo de Python y guardarlo con Descargar Python en el menú ⋯.',
-  'files.openSingle': 'Abrir un archivo de Python',
-  'files.save': 'Guardar',
   'files.unsaved': 'Todavía sin guardar',
   'files.openFailed': 'No se pudo abrir {file}',
   'files.saveFailed': 'No se pudo guardar {file}',
-  'files.reopenDetail': 'Vuelve a permitir la carpeta {folder} desde el panel Archivos y guarda otra vez.',
+  'files.reopenDetail': 'Vuelve a permitir la carpeta {folder}: presiona el botón de la barra.',
   'files.savedTitle': 'Guardado',
   'files.savedDetail': '{file} está guardado en {folder}.',
-  'files.replaceTitle': '¿Abrir {file}?',
-  'files.replaceBodyHtml': '<p>El Python que estás escribiendo no está guardado en un archivo. Si abres {file}, ocupará el lugar de lo que escribiste.</p>',
-  'files.replaceConfirm': 'Abrirlo',
-  'files.keep': 'Conservar el mío',
+  'files.deleteTitle': '¿Borrar {name}?',
+  'files.deleteFolderTitle': '¿Borrar la carpeta {name}?',
+  'files.deleteBodyHtml': '<p>{name} se borrará para siempre. Esto no se puede deshacer.</p>',
+  'files.deleteFolderBodyHtml': '<p>La carpeta {name} y todo lo que contiene se borrarán para siempre. Esto no se puede deshacer.</p>',
+  'files.deleteConfirm': 'Borrar',
+  'files.deleteFailed': 'No se pudo borrar {name}',
+  'files.copyTitle': '¿Copiar {file} a {folder}?',
+  'files.copyBodyHtml': '<p>Tu programa {file} está guardado en este navegador. ¿Lo copias a {folder} y sigues trabajando ahí?</p><p>La copia en este navegador también se queda.</p>',
+  'files.copyConfirm': 'Copiarlo ahí',
+  'files.copyKeep': 'Dejarlo en este navegador',
+  'files.saveAgain': 'Sin guardar: intentar otra vez',
+  'files.allowAgain': 'Sin guardar: permitir {folder}',
+  'files.otherBoardTitle': 'Este programa es para un {device}',
+  'files.boardFromFile': 'Este programa es para un {device}, así que se muestran sus bloques.',
   'palette.label': 'Paleta de Python',
   'palette.hint': 'Arrástralo a tu programa, o presiona Enter para agregarlo donde está el cursor.',
   'editor.find': 'Buscar',
@@ -157,17 +166,9 @@ export default {
   'editor.noBlock': 'Esta línea aún no tiene bloque: se convierte en un bloque gris de Python.',
   'editor.selectionDeleted': 'Selección borrada',
   'editor.controlCharacter': 'Carácter de control',
-  'text.startedTitle': 'Ahora estás escribiendo Python',
-  'text.startedDetail': 'Ejecutar envía el código que escribes. Volver a los bloques convierte tu Python en bloques.',
   'text.notParsedTitle': 'Primero corrige el Python',
   'text.notParsedDetail': 'La línea {line} tiene un error, así que todavía no puede convertirse en bloques. El cursor está en ella.',
 
-  'new.title': '¿Empezar un proyecto nuevo?',
-  'new.bodyHtml': '<p>Se borrarán tus bloques actuales. Esto no se puede deshacer.</p><p>Para conservarlos, presiona <b>Conservar mis bloques</b> y luego Guardar proyecto en el menú ⋯.</p>',
-  'new.bodyTextHtml': '<p>Se borrará tu programa actual. Esto no se puede deshacer.</p><p>Para conservarlo, presiona <b>Conservar mi programa</b> y luego Guardar proyecto en el menú ⋯.</p>',
-  'new.keepText': 'Conservar mi programa',
-  'new.confirm': 'Sí, empezar de nuevo',
-  'new.started': 'Proyecto nuevo. ¡Diviértete!',
   'pySaved.title': 'Python guardado',
   'pySaved.detail': 'Busca main.py en tu carpeta de Descargas.',
   'pyCopied.title': '¡Python copiado!',
@@ -188,7 +189,7 @@ export default {
   'welcome.bodyHtml': `
     <p>¡Hola! Con {app} puedes crear programas para tu dispositivo de Firia Labs
     uniendo bloques. No necesitas escribir nada, pero el Python de verdad
-    siempre está a un clic de <strong>🐍 Python</strong> (abajo a la izquierda) si quieres echar un vistazo.</p>
+    siempre está a un clic de <strong>🐍 Python</strong> (sobre tu programa, a la derecha) si quieres echar un vistazo.</p>
     <ol>
       <li><strong>Elige tu dispositivo</strong> arriba: CodeBot, CodeX o CodeAIR.</li>
       <li><strong>Conéctalo</strong> con un cable USB y presiona <strong>Conectar</strong>.</li>
@@ -230,24 +231,25 @@ export default {
       <li>Mientras el simulador está encendido, se muestra encima de la Consola. Arrastra la barra
         entre ellos (o usa las flechas sobre ella) para cambiar su tamaño, y presiona <strong>▾</strong>
         para cerrar la Consola hasta su título.</li>
-      <li><strong>🐍 Python</strong>, abajo a la izquierda, muestra exactamente el código que forman
-        tus bloques, en lugar de los bloques; <strong>🧩 Bloques</strong> los trae de vuelta. Presiona
-        <strong>✏️ Editar como Python</strong> ahí para escribir el tuyo; al volver a los bloques se
-        pierden los cambios que escribiste (no se convierten otra vez en bloques), así que pregunta antes.
+      <li><strong>🧩 Bloques | 🐍 Python</strong>, a la derecha de la barra sobre tu programa, lo muestra
+        como bloques o como Python. El Python es tuyo para editar; al volver, se convierte en bloques
+        (el Python sin bloque propio se vuelve un bloque gris de Python). Una línea con un error te
+        deja en Python, en esa línea, hasta que la arregles.
         La paleta al lado del Python tiene las mismas categorías que la de los bloques, con cada bloque
         como su Python: arrastra uno a tu programa, o haz clic en él para agregarlo donde está el cursor.
         Arrastra un bucle o un <code>if</code> sobre parte de tu código y ese código queda dentro
         (lo que va a tomar se sombrea mientras arrastras).</li>
-      <li><strong>📁 Archivos</strong>, arriba del Python, abre una carpeta de tu computadora (en Chrome o Edge):
-        abre los archivos de Python que tiene, crea uno nuevo y guarda con <strong>Guardar</strong> o
-        <kbd>Ctrl</kbd>+<kbd>S</kbd>. Un punto junto al nombre del archivo indica que tiene cambios sin guardar.</li>
-      <li><strong>🆕 Nuevo</strong> empieza de nuevo. Haz clic en el nombre del proyecto, al lado, para cambiarle el nombre.</li>
+      <li>Cada programa es un archivo de Python, aunque esté hecho de bloques. Su nombre está a la izquierda
+        de la barra: haz clic en él para ver tus archivos. Ahí puedes abrir otro archivo, crear archivos y
+        carpetas, y cambiarles el nombre o borrarlos. Tu trabajo se guarda solo un momento después de cada
+        cambio. Los archivos se guardan en este navegador o (en Chrome o Edge) en una carpeta de tu
+        computadora. Un punto junto al nombre indica un cambio que todavía no se guardó.</li>
     </ul>
     <h3>Atajos</h3>
     <ul>
       <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd>: ejecutar tu programa</li>
       <li><kbd>Esc</kbd>: detener un programa en ejecución</li>
-      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: guardar tu proyecto en un archivo (o, con un archivo abierto de tu carpeta, guardar ese archivo)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>S</kbd>: guardar ahora (también se guarda solo)</li>
     </ul>
     <h3>Escribir Python</h3>
     <ul>
@@ -383,9 +385,6 @@ export default {
   'examples.boards': 'Placa',
   'examples.listLabel': 'Ejemplos para {device}',
   'examples.close': 'Cerrar',
-  'examples.replaceTitle': '¿Reemplazar tu programa?',
-  'examples.replaceBodyHtml': '<p>Al abrir un ejemplo se borran tus bloques actuales. Esto no se puede deshacer.</p><p>Para conservarlos, presiona <b>Conservar mis bloques</b> y luego Guardar proyecto en el menú ⋯.</p>',
-  'examples.replace': 'Sí, abrir el ejemplo',
   'examples.opened': 'Se abrió «{name}». Meta: {goal}',
   'example.text.done': '¡Listo!',
   'example.text.hello': '¡Hola!',

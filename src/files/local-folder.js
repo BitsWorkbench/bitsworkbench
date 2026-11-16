@@ -5,6 +5,8 @@
  * The FileStore methods are described in store.js.
  */
 
+import { byKindThenName } from './browser-store.js'
+
 const DB = 'opencodebot-files'
 const STORE = 'handles'
 const KEY = 'folder'
@@ -15,6 +17,7 @@ export class LocalFolderStore {
   }
 
   constructor() {
+    this.kind = 'folder'
     this.root = null
     this.name = null
   }
@@ -55,7 +58,58 @@ export class LocalFolderStore {
       if (name.startsWith('.')) continue // hidden files and folders
       out.push({ name, path: dir ? `${dir}/${name}` : name, kind: entry.kind === 'directory' ? 'dir' : 'file' })
     }
-    return out.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'dir' ? -1 : 1))
+    return out.sort(byKindThenName)
+  }
+
+  async mkdir(path) {
+    await this._writable()
+    await this._dir(path, true)
+  }
+
+  /** Remove a file, or a folder and all in it. */
+  async remove(path) {
+    await this._writable()
+    const parts = path.split('/')
+    const name = parts.pop()
+    await (await this._dir(parts.join('/'))).removeEntry(name, { recursive: true })
+  }
+
+  /** Rename (or move) a file or a folder: a copy, then the old one removed, so it works for both everywhere. */
+  async rename(from, to) {
+    await this._writable()
+    if (await this._entry(to)) throw new Error(`${to}: already there`)
+    const entry = await this._entry(from)
+    if (!entry) throw new Error(`${from}: not found`)
+    await this._copy(entry, to)
+    await this.remove(from)
+  }
+
+  async _copy(entry, to) {
+    if (entry.kind === 'file') {
+      const out = await (await this._file(to, true)).createWritable()
+      await out.write(await entry.getFile())
+      await out.close()
+      return
+    }
+    await this._dir(to, true)
+    for await (const [name, child] of entry.entries()) await this._copy(child, `${to}/${name}`)
+  }
+
+  async _entry(path) {
+    const parts = path.split('/')
+    const name = parts.pop()
+    let dir
+    try {
+      dir = await this._dir(parts.join('/'))
+    } catch {
+      return null
+    }
+    for await (const [n, e] of dir.entries()) if (n === name) return e
+    return null
+  }
+
+  async _writable() {
+    if (!(await allowed(this.root, true))) throw new Error('not allowed')
   }
 
   async read(path) {
