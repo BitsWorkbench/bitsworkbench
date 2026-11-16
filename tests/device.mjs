@@ -131,6 +131,13 @@ const readBack = await page
   .catch(() => false)
 check(saved && readBack, 'a file saved on the simulator is there for the next program')
 
+// A program that runs until it is stopped: the starter ends by itself in a
+// second or two, and on a slow machine Stop was gone before the click landed.
+await page.click('#btn-view')
+await page.click('#btn-mode')
+await page.evaluate(() => {
+  window.openCodeBot.pythonEditor.value = 'from time import sleep\nwhile True:\n    sleep(0.1)\n'
+})
 await page.click('#btn-run')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'running')
 await page.click('#btn-stop')
