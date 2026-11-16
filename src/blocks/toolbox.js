@@ -87,6 +87,8 @@ const generalTail = [
   { kind: 'category', name: t('cat.variables'), categorystyle: 'variables_category', custom: 'VARIABLE' },
   { kind: 'category', name: t('cat.functions'), categorystyle: 'functions_category', custom: 'PROCEDURE' },
   category(t('cat.python'), 'python_category', python),
+  // A student's own saved grey blocks (src/my-blocks), filled in as it opens.
+  { kind: 'category', name: t('cat.myBlocks'), categorystyle: 'python_category', custom: 'MY_BLOCKS' },
 ]
 
 // ---------------------------------------------------------------- CodeX

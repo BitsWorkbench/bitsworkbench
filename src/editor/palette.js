@@ -16,10 +16,13 @@ const DRAG_START_PX = 6
 export class SnippetPalette {
   /**
    * @param {HTMLElement} host the palette's element
-   * @param {{ editor: () => import('./python-editor.js').PythonEditor, beforeUse: () => void }} options
+   * @param {{ editor: () => import('./python-editor.js').PythonEditor, beforeUse: () => void,
+   *   myBlocks?: () => Array<{ name: string, code: string, value: boolean }> }} options
+   *   myBlocks gives the student's saved blocks, for the My blocks category
    */
-  constructor(host, { editor, beforeUse }) {
+  constructor(host, { editor, beforeUse, myBlocks }) {
     this.host = host
+    this.myBlocks = myBlocks || (() => [])
     this.editor = editor
     this.beforeUse = beforeUse
     this.targetId = undefined
@@ -71,7 +74,7 @@ export class SnippetPalette {
   render(targetId) {
     if (targetId === this.targetId) return
     this.targetId = targetId
-    this.categories = snippetsFor(targetId)
+    this.categories = snippetsFor(targetId, this.myBlocks())
     this.cats.innerHTML = this.categories
       .map((c, i) =>
         c.kind === 'sep'
@@ -80,6 +83,15 @@ export class SnippetPalette {
       )
       .join('')
     this.show(-1)
+  }
+
+  /** Draw it again (the saved blocks changed), keeping the open category. */
+  refresh() {
+    const { targetId, open } = this
+    if (targetId === undefined) return
+    this.targetId = undefined
+    this.render(targetId)
+    if (open >= 0) this.show(open)
   }
 
   /** Open category i's flyout (-1 closes it). */
@@ -94,12 +106,14 @@ export class SnippetPalette {
     this.flyout.hidden = !cat
     if (!cat) return
     this.flyout.setAttribute('aria-label', cat.name)
-    this.list.innerHTML = cat.snippets
-      .map(
-        (s, j) =>
-          `<li><button type="button" class="snippet${s.line ? '' : ' is-value'}" data-j="${j}" style="--c: ${cat.colour}" aria-describedby="py-flyout-hint"><code>${highlightPython(s.code)}</code></button></li>`,
-      )
-      .join('')
+    this.list.innerHTML = cat.hint
+      ? `<li class="py-hint">${esc(cat.hint)}</li>`
+      : cat.snippets
+          .map(
+            (s, j) =>
+              `<li>${s.name ? `<span class="snippet-name" id="py-name-${j}">${esc(s.name)}</span>` : ''}<button type="button" class="snippet${s.line ? '' : ' is-value'}" data-j="${j}" style="--c: ${cat.colour}" aria-describedby="py-flyout-hint${s.name ? ` py-name-${j}` : ''}"><code>${highlightPython(s.code)}</code></button></li>`,
+          )
+          .join('')
     this.list.scrollTop = 0
     if (focus) this.list.querySelector('.snippet')?.focus()
   }

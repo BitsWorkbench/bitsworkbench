@@ -17,6 +17,8 @@ import { PythonEditor } from '../editor/python-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
 import { pythonToBlocks } from '../convert/to-blocks.js'
 import { createFileStore } from '../files/store.js'
+import { createMyBlocksStore } from '../my-blocks/store.js'
+import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
@@ -39,6 +41,11 @@ export class App {
     this.pickedTarget = localStorage.getItem(PICKED_DEVICE) || null
 
     this.workspace = new BlockWorkspace($('blockly-root'), this.pickedTarget)
+    // The student's own saved Python blocks, in this browser, for every project.
+    this.myBlocks = createMyBlocksStore()
+    installMyBlocks(this.workspace.workspace, this.myBlocks, {
+      saved: () => toast({ kind: 'info', title: t('myBlocks.saved'), detail: t('myBlocks.savedDetail') }),
+    })
     this.terminal = new TerminalPanel($('terminal-host'), (data) => this.device.sendRaw(data))
 
     this._bindDevice()
@@ -704,7 +711,9 @@ export class App {
       beforeUse: () => {
         if (this.workspace.mode !== 'text') this._toText()
       },
+      myBlocks: () => this.myBlocks.list(),
     })
+    this.myBlocks.addEventListener('change', () => this.palette.refresh())
     $('btn-mode').addEventListener('click', () =>
       this.workspace.mode === 'text' ? this._toBlocks() : this._toText(),
     )

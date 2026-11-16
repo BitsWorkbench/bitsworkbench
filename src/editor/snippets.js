@@ -14,6 +14,7 @@ import { toolboxFor } from '../blocks/index.js'
 import { HUE } from '../blocks/theme.js'
 import { importLines, setupLines } from '../blocks/generate.js'
 import { resetNeeds, allNeeds } from '../blocks/context.js'
+import { t } from '../i18n/index.js'
 
 const line = (code) => ({ code, line: true })
 const value = (code) => ({ code, line: false })
@@ -49,18 +50,24 @@ const CUSTOM = {
 
 /**
  * The palette for a board: categories and separators, in the toolbox's order.
- * Category: { kind: 'category', name, colour, snippets }; separator: { kind: 'sep' }.
+ * Category: { kind: 'category', name, colour, snippets, hint? }; separator: { kind: 'sep' }.
+ * `myBlocks` is the student's library ([{ name, code, value }]), for its category.
  */
-export function snippetsFor(targetId) {
+export function snippetsFor(targetId, myBlocks = []) {
   const scratch = new Blockly.Workspace()
   try {
     return toolboxFor(targetId).contents.map((entry) => {
       if (entry.kind !== 'category') return { kind: 'sep' }
-      const snippets = entry.custom
-        ? CUSTOM[entry.custom].map(complete)
-        : entry.contents.filter((item) => item.kind === 'block').map((item) => snippetOf(item, scratch)).filter(Boolean)
+      const mine = entry.custom === 'MY_BLOCKS'
+      const snippets = mine
+        ? myBlocks.map((i) => complete({ code: i.code, line: !i.value, name: i.name }))
+        : entry.custom
+          ? CUSTOM[entry.custom].map(complete)
+          : entry.contents.filter((item) => item.kind === 'block').map((item) => snippetOf(item, scratch)).filter(Boolean)
       const colour = HUE[entry.categorystyle.replace(/_category$/, '')]
-      return { kind: 'category', name: entry.name, colour, snippets: snippets.map((s) => ({ ...s, colour })) }
+      const category = { kind: 'category', name: entry.name, colour, snippets: snippets.map((s) => ({ ...s, colour })) }
+      if (mine && !snippets.length) category.hint = t('myBlocks.emptyPython')
+      return category
     })
   } finally {
     scratch.dispose()
