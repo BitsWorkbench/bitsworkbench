@@ -217,8 +217,72 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   const r = await from('from botcore import *\n# lights on\nleds.user(0xFF)  # all of them\nspkr.pitch(440)\n# the end\n')
   const leds = r.shape[0].inputs.DO
   check(leds.comment === 'lights on\nall of them', 'comments above and at the end of a line go on that line\'s block')
-  check(leds.next.comment === 'the end', 'a comment after the last line goes on the block before it')
-  check(r.back.includes('# lights on\n# all of them\nleds.user(0xFF)'), 'and come back as Python comments')
+  check(!leds.next.comment, 'a comment after the last line is on no block')
+  check(r.back.includes('# lights on\nleds.user(0xFF)  # all of them\n'), `and come back where they were, above and at the end of the line${r.back.includes('# all of them') ? '' : ': ' + r.back}`)
+  const notes = await page.evaluate(() => window.openCodeBot.workspace.workspace.getTopComments().map((c) => c.getText()))
+  check(JSON.stringify(notes) === '["the end"]', `it is a note on the workspace (${JSON.stringify(notes)})`)
+  check(r.back.endsWith('spkr.pitch(440)\n\n# the end\n'), 'written after the program')
+}
+{
+  // An end-of-line comment on a block with a body, and on a function.
+  const src = 'def go():  # off we go\n    pass\n\nwhile True:  # for ever\n    print(1)  # one\n\n# first note\n# still the first\n\n# second note\n'
+  const r = await from(src)
+  check(r.back.includes('def go():  # off we go\n') && r.back.includes('while True:  # for ever\n    print(1)  # one\n'), `the end of a def, a loop and a line inside it (${r.back.split('\n').slice(-12).join(' | ')})`)
+  const notes = await page.evaluate(() => window.openCodeBot.workspace.workspace.getTopComments().map((c) => c.getText()).sort())
+  check(JSON.stringify(notes) === '["first note\\nstill the first","second note"]', `comment lines one after another are one note (${JSON.stringify(notes)})`)
+  check(r.back.endsWith('# first note\n# still the first\n\n# second note\n'), 'notes come back in order')
+  const only = await from('# just an idea\n')
+  check(!only.shape.length && only.back.endsWith('# just an idea\n') && !only.back.includes('Add some blocks'), 'a program of only a comment is a note')
+}
+{
+  // Comments added in block mode are Python comments: on a block, above its
+  // line; on the workspace, after the program. A changed end-of-line comment
+  // goes above.
+  const r = await page.evaluate(() => {
+    const app = window.openCodeBot
+    const { Blockly } = window.openCodeBotInternals
+    const ws = app.workspace.workspace
+    ws.clear()
+    app.workspace.replaceBlocks(app.blocksFromPython('print(1)  # one\nprint(2)\n').state)
+    const [one, two] = ws.getAllBlocks(true).filter((b) => b.type === 'ocb_print')
+    const menu = Blockly.ContextMenuRegistry.registry.getItem('blockComment')
+    const offered = menu.preconditionFn({ block: two, focusedNode: two }) === 'enabled'
+    two.setCommentText('two, from blocks')
+    const note = new Blockly.comments.RenderedWorkspaceComment(ws)
+    note.setText('a note from blocks')
+    note.moveTo(new Blockly.utils.Coordinate(40, 2000))
+    const first = app._blocksPython()
+    one.setCommentText('one, changed')
+    return { offered, first, second: app._blocksPython() }
+  })
+  check(r.offered, 'a block offers "Add Comment"')
+  check(r.first.includes('print(1)  # one\n# two, from blocks\nprint(2)\n\n# a note from blocks\n'), `a block's comment goes above it; a note goes after the program${r.first.includes('# two') ? '' : ': ' + r.first}`)
+  check(r.second.includes('# one, changed\nprint(1)\n'), 'an end-of-line comment changed in blocks goes above its line')
+}
+{
+  // Stacks keep their places when the Python changes; new ones line up below.
+  const r = await page.evaluate(() => {
+    const app = window.openCodeBot
+    const { Blockly } = window.openCodeBotInternals
+    const ws = app.workspace.workspace
+    ws.clear()
+    app.workspace.replaceBlocks(app.blocksFromPython('def hop():\n    pass\n\nprint(1)\n').state)
+    const at = (type) => ws.getTopBlocks(false).find((b) => b.type === type)
+    at('procedures_defnoreturn').moveTo(new Blockly.utils.Coordinate(500, 30))
+    at('ocb_on_start').moveTo(new Blockly.utils.Coordinate(520, 400))
+    app.workspace.replaceBlocks(app.blocksFromPython('def hop():\n    print(0)\n\nprint(2)\nwhile True:\n    pass\n').state)
+    const xy = (type) => { const p = at(type).getRelativeToSurfaceXY(); return [p.x, p.y] }
+    const keep = { def: xy('procedures_defnoreturn'), start: xy('ocb_on_start'), forever: xy('ocb_forever'), startBottom: at('ocb_on_start').getBoundingRectangle().bottom }
+    // The old places would put "forever" above "on start": tidied instead.
+    at('ocb_on_start').moveTo(new Blockly.utils.Coordinate(520, 900))
+    at('ocb_forever').moveTo(new Blockly.utils.Coordinate(520, 600))
+    app.workspace.replaceBlocks(app.blocksFromPython('def hop():\n    print(0)\n\nprint(3)\nwhile True:\n    pass\n').state)
+    const order = ws.getTopBlocks(true).map((b) => b.type)
+    return { keep, order, python: app._blocksPython() }
+  })
+  check(r.keep.def.join() === '500,30' && r.keep.start.join() === '520,400', `a function and "on start" keep their places (${JSON.stringify(r.keep)})`)
+  check(r.keep.forever[0] === 500 && r.keep.forever[1] > r.keep.startBottom, `a new "forever" lines up below them (${r.keep.forever})`)
+  check(r.order.join() === 'procedures_defnoreturn,ocb_on_start,ocb_forever' && /print\(3\)\n+while True:/.test(r.python), `places that would change the program's order are tidied instead (${r.order}; ${r.python.slice(-60)})`)
 }
 {
   await board('codex')

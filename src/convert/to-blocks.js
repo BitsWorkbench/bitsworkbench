@@ -22,6 +22,7 @@ import { tree, statementsOf, lineAt, unwrap } from './tree.js'
 import { patternsFor } from './patterns.js'
 import { pythonGenerator } from 'blockly/python'
 import { generatePython, DEVICE_IMPORT, BANNER } from '../blocks/generate.js'
+import { endOfLineData } from '../blocks/comments.js'
 
 const cache = new Map()
 function patterns(targetId) {
@@ -74,7 +75,13 @@ export function pythonToBlocks(source, targetId) {
   }
 
   const first = [...defs, ...top][0]
-  ctx.anchor(comments.filter((c) => !(c.ownLine && HEADER_COMMENT(c.text) && (!first || c.from < first.from))), [
+  const ours = comments.filter((c) => !(c.ownLine && HEADER_COMMENT(c.text) && (!first || c.from < first.from)))
+  // Comments with no code after them are notes on the workspace, one for
+  // each run of lines.
+  const end = codeEnd(statementsOf(root))
+  const loose = ours.filter((c) => c.ownLine && c.from >= end)
+  ctx.loose = runs(loose)
+  ctx.anchor(ours.filter((c) => !loose.includes(c)), [
     ...defs,
     ...top,
     ...(forever ? [forever] : []),
@@ -89,6 +96,26 @@ export function pythonToBlocks(source, targetId) {
   const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')))
   start.unshift(...kept.map((s) => ctx.grey(s)))
   return { ok: true, state: ctx.state(defBlocks, start, foreverBlock), targetId: board }
+}
+
+/** Where the last statement's code ends (a body's last statement, in turn). */
+function codeEnd(stmts) {
+  const s = stmts.at(-1)
+  if (!s) return 0
+  const body = s.children.filter((c) => c.name === 'Body').pop()
+  return body ? Math.max(body.from, codeEnd(statementsOf(body))) : s.to
+}
+
+/** Comments on lines one after another, each run as one text. */
+function runs(comments) {
+  const out = []
+  let line = -1
+  for (const c of comments) {
+    if (c.line === line + 1 && out.length) out[out.length - 1] += `\n${c.text}`
+    else out.push(c.text)
+    line = c.line
+  }
+  return out
 }
 
 /** A `def`'s name, or null for any other statement. */
@@ -202,6 +229,7 @@ class Context {
     this.lists = new Set() // of those, the ones set to a list
     this.functions = new Map() // Python name -> { name, params, returns }: functionsOf
     this.fn = null // the function whose body is being made into blocks
+    this.loose = [] // comments with no code after them: workspace notes
   }
 
   text(node) {
@@ -236,16 +264,27 @@ class Context {
     return (this.notes.get(s) || []).some((c) => !c.ownLine && c.text === text)
   }
 
-  /** Comments of these statements, less a pattern's own end-of-line comment. */
-  commentFor(stmts, own = null) {
-    const texts = []
+  /**
+   * Put the comments of these statements on their block (less a pattern's
+   * own end-of-line comment). Comments above come first; one that ends the
+   * block's first line is the comment's last line, and the block keeps it to
+   * write back at the end of that line.
+   */
+  note(block, stmts, own = null) {
+    const above = []
+    const ends = []
     for (const s of stmts) {
       for (const c of this.notes.get(s) || []) {
         if (own !== null && !c.ownLine && c.text === own) continue
-        texts.push(c.text)
+        ;(c.ownLine ? above : ends).push(c)
       }
     }
-    return texts.length ? texts.join('\n') : null
+    if (!above.length && !ends.length) return
+    const firstLine = lineAt(this.source, stmts[0].from)
+    const end = ends.length === 1 && ends[0].line === firstLine ? ends[0] : null
+    const texts = end ? [...above, end] : [...above, ...ends].sort((a, b) => a.from - b.from)
+    block.icons = { comment: { text: texts.map((c) => c.text).join('\n'), pinned: false } }
+    if (end) block.data = endOfLineData(end.text)
   }
 
   // ---------------------------------------------------------- statements
@@ -278,8 +317,7 @@ class Context {
     if (s.name === 'PassStatement' && !this.notes.has(s)) return { block: null, count: 1 }
     const byHand = HAND[s.name]?.call(this, s)
     if (byHand) {
-      const comment = this.commentFor([s])
-      if (comment && !byHand.icons) byHand.icons = { comment: { text: comment, pinned: false } }
+      if (!byHand.icons) this.note(byHand, [s])
       return { block: byHand, count: 1 }
     }
     for (const p of this.pats.statements) {
@@ -291,8 +329,7 @@ class Context {
       if (!p.stmts.every((ps, k) => match(ps, stmts[i + k], binds, p, this))) continue
       const block = this.build(p, binds)
       if (!block) continue
-      const comment = this.commentFor(stmts.slice(i, i + n), p.comment)
-      if (comment) block.icons = { comment: { text: comment, pinned: false } }
+      this.note(block, stmts.slice(i, i + n), p.comment)
       return { block, count: n }
     }
     return null
@@ -303,8 +340,7 @@ class Context {
     const block = { type: 'ocb_forever' }
     const chain = this.chain(statementsOf(body))
     if (chain) block.inputs = { DO: { block: chain } }
-    const comment = this.commentFor([s])
-    if (comment) block.icons = { comment: { text: comment, pinned: false } }
+    this.note(block, [s])
     return block
   }
 
@@ -328,8 +364,7 @@ class Context {
     if (end) inputs.RETURN = { block: this.value(end.children[1]) }
     this.fn = null
     if (Object.keys(inputs).length) block.inputs = inputs
-    const comment = this.commentFor(end ? [s, end] : [s])
-    if (comment) block.icons = { comment: { text: comment, pinned: false } }
+    this.note(block, end ? [s, end] : [s])
     return block
   }
 
@@ -366,8 +401,7 @@ class Context {
       .map((l, k) => (k === 0 ? l : l.replace(new RegExp(`^ {0,${indent}}`), '')))
       .join('\n')
     const block = { type: 'ocb_python', fields: { CODE: text } }
-    const comment = this.commentFor([s])
-    if (comment) block.icons = { comment: { text: comment, pinned: false } }
+    this.note(block, [s])
     return block
   }
 
@@ -503,6 +537,13 @@ class Context {
     if (first) place({ type: 'ocb_on_start', inputs: { DO: { block: first } } }, start.length)
     if (forever) place(copy(forever), 1)
     const state = { blocks: { languageVersion: 0, blocks } }
+    if (this.loose.length) {
+      state.workspaceComments = this.loose.map((text) => {
+        const note = { text, x: 40, y }
+        y += 40 * (text.split('\n').length + 2)
+        return note
+      })
+    }
     if (this.variables.size) state.variables = [...this.variables].map(([name, id]) => ({ name, id }))
     return state
   }
@@ -524,8 +565,7 @@ const HAND = {
       const block = { type: 'procedures_ifreturn', extraState: `<mutation value="${this.fn.returns ? 1 : 0}"></mutation>` }
       block.inputs = { CONDITION: { block: this.value(parts[1], ['Boolean']) } }
       if (this.fn.returns) block.inputs.VALUE = { block: this.value(ret.children[1]) }
-      const comment = this.commentFor([s, ret])
-      if (comment) block.icons = { comment: { text: comment, pinned: false } }
+      this.note(block, [s, ret])
       return block
     }
     const block = { type: 'controls_if', inputs: {} }

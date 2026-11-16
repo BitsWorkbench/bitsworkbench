@@ -9,6 +9,15 @@ import { t } from '../i18n/index.js'
 const STORAGE_KEY = 'opencodebot.project.v1'
 export const DEFAULT_PROJECT_NAME = t('project.default')
 
+/** Space between stacks lined up below the others (workspace units). */
+const PLACE_GAP = 48
+
+/** What a stack or note on the canvas is, for keeping its place: its kind, and a function's name or a note's text. */
+function placeKey(item) {
+  if (item instanceof Blockly.BlockSvg) return `${item.type}:${item.getField('NAME') ? item.getFieldValue('NAME') : ''}`
+  return `note:${item.getText()}`
+}
+
 /** Tidy a project name: one line, no runs of spaces, never empty. */
 export function cleanProjectName(name) {
   const tidy = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 60)
@@ -89,10 +98,70 @@ export class BlockWorkspace extends EventTarget {
    * blocks): the stacks are laid out in a column, in program order.
    */
   replaceBlocks(state) {
+    const before = this._places()
     Blockly.serialization.workspaces.load(state, this.workspace)
-    this.workspace.cleanUp()
+    this._keepPlaces(before, state)
     this.workspace.scrollCenter()
     this.dispatchEvent(new CustomEvent('change'))
+  }
+
+  /** The stacks and notes on the canvas, top to bottom. */
+  _tops() {
+    const notes = (this.workspace.getTopComments?.() || []).sort(
+      (a, b) => a.getRelativeToSurfaceXY().y - b.getRelativeToSurfaceXY().y,
+    )
+    return [...this.workspace.getTopBlocks(true), ...notes]
+  }
+
+  /** Where each stack and note stands, by what it is (placeKey). */
+  _places() {
+    const places = new Map()
+    for (const item of this._tops()) {
+      const key = placeKey(item)
+      if (!places.has(key)) places.set(key, [])
+      places.get(key).push(item.getRelativeToSurfaceXY())
+    }
+    return places
+  }
+
+  /**
+   * Stacks and notes that were on the canvas before (the "on start" stack,
+   * "forever", a function by its name, a note by its text) keep their
+   * places, and new ones line up below them. The blocks' Python follows
+   * their order top to bottom, so when the old places would change that
+   * order, or nothing was there before, the canvas is tidied instead.
+   */
+  _keepPlaces(before, state) {
+    const tops = this._tops()
+    const fresh = []
+    const kept = []
+    for (const item of tops) {
+      const at = before.get(placeKey(item))?.shift()
+      if (!at) {
+        fresh.push(item)
+        continue
+      }
+      item.moveTo(new Blockly.utils.Coordinate(at.x, at.y))
+      kept.push(item)
+    }
+    if (!kept.length) return this.workspace.cleanUp()
+    // Sizes are known once Blockly has drawn the new blocks.
+    Blockly.renderManagement.triggerQueuedRenders(this.workspace)
+    const left = Math.min(...kept.map((item) => item.getBoundingRectangle().left))
+    let bottom = Math.max(...kept.map((item) => item.getBoundingRectangle().bottom))
+    for (const item of fresh) {
+      item.moveTo(new Blockly.utils.Coordinate(left, bottom + PLACE_GAP))
+      bottom = item.getBoundingRectangle().bottom
+    }
+    const wanted = [
+      ...(state.blocks?.blocks || []).map((b) => `${b.type}:${b.fields?.NAME ?? ''}`),
+      ...(state.workspaceComments || []).map((c) => `note:${c.text}`),
+    ]
+    if (this._tops().map(placeKey).join('\n') !== wanted.join('\n')) {
+      // Back to the order the state has, then tidied.
+      Blockly.serialization.workspaces.load(state, this.workspace)
+      this.workspace.cleanUp()
+    }
   }
 
   /** Switch between blocks and typed Python. `text` seeds text mode. */
