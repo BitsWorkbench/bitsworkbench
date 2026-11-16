@@ -14,6 +14,10 @@ const AXLE_Y = CB3_BODY.axle[1] / 100
 const WHEEL_R = CB3_BODY.tyreRadius / 1000
 const TRACK = 0.111
 const PITCH = CB3_PITCH       // rad, front down to the skid
+// The main board's top face in model units (the model's board is 1.75 mm
+// thick, centred 0.94 mm below the model's origin), and an LED's height, m.
+const BOARD_TOP = -0.0007
+const LED_H = 0.001
 
 // LED positions in model units (x left, z forward), from the CB3 layout as
 // CodeSpace's simulator has it: user LED 0 at the left, under its 0; the
@@ -63,11 +67,12 @@ export class CodeBotFigure {
 
     reflect(b, env)
     reflect(wheel.scene, env)          // its clones share its materials
-    // A 0603 LED, 2 mm across by 1.4 mm, standing 1 mm on the board.
+    // A 0603 LED, 2 mm across by 1.4 mm, standing 1 mm on the board: its
+    // base on the board's top face.
     const led = (group, x, z, color) => {
       // model (x left, z forward) to the body's frame after its rotation
-      const at = new THREE.Vector3(z * U - AXLE_Z * U, (-AXLE_Y + 0.013) * U, -x * U)
-      this.leds[group].push(new Led(this.tilt, at, [0.0014, 0.001, 0.002], color, 0.018))
+      const at = new THREE.Vector3(z * U - AXLE_Z * U, (-AXLE_Y + BOARD_TOP) * U + LED_H / 2, -x * U)
+      this.leds[group].push(new Led(this.tilt, at, [0.0014, LED_H, 0.002], color, 0.018))
     }
     USER.forEach(([x, z]) => led('user', x, z, RED))
     LS.forEach(([x, z]) => led('ls', x, z, GREEN))
