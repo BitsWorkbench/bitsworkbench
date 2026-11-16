@@ -79,9 +79,11 @@ await page.click('#btn-stop')
 await page.click('#btn-view') // the Python, in place of the blocks
 await page.click('#btn-view') // and back
 
-// The simulator, in every room it has.
+// The simulator, in every room it has (the board on USB gives way once agreed to).
 await page.click('#btn-sim')
-await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
+await page.waitForFunction(() => document.getElementById('modal')?.open)
+await page.click('#modal button[value="ok"]')
+await page.waitForFunction(() => window.openCodeBot.device.simulating && window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
 const rooms = await page.$$eval('.sim-room option', (os) => os.map((o) => o.value))
 for (const room of rooms) {
   await page.selectOption('.sim-room', room)

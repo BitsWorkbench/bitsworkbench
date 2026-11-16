@@ -194,7 +194,11 @@ await page.click('#modal button[value="ok"]')
 await sweep('an empty project')
 
 await page.click('#btn-sim')
-await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
+// The board on USB gives way to the simulator once agreed to.
+await page.waitForFunction(() => document.getElementById('modal')?.open)
+await sweep('leaving the board for the simulator')
+await page.click('#modal button[value="ok"]')
+await page.waitForFunction(() => window.openCodeBot.device.simulating && window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
 await page.waitForTimeout(500)
 await sweep('simulating')
 // Paused, with Stop, Resume and Step showing.

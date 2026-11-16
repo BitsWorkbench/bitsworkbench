@@ -161,9 +161,23 @@ export class App {
       toast({ kind: 'warn', title, detail })
       return
     }
+    // A board on USB gives way to the simulator, once the student agrees.
+    if (this.device.isConnected && !(await this._confirmLeave(t('leave.toSim')))) return
     this._roomForSim()
     await this.device.simulate(target)
     this._refreshSimButton()
+  }
+
+  /** Ask before leaving the board in use (on USB or in the simulator) for the other kind; its program stops. */
+  _confirmLeave(confirmText) {
+    const sim = this.device.simulating
+    const device = getTarget(this.device.targetId)?.name || ''
+    return showModal({
+      title: t(sim ? 'leave.simTitle' : 'leave.boardTitle', { device }),
+      bodyHtml: t(this.device.state === State.RUNNING ? 'leave.runningBodyHtml' : 'leave.bodyHtml', { device }),
+      confirmText,
+      cancelText: t(sim ? 'leave.keepSim' : 'leave.keepBoard', { device }),
+    })
   }
 
   _refreshSimButton() {
@@ -179,7 +193,10 @@ export class App {
       this.terminal.warn(t('term.disconnected'))
       return
     }
+    // The simulator gives way to a board on USB, once the student agrees.
+    if (this.device.simulating && !(await this._confirmLeave(t('leave.toBoard')))) return
     const ok = await this.device.connect()
+    this._refreshSimButton()
     if (ok) this.terminal.focus()
   }
 
@@ -548,7 +565,11 @@ export class App {
   }
 
   async _pickTarget(targetId) {
-    if (this.device.isConnected && this.device.targetId && this.device.targetId !== targetId) {
+    // In the simulator another board just takes the place of the one loaded
+    // (its program stops). Only a real board plugged in cannot be swapped here.
+    const resimulate = this.device.simulating && this.device.targetId !== targetId
+    if (resimulate) await this.device.disconnect()
+    else if (this.device.isConnected && this.device.targetId && this.device.targetId !== targetId) {
       toast({
         kind: 'warn',
         title: t('pick.otherTitle'),
@@ -584,6 +605,8 @@ export class App {
     }
     this._renderDevicePicker()
     this._refreshDeviceChip()
+    if (resimulate) await this._toggleSimulate()
+    else this._refreshSimButton()
   }
 
   _refreshDeviceChip() {

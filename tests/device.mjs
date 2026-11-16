@@ -93,6 +93,38 @@ await page.click('#btn-stop')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready')
 check(true, 'Stop returns to ready')
 
+// One device at a time. A board on USB gives way to the simulator, and the
+// simulator to a board, only once the student agrees; another board in the
+// simulator just takes the place of the one loaded.
+{
+  const modalOpen = () => page.evaluate(() => document.getElementById('modal')?.open)
+  const where = () => page.evaluate(() => ({ sim: window.openCodeBot.device.simulating, connected: window.openCodeBot.device.isConnected, target: window.openCodeBot.device.targetId }))
+  await page.click('#btn-sim')
+  await page.waitForTimeout(200)
+  check(await modalOpen(), 'Simulate with a board on USB asks first')
+  await page.click('#modal button[value="cancel"]')
+  await page.waitForTimeout(200)
+  let w = await where()
+  check(w.connected && !w.sim, 'keeping the board keeps it connected')
+  await page.click('#btn-sim')
+  await page.click('#modal button[value="ok"]')
+  await page.waitForFunction(() => window.openCodeBot.device.simulating && window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
+  check(true, 'agreeing moves to the simulator')
+  await page.evaluate(() => window.openCodeBot._pickTarget('codex'))
+  await page.waitForFunction(() => window.openCodeBot.device.simulating && window.openCodeBot.device.targetId === 'codex' && window.openCodeBot.device.state === 'ready', null, { timeout: 20000 }).catch(() => {})
+  w = await where()
+  check(!(await modalOpen()) && w.sim && w.target === 'codex', `another board in the simulator takes the loaded one's place, without asking (${JSON.stringify(w)})`)
+  await page.evaluate(() => window.openCodeBot._pickTarget('codebot'))
+  await page.waitForFunction(() => window.openCodeBot.device.targetId === 'codebot' && window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
+  await page.click('#btn-connect')
+  await page.waitForTimeout(200)
+  check(await modalOpen(), 'Connect while simulating asks first')
+  await page.click('#modal button[value="ok"]')
+  await page.waitForFunction(() => !window.openCodeBot.device.simulating && window.openCodeBot.device.state === 'ready', null, { timeout: 5000 }).catch(() => {})
+  w = await where()
+  check(w.connected && !w.sim, `agreeing connects the board (${JSON.stringify(w)})`)
+}
+
 await page.click('#btn-connect')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'offline')
 check(true, 'Connect again disconnects')
