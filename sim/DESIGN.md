@@ -193,7 +193,19 @@ LED (beside the power switch) green; the proximity emitters amber. CodeAIR's sit
 model's own parts, named by `build-models.mjs` from the CAD's part numbers: the eight BYTE LEDs
 blue (0 at the front), STA green, CHG amber (it lights while the battery charges on USB, and
 a simulated CodeAIR is never on USB, so it is drawn unlit), and the NeoPixels on the model's four on top and
-four underneath. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
+four underneath, each lens turned as its part is on the board (the arms' NeoPixels sit at
+about 34 degrees; `yawIn` reads the angle from the model). CodeBot's battery LED is off
+until a program turns it on, as botcore leaves it.
+
+**One lit look on every board** (`Light` in `led.js`, CodeX's LEDs and NeoPixels too): a lit
+LED shows the colour the program set, at any brightness. Its colour is the program's red,
+green and blue as a screen shows them (sRGB), scaled together so brightness never changes
+the hue; its body is that light alone, solid, never driven past full and not tone mapped (a
+pale package under it, a channel clipping or the film curve each push orange toward yellow
+and every colour toward white); its glow is a tint of the same colour laid over what is
+around it rather than light added to it (added light runs to white over the lit body and
+turns red toward yellow over a green board). CodeSpace's simulator likewise lights an LED in
+the program's colour as is, with a glow layer of that colour. The robots' metal (CodeBot's USB-C connector and CPU module, CodeAIR's CPU
 shield, USB-C connector and motors) mirrors the studio light whatever the room: reflection
 only, so the painted parts keep the colours the room's own lights give them, and only parts
 that are metal (a plain metallic material or a palette's metal), never a printed board.

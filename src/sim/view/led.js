@@ -1,51 +1,99 @@
 // LEDs as drawn on a board: a small clear package that shows its pale lens
 // when unlit (never a black box) and its own colour when lit, with a soft
-// glow over it that reads at a distance. The look follows CodeSpace's
-// simulator: the lens 0.956, 0.921, 0.721 at 80% opacity, lit by emission.
+// glow over it that reads at a distance. Unlit, the look follows CodeSpace's
+// simulator: the lens 0.956, 0.921, 0.721 at 80% opacity.
+//
+// Lit, every LED and NeoPixel on every board has one look (`Light`), made
+// to keep the colour the program asked for, at full brightness too:
+//   - the colour is the program's red, green and blue as a screen shows
+//     them (sRGB), scaled together so the brightest is full: brightness
+//     changes how bright, never which colour (lifting each channel on its
+//     own turns orange, 255 165 0, toward yellow);
+//   - the body is its light alone and solid: no pale package under it to
+//     wash the colour toward white, never driven past full (a channel past
+//     full clips, and orange clips to yellow), and not tone mapped (the
+//     film curve pulls bright colours toward white);
+//   - the glow is a tint of the same colour laid over what is around it,
+//     not light added to it: added light over a lit body or a pale surface
+//     runs to white, and over a green board turns red toward yellow.
+// CodeSpace's simulator does the same in Babylon: its emissive colour is
+// the program's colour as is, with a glow layer of that colour around it.
 import * as THREE from 'three'
 
 const LENS = new THREE.Color(0.956, 0.921, 0.721)
 const BLACK = new THREE.Color(0, 0, 0)
+const GLOW = 0.85                // the glow's strength at its middle, lit full
 
-export class Led {
+// A light's look: `mat` its body's material (a lens, or the part's own),
+// `halo` its glow; `rest` the body's colour unlit.
+export class Light {
+  constructor(mat, halo, rest = mat.color.clone()) {
+    this.mat = mat
+    this.halo = halo
+    this.rest = rest.clone()
+    this.restOpacity = mat.opacity
+    this.color = new THREE.Color(1, 1, 1)
+    this.level = 0
+    this.show(this.color, 0)
+  }
+
+  // An RGB pixel: each 0 to 255, as a program sets it.
+  rgb(r, g, b) {
+    const top = Math.max(r, g, b)
+    if (top > 0) this.color.setRGB(r / top, g / top, b / top, THREE.SRGBColorSpace)
+    this.show(this.color, top / 255)
+  }
+
+  // `color` at `level`, 0 (off) to 1 (full): a dim LED still reads as lit,
+  // as it does to the eye.
+  show(color, level) {
+    if (color !== this.color) this.color.copy(color)
+    this.level = level
+    const k = level > 0 ? 0.35 + 0.65 * Math.sqrt(Math.min(1, level)) : 0
+    const lit = k > 0
+    this.mat.emissive.copy(this.color).multiplyScalar(k)
+    this.mat.color.copy(lit ? BLACK : this.rest)
+    this.mat.opacity = lit ? 1 : this.restOpacity
+    this.mat.toneMapped = !lit
+    this.halo.material.color.copy(this.color)
+    this.halo.material.opacity = GLOW * k
+    this.halo.visible = lit
+  }
+}
+
+// A glow `size` across (in its parent's units): a soft disc of a light's
+// colour, laid over the scene.
+export function glowSprite(size) {
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: haloTexture(), transparent: true, depthWrite: false, toneMapped: false,
+  }))
+  halo.scale.setScalar(size)
+  halo.userData.realism = 'effects'   // drawn at the levels that have them (realism.js)
+  return halo
+}
+
+export class Led extends Light {
   // size [x, y, z] in the parent's units; glow: the halo's width there;
   // facing: 1 for an LED on a board's top, -1 for one on its underside.
   constructor(parent, position, size, color, glow, facing = 1) {
-    this.color = new THREE.Color(color)
-    this.mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color: LENS, transparent: true, opacity: 0.8, roughness: 0.35, metalness: 0,
       emissive: 0x000000,
     })
-    this.mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), this.mat)
+    const halo = glowSprite(glow)
+    super(mat, halo, LENS)
+    this.color.set(color)
+    this.mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), mat)
     this.mesh.position.copy(position)
     parent.add(this.mesh)
-    this.halo = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: haloTexture(), color: 0x000000, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, toneMapped: false,
-    }))
-    this.halo.scale.setScalar(glow)
-    this.halo.position.copy(position)
-    this.halo.position.y += facing * size[1]
-    this.halo.userData.realism = 'effects'   // drawn at the levels that have them (realism.js)
-    parent.add(this.halo)
+    halo.position.copy(position)
+    halo.position.y += facing * size[1]
+    parent.add(halo)
   }
 
-  // An RGB pixel: each 0 to 255, its colour lifted the way set() lifts a level.
-  rgb(r, g, b) {
-    const top = Math.max(r, g, b)
-    if (top > 0) this.color.setRGB(r / top, g / top, b / top)
-    this.set(top / 255)
-  }
-
-  // level 0 (off) to 1 (full): a dim LED still reads as lit, as to the eye
+  // level 0 (off) to 1 (full), in the LED's own colour
   set(level) {
-    const k = level > 0 ? 0.35 + 0.65 * Math.sqrt(Math.min(1, level)) : 0
-    this.mat.emissive.copy(this.color).multiplyScalar(k * 1.6)
-    // lit, the lens is its light alone (the pale lens under it would wash a
-    // red out to pink), its own colour, not the film's
-    this.mat.color.copy(k > 0 ? BLACK : LENS)
-    this.mat.toneMapped = !(k > 0)
-    this.halo.material.color.copy(this.color).multiplyScalar(k)
+    this.show(this.color, level)
   }
 }
 
@@ -145,8 +193,10 @@ export function haloTexture() {
   c.width = c.height = 64
   const g = c.getContext('2d')
   const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+  // full over the light, falling off softly: a tint that reads as its glow
   grad.addColorStop(0, 'rgba(255,255,255,1)')
-  grad.addColorStop(0.25, 'rgba(255,255,255,0.45)')
+  grad.addColorStop(0.2, 'rgba(255,255,255,0.85)')
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.35)')
   grad.addColorStop(1, 'rgba(255,255,255,0)')
   g.fillStyle = grad
   g.fillRect(0, 0, 64, 64)
