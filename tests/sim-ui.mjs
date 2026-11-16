@@ -157,6 +157,29 @@ await page.screenshot({ path: `${SHOT_DIR}/ocb-sim.png` })
   const view = await page.evaluate(() => ({ level: window.openCodeBot.device.sim.view.level, ratio: window.openCodeBot.device.sim.view.ratio, overlay: document.querySelector('.sim-perf').hidden ? null : document.querySelector('.sim-perf').textContent }))
   if (view.level !== 'low' || view.ratio > 0.6 || !/fps/.test(view.overlay ?? '')) problems.push(`settings: realism low and frame rate shown gave ${JSON.stringify(view)}`)
 
+  // Resizing never paints an empty view: sizing a canvas clears it, so each
+  // new size is drawn before the frame is painted. A ResizeObserver made after
+  // the view's runs just after it, before the paint, and checks.
+  await page.evaluate(() => {
+    const v = window.openCodeBot.device.sim.view, r = v.renderer
+    const log = (window.__resizeLog = { sized: 0, blank: 0, observed: 0, cleared: false })
+    const setSize = r.setSize.bind(r), render = r.render.bind(r)
+    r.setSize = (...a) => { log.sized++; log.cleared = true; return setSize(...a) }
+    r.render = (...a) => { log.cleared = false; return render(...a) }
+    new ResizeObserver(() => { log.observed++; if (log.cleared) log.blank++ }).observe(v.host)
+  })
+  const vp = page.viewportSize()
+  for (const dw of [-40, -80, -120, -60, 0]) {
+    await page.setViewportSize({ width: vp.width + dw, height: vp.height + dw / 2 })
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+  }
+  const sizedBefore = await page.evaluate(() => window.__resizeLog.sized)
+  await page.evaluate(() => window.openCodeBot.device.sim.view.resize())
+  const resized = await page.evaluate(() => window.__resizeLog)
+  if (resized.observed < 4 || resized.blank) problems.push(`resize: the view showed empty while resized ${JSON.stringify(resized)}`)
+  if (resized.sized !== sizedBefore) problems.push('resize: sizing to the size it has cleared the view')
+  else console.log(`sim-ui: resized ${resized.observed} times, drawn at once each time`)
+
   // a track (a quarter second of silence) brings the Music row and its credit
   const wav = (() => {
     const n = 2000, b = Buffer.alloc(44 + n * 2)
