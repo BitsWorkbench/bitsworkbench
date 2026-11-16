@@ -73,9 +73,6 @@ async function pick(id, title) {
   await page.waitForFunction((name) => window.openCodeBot.workspace.name === name, title, { timeout: 5000 })
 }
 
-/** Blocks whose Python does not come back as blocks yet (it stays as Python blocks). */
-const NO_WAY_BACK_YET = /^procedures_/
-
 const programs = []
 await fresh()
 
@@ -115,7 +112,7 @@ for (const device of ['codebot', 'codex', 'codeair']) {
     programs.push({ device, label, python: state.python, types: state.types })
 
     // Back from its Python, it is the same program: nothing lost, and the
-    // same Python again when every block it uses has a way back.
+    // same Python again.
     const back = await page.evaluate((py) => {
       const app = window.openCodeBot
       const r = app.blocksFromPython(py)
@@ -126,9 +123,7 @@ for (const device of ['codebot', 'codex', 'codeair']) {
     const lines = (s) => s.split('\n').map((l) => l.trim()).filter(Boolean)
     const lost = back.python ? lines(state.python).filter((l) => !lines(back.python).includes(l)) : ['(did not parse)']
     check(lost.length === 0, `${label}: back from Python, no line lost ${lost.slice(0, 2).join(' | ')}`)
-    if (!state.types.some((t) => NO_WAY_BACK_YET.test(t))) {
-      check(back.python === state.python, `${label}: back from Python, the same Python`)
-    }
+    check(back.python === state.python, `${label}: back from Python, the same Python`)
   }
 }
 
