@@ -42,8 +42,7 @@ const NOT_GENERIC = new Set([
   // number of items, a loop variable): their way back is written by hand.
   'controls_if', // to-blocks.js HAND
   'controls_repeat_ext', // to-blocks.js HAND
-  'controls_for',
-  'controls_forEach',
+  'controls_for', // to-blocks.js HAND
   'lists_create_with',
   'lists_getIndex',
   'lists_setIndex',
@@ -83,12 +82,20 @@ export function patternsFor(targetId) {
   return { statements, values, shadows }
 }
 
+/** The blocks of the categories Blockly fills in itself. */
+const CUSTOM_ITEMS = {
+  VARIABLE: [
+    { kind: 'block', type: 'variables_set' },
+    { kind: 'block', type: 'math_change', inputs: { DELTA: { shadow: { type: 'math_number', fields: { NUM: 1 } } } } },
+  ],
+}
+
 /** Every block in a board's toolbox, once per type and extra state. */
 function toolboxItems(targetId) {
   const seen = new Set()
   const out = []
   for (const entry of toolboxFor(targetId).contents) {
-    for (const item of entry.contents || []) {
+    for (const item of entry.contents || CUSTOM_ITEMS[entry.custom] || []) {
       if (item.kind !== 'block') continue
       const key = item.type + JSON.stringify(item.extraState || {})
       if (seen.has(key)) continue

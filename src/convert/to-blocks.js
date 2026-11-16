@@ -39,6 +39,7 @@ export function pythonToBlocks(source, targetId) {
   if (root.error) return { ok: false, line: root.error.line }
   const board = boardOf(source) || targetId
   const ctx = new Context(source, patterns(board))
+  ctx.assigned = assignedNames(root)
 
   let top = statementsOf(root)
   // The header the blocks make: pulled out now, put back below if the
@@ -85,6 +86,17 @@ function boardOf(source) {
   return null
 }
 
+/** Names given a value anywhere: `x = ...`, `x += ...`, `for x in ...`. */
+function assignedNames(node, names = new Set()) {
+  const first = node.children?.[0]
+  if ((node.name === 'AssignStatement' || node.name === 'UpdateStatement') && first?.name === 'VariableName') {
+    names.add(first.text)
+  }
+  if (node.name === 'ForStatement' && node.children[1]?.name === 'VariableName') names.add(node.children[1].text)
+  for (const c of node.children || []) assignedNames(c, names)
+  return names
+}
+
 /** `while True:` with no `break` of its own. */
 function isForever(s) {
   if (s.name !== 'WhileStatement') return false
@@ -122,6 +134,7 @@ class Context {
     this.pats = pats
     this.variables = new Map()
     this.notes = new Map() // statement node -> [comment]
+    this.assigned = new Set() // names the program gives a value: its variables
   }
 
   text(node) {
@@ -255,6 +268,10 @@ class Context {
       const block = this.build(p, binds)
       if (block) return block
     }
+    // A name the program gives a value somewhere is a variable.
+    if (u.name === 'VariableName' && this.assigned.has(u.text)) {
+      return { type: 'variables_get', fields: { VAR: { id: this.variable(u.text) } } }
+    }
     return { type: 'ocb_python_value', fields: { CODE: this.text(u) } }
   }
 
@@ -335,22 +352,80 @@ const HAND = {
     return block
   },
 
-  /** `for count in range(n):` whose body does not use its counter: "repeat n times". */
+  /**
+   * `for count in range(n):` whose body does not use its counter is "repeat
+   * n times"; `for i in range(...)` over whole numbers is "count with i".
+   * (Any other `for` is "for each item in list", by its pattern.)
+   */
   ForStatement(s) {
     const [, target, , iter, body] = s.children
     if (target?.name !== 'VariableName' || iter?.name !== 'CallExpression' || body?.name !== 'Body') return null
     const args = callArgs(iter, 'range')
-    if (!args || args.length !== 1 || uses(body, target.text)) return null
-    // Blockly writes `range(int(n))` when n is not a plain number.
-    const times = callArgs(args[0], 'int')?.length === 1 ? callArgs(args[0], 'int')[0] : args[0]
-    const block = {
-      type: 'controls_repeat_ext',
-      inputs: { TIMES: withShadow(this.value(times, ['Number']), this.pats.shadows.controls_repeat_ext?.TIMES) },
+    if (!args) return null
+    let block
+    if (args.length === 1 && !uses(body, target.text)) {
+      // Blockly writes `range(int(n))` when n is not a plain number.
+      const times = callArgs(args[0], 'int')?.length === 1 ? callArgs(args[0], 'int')[0] : args[0]
+      block = {
+        type: 'controls_repeat_ext',
+        inputs: { TIMES: withShadow(this.value(times, ['Number']), this.pats.shadows.controls_repeat_ext?.TIMES) },
+      }
+    } else {
+      const span = countSpan(args.map(wholeNumber))
+      if (!span) return null
+      const shadows = this.pats.shadows.controls_for || {}
+      const num = (n, name) => withShadow({ type: 'math_number', fields: { NUM: n } }, shadows[name])
+      block = {
+        type: 'controls_for',
+        fields: { VAR: { id: this.variable(target.text) } },
+        inputs: { FROM: num(span.from, 'FROM'), TO: num(span.to, 'TO'), BY: num(span.by, 'BY') },
+      }
     }
     const chain = this.chain(statementsOf(body))
     if (chain) block.inputs.DO = { block: chain }
     return block
   },
+
+  /** `x += n` and `x -= n`: "change x by". */
+  UpdateStatement(s) {
+    const [target, op, delta] = s.children
+    if (target?.name !== 'VariableName' || !delta) return null
+    let by
+    if (op.text === '+=') by = this.value(delta, ['Number'])
+    else if (op.text === '-=' && wholeNumber(delta) !== null) by = { type: 'math_number', fields: { NUM: -wholeNumber(delta) } }
+    else if (op.text === '-=' && unwrap(delta).name === 'Number') by = { type: 'math_number', fields: { NUM: -Number(unwrap(delta).text) } }
+    else return null
+    return {
+      type: 'math_change',
+      fields: { VAR: { id: this.variable(target.text) } },
+      inputs: { DELTA: withShadow(by, this.pats.shadows.math_change?.DELTA) },
+    }
+  },
+}
+
+/** A whole number written as one (`3`, `-1`), or null. */
+function wholeNumber(node) {
+  node = unwrap(node)
+  let sign = 1
+  if (node.name === 'UnaryExpression' && node.children[0]?.text === '-' && node.children.length === 2) {
+    sign = -1
+    node = unwrap(node.children[1])
+  }
+  if (node.name !== 'Number' || !/^\d+$/.test(node.text)) return null
+  return sign * Number(node.text)
+}
+
+/**
+ * The "count with" block's from, to and by for `range(...)` over whole
+ * numbers, when the block makes that same `range(...)` again; else null.
+ * (The block counts from and to inclusive, either way; range stops short.)
+ */
+function countSpan(nums) {
+  if (nums.some((n) => n === null)) return null
+  const [a, b, step] = nums.length === 1 ? [0, nums[0], 1] : nums.length === 2 ? [...nums, 1] : nums
+  if (step > 0 && a <= b - 1) return { from: a, to: b - 1, by: step }
+  if (step < 0 && a > b + 1) return { from: a, to: b + 1, by: -step }
+  return null
 }
 
 /** The arguments of a call to the plain function `name`, or null. */
