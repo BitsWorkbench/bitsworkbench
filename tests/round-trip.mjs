@@ -45,7 +45,7 @@ await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
 
 /** Blocks whose way back comes in a later change: their Python stays as Python blocks. */
-const NOT_YET = ['controls_for', 'controls_forEach', 'lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length', 'text_join']
+const NOT_YET = ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length', 'text_join']
 
 // Helpers in the page: a block program's Python, and the same program back from it.
 await page.evaluate(() => {
@@ -116,6 +116,12 @@ for (const id of ['codebot', 'codex', 'codeair']) {
         items.push(item)
       }
     }
+    // The Variables category fills itself in; its blocks, as the palette makes them.
+    items.push(
+      { kind: 'block', type: 'variables_set' },
+      { kind: 'block', type: 'variables_get' },
+      { kind: 'block', type: 'math_change', inputs: { DELTA: { shadow: { type: 'math_number', fields: { NUM: 1 } } } } },
+    )
     const failures = []
     let trips = 0
     for (const item of items) {
@@ -200,6 +206,27 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   const note = r.shape[0].inputs.DO
   check(note.type === 'codex_note' && !note.comment, 'a note\'s own "# C5" is part of its block, not a comment')
   await board('codebot')
+}
+{
+  // Variables and counting.
+  const r = await from('x = 0\nx += 2\nx -= 1\nprint(x)\nfor i in range(5):\n    print(i)\nfor n in range(10, 0, -2):\n    pass\nfor count in range(3):\n    x += 1\n')
+  const names = JSON.stringify(types(r.shape))
+  check(
+    names === JSON.stringify(['ocb_on_start', 'variables_set', 'math_number', 'math_change', 'math_number', 'math_change', 'math_number', 'ocb_print', 'variables_get',
+      'controls_for', 'math_number', 'math_number', 'math_number', 'ocb_print', 'variables_get', 'controls_for', 'math_number', 'math_number', 'math_number',
+      'controls_repeat_ext', 'math_number', 'math_change', 'math_number']),
+    `set, change (+= and -=), get, count with, repeat (${names})`,
+  )
+  const counts = JSON.stringify(r.shape).match(/"FROM":\{[^}]*\}\},"TO":\{[^}]*\}\},"BY":\{[^}]*\}/g)
+  check(
+    counts?.length === 2 && /"NUM":0.*"NUM":4.*"NUM":1/.test(counts[0]) && /"NUM":10.*"NUM":1.*"NUM":2/.test(counts[1]),
+    'range(5) counts 0 to 4 by 1; range(10, 0, -2) counts 10 down to 1 by 2',
+  )
+  check(r.back.includes('for i in range(5):') && r.back.includes('for n in range(10, 0, -2):'), 'and both make the same range again')
+  const each = await from('for word in words:\n    print(word)\n')
+  check(each.shape[0].inputs.DO.type === 'controls_forEach' && each.shape[0].inputs.DO.fields.VAR === 'word', 'for word in words is "for each word in list"')
+  const notVar = await from('print(RED)\n')
+  check(notVar.shape[0].inputs.DO.inputs.TEXT.type !== 'variables_get', 'a name the program never sets is not a variable')
 }
 {
   // The program's frame: header left out, a last `while True:` is forever.
