@@ -424,6 +424,7 @@ export class CodeBot {
       x: this.x, y: this.y, z: this.z, heading: this.heading,
       wheelAngle: [this.wheelAngle[0], this.wheelAngle[1]],
       leds: { ...this.leds }, tone: this.tone, enabled: this.enabled, blocked: this.blocked,
+      buttons: [...this.buttons],
       whine: humVoices(this.wheel, this.p),
       hits: this.hits.snapshot(),
     }

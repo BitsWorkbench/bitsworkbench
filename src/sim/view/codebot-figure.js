@@ -7,6 +7,7 @@
 import * as THREE from 'three'
 import { CB3_BODY, CB3_PITCH } from '../world/codebot.js'
 import { Led, reflect } from './led.js'
+import { Keys } from './keys.js'
 
 const U = 0.1                 // model units to metres
 const AXLE_Z = CB3_BODY.axle[0] / 100    // model units
@@ -38,7 +39,12 @@ export class CodeBotFigure {
     this.tilt.position.y = WHEEL_R
     this.tilt.rotation.z = -PITCH
     this.leds = { user: [], ls: [], prox: [], pwr: [] }
+    this.keys = new Keys()
   }
+
+  // Button n's centre in the world; the button a ray meets, or -1 (view.js).
+  keyCentre(n) { return this.keys.keyCentre(n) }
+  keyAt(raycaster) { return this.keys.keyAt(raycaster) }
 
   // env: studio light for the metal to reflect (view.js)
   async load(loader, base, env) {
@@ -67,6 +73,10 @@ export class CodeBotFigure {
 
     reflect(b, env)
     reflect(wheel.scene, env)          // its clones share its materials
+    // BTN-0 and BTN-1: a click presses them (keys.js), 0.5 mm down
+    for (const n of [0, 1]) {
+      this.keys.add(n, [b.getObjectByName(`BTN_${n}`), b.getObjectByName(`BTN_${n}_cap`)], { reach: 0.045, travel: 0.005 })
+    }
     // A 0603 LED, 2 mm across by 1.4 mm, standing 1 mm on the board: its
     // base on the board's top face.
     const led = (group, x, z, color) => {
@@ -110,5 +120,6 @@ export class CodeBotFigure {
     bits(this.leds.ls, s.leds.ls)
     bits(this.leds.prox, s.leds.prox)
     bits(this.leds.pwr, s.leds.pwr ? 1 : 0)
+    if (s.buttons) this.keys.show((n) => s.buttons[n])
   }
 }
