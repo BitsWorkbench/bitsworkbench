@@ -314,6 +314,21 @@ await audit('simulating')
 
 // The run controls from the keyboard: Run hands focus to Stop; Pause shows
 // Step, which stays (with Pause, now Resume) until the program stops.
+// A program that runs until stopped: the starter drives for a second, and a
+// busy machine reached Pause after it had already finished.
+await page.evaluate(() =>
+  window.openCodeBot.workspace.loadProject({
+    blocks: {
+      blocks: {
+        languageVersion: 0,
+        blocks: [{
+          type: 'ocb_forever', x: 40, y: 40,
+          inputs: { DO: { block: { type: 'ocb_wait', inputs: { SECS: { shadow: { type: 'math_number', fields: { NUM: 0.1 } } } } } } },
+        }],
+      },
+    },
+  }),
+)
 const shown = () =>
   page.evaluate(() => ['btn-run', 'btn-stop', 'btn-pause', 'btn-step'].filter((id) => !document.getElementById(id).hidden).join(' '))
 check((await shown()) === 'btn-run', `at rest only Run shows (${await shown()})`)
