@@ -6,6 +6,8 @@
  *   again stays, as a Python block;
  * - a last `while True:` at the top level is the "forever" block, and the
  *   statements before it go in "on start";
+ * - a top-level `def` is a function block, above the rest as Blockly writes
+ *   it, and its calls are call blocks (see functionsOf);
  * - each statement becomes the block whose pattern it matches (see
  *   patterns.js), the longest and then the most specific pattern first;
  * - Python with no block stays as it is, in a grey Python block: a whole
@@ -18,6 +20,7 @@
 import * as Blockly from 'blockly/core'
 import { tree, statementsOf, lineAt, unwrap } from './tree.js'
 import { patternsFor } from './patterns.js'
+import { pythonGenerator } from 'blockly/python'
 import { generatePython, DEVICE_IMPORT, BANNER } from '../blocks/generate.js'
 
 const cache = new Map()
@@ -57,6 +60,12 @@ export function pythonToBlocks(source, targetId) {
     return !isHeader
   })
 
+  // Functions the blocks can hold come out of the program, as Blockly puts
+  // every function before the rest; any other `def` stays where it is.
+  ctx.functions = functionsOf(top, ctx.assigned)
+  const defs = top.filter((s) => ctx.functions.has(functionName(s)))
+  top = top.filter((s) => !defs.includes(s))
+
   let forever = null
   const last = top[top.length - 1]
   if (last && isForever(last)) {
@@ -64,19 +73,61 @@ export function pythonToBlocks(source, targetId) {
     top = top.slice(0, -1)
   }
 
-  ctx.anchor(comments.filter((c) => !(c.ownLine && HEADER_COMMENT(c.text) && (!top[0] || c.from < top[0].from))), [
+  const first = [...defs, ...top][0]
+  ctx.anchor(comments.filter((c) => !(c.ownLine && HEADER_COMMENT(c.text) && (!first || c.from < first.from))), [
+    ...defs,
     ...top,
     ...(forever ? [forever] : []),
   ])
 
+  const defBlocks = defs.map((s) => ctx.defBlock(s))
   const start = ctx.statements(top)
   const foreverBlock = forever ? ctx.foreverBlock(forever) : null
 
   // The header lines the blocks would not write again stay, in order, first.
-  const made = new Set(madeLines(ctx.state(start, foreverBlock), board))
+  const made = new Set(madeLines(ctx.state(defBlocks, start, foreverBlock), board))
   const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')))
   start.unshift(...kept.map((s) => ctx.grey(s)))
-  return { ok: true, state: ctx.state(start, foreverBlock), targetId: board }
+  return { ok: true, state: ctx.state(defBlocks, start, foreverBlock), targetId: board }
+}
+
+/** A `def`'s name, or null for any other statement. */
+function functionName(s) {
+  return s.name === 'FunctionDefinition' && s.children[1]?.name === 'VariableName' ? s.children[1].text : null
+}
+
+/**
+ * The top-level functions the function blocks can hold, by their Python
+ * name: { name, params, returns }. One can when it is a plain `def` (no
+ * decorator, default, `*args` or type), and when Blockly, writing the block's
+ * Python, gives it and its parameters the same names again: a block's name
+ * is the Python one with spaces for underscores ("blink twice"), and Blockly
+ * renames a function that would clash with a variable, another function or
+ * a word Python keeps.
+ */
+function functionsOf(top, variables) {
+  const defs = top.filter((s) => functionName(s))
+  const count = {}
+  for (const s of defs) count[functionName(s)] = (count[functionName(s)] || 0) + 1
+  const names = new Blockly.Names(pythonGenerator.RESERVED_WORDS_)
+  for (const v of [...variables].sort()) names.getName(v, Blockly.Names.NameType.DEVELOPER_VARIABLE)
+  const out = new Map()
+  for (const s of defs) {
+    const py = functionName(s)
+    const [, , list, body, more] = s.children
+    if (count[py] > 1 || list?.name !== 'ParamList' || body?.name !== 'Body' || more) continue
+    const inner = list.children.filter((c) => c.name !== '(' && c.name !== ')' && c.name !== ',')
+    if (inner.some((c) => c.name !== 'VariableName')) continue
+    const params = inner.map((c) => c.text)
+    if (new Set(params).size !== params.length) continue
+    if (params.some((p) => names.getName(p, Blockly.Names.NameType.DEVELOPER_VARIABLE) !== p)) continue
+    const name = py.replace(/(?<=[A-Za-z0-9])_(?=[A-Za-z0-9])/g, ' ')
+    if (names.getName(name, Blockly.Names.NameType.PROCEDURE) !== py) continue
+    const end = statementsOf(body).at(-1)
+    const returns = end?.name === 'ReturnStatement' && end.children.length === 2
+    out.set(py, { name, params, returns })
+  }
+  return out
 }
 
 /** The board a program's own import names, if any. */
@@ -94,6 +145,8 @@ function assignedNames(node, names = new Set()) {
     names.add(first.text)
   }
   if (node.name === 'ForStatement' && node.children[1]?.name === 'VariableName') names.add(node.children[1].text)
+  // A function's parameters are variables too, as Blockly has them.
+  if (node.name === 'ParamList') for (const c of node.children) if (c.name === 'VariableName') names.add(c.text)
   for (const c of node.children || []) assignedNames(c, names)
   return names
 }
@@ -147,6 +200,8 @@ class Context {
     this.notes = new Map() // statement node -> [comment]
     this.assigned = new Set() // names the program gives a value: its variables
     this.lists = new Set() // of those, the ones set to a list
+    this.functions = new Map() // Python name -> { name, params, returns }: functionsOf
+    this.fn = null // the function whose body is being made into blocks
   }
 
   text(node) {
@@ -224,7 +279,7 @@ class Context {
     const byHand = HAND[s.name]?.call(this, s)
     if (byHand) {
       const comment = this.commentFor([s])
-      if (comment) byHand.icons = { comment: { text: comment, pinned: false } }
+      if (comment && !byHand.icons) byHand.icons = { comment: { text: comment, pinned: false } }
       return { block: byHand, count: 1 }
     }
     for (const p of this.pats.statements) {
@@ -250,6 +305,53 @@ class Context {
     if (chain) block.inputs = { DO: { block: chain } }
     const comment = this.commentFor([s])
     if (comment) block.icons = { comment: { text: comment, pinned: false } }
+    return block
+  }
+
+  /**
+   * A function (one functionsOf found): "to do something" with its
+   * parameters, its body and, for one that ends `return x`, x. The `global`
+   * lines go, since Blockly writes them again for every variable.
+   */
+  defBlock(s) {
+    const py = functionName(s)
+    const info = this.functions.get(py)
+    let body = statementsOf(s.children[3])
+    body = body.filter((st) => !(this.isGlobal(st) && !this.notes.has(st)))
+    const end = info.returns ? body.pop() : null
+    const block = { type: info.returns ? 'procedures_defreturn' : 'procedures_defnoreturn', fields: { NAME: info.name } }
+    if (info.params.length) block.extraState = { params: info.params.map((p) => ({ name: p, id: this.variable(p) })) }
+    this.fn = info
+    const inputs = {}
+    const chain = this.chain(body)
+    if (chain) inputs.STACK = { block: chain }
+    if (end) inputs.RETURN = { block: this.value(end.children[1]) }
+    this.fn = null
+    if (Object.keys(inputs).length) block.inputs = inputs
+    const comment = this.commentFor(end ? [s, end] : [s])
+    if (comment) block.icons = { comment: { text: comment, pinned: false } }
+    return block
+  }
+
+  /** `global x, y` naming only the program's variables. */
+  isGlobal(s) {
+    if (s.name !== 'ScopeStatement' || s.children[0]?.name !== 'global') return false
+    return s.children.slice(1).every((c) => c.name === ',' || (c.name === 'VariableName' && this.assigned.has(c.text)))
+  }
+
+  /**
+   * A call of one of the program's functions, as a statement ("do
+   * something") or a value ("twice"): its block, or null.
+   */
+  call(node, value) {
+    node = unwrap(node)
+    const callee = node.name === 'CallExpression' ? node.children[0] : null
+    const info = callee?.name === 'VariableName' && this.functions.get(callee.text)
+    if (!info || info.returns !== value) return null
+    const args = callArgs(node, callee.text)
+    if (!args || args.length !== info.params.length) return null
+    const block = { type: value ? 'procedures_callreturn' : 'procedures_callnoreturn', extraState: { name: info.name, params: info.params } }
+    if (args.length) block.inputs = Object.fromEntries(args.map((a, k) => [`ARG${k}`, { block: this.value(a) }]))
     return block
   }
 
@@ -384,12 +486,22 @@ class Context {
     return this.variables.get(name)
   }
 
-  /** The workspace state: "on start" and "forever", and the variables. */
-  state(start, forever) {
+  /**
+   * The workspace state: the functions, "on start" and "forever", top to
+   * bottom as in the Python, and the variables. (Blockly writes functions in
+   * the order they stand on the canvas.)
+   */
+  state(defs, start, forever) {
     const blocks = []
+    let y = 40
+    const place = (block, rows) => {
+      blocks.push({ ...block, x: 40, y })
+      y += 40 * (rows + 2)
+    }
+    for (const d of defs) place(copy(d), JSON.stringify(d).split('"type"').length)
     const first = link(start.map(copy))
-    if (first) blocks.push({ type: 'ocb_on_start', x: 40, y: 40, inputs: { DO: { block: first } } })
-    if (forever) blocks.push({ ...copy(forever), x: 40, y: first ? 40 + 40 * (start.length + 2) : 40 })
+    if (first) place({ type: 'ocb_on_start', inputs: { DO: { block: first } } }, start.length)
+    if (forever) place(copy(forever), 1)
     const state = { blocks: { languageVersion: 0, blocks } }
     if (this.variables.size) state.variables = [...this.variables].map(([name, id]) => ({ name, id }))
     return state
@@ -404,6 +516,18 @@ const HAND = {
   /** if, any number of elif, else: one "if" block with its + and - parts. */
   IfStatement(s) {
     const parts = s.children
+    // In a function, `if c: return` (`return x` in one that returns a value)
+    // is "if c return".
+    const only = parts.length === 3 && parts[2].name === 'Body' && statementsOf(parts[2])
+    const ret = only?.length === 1 && only[0].name === 'ReturnStatement' ? only[0] : null
+    if (this.fn && ret && ret.children.length === (this.fn.returns ? 2 : 1)) {
+      const block = { type: 'procedures_ifreturn', extraState: `<mutation value="${this.fn.returns ? 1 : 0}"></mutation>` }
+      block.inputs = { CONDITION: { block: this.value(parts[1], ['Boolean']) } }
+      if (this.fn.returns) block.inputs.VALUE = { block: this.value(ret.children[1]) }
+      const comment = this.commentFor([s, ret])
+      if (comment) block.icons = { comment: { text: comment, pinned: false } }
+      return block
+    }
     const block = { type: 'controls_if', inputs: {} }
     let n = 0
     let hasElse = false
@@ -494,6 +618,8 @@ const HAND_VALUE = {
   },
 
   CallExpression(u) {
+    const call = this.call(u, true)
+    if (call) return call
     const method = methodCall(u)
     // `items.pop(i)` and `items.pop()`: "get and remove item i" (the last).
     if (method?.name === 'pop' && method.args.length <= 1) {
@@ -539,6 +665,8 @@ const HAND_VALUE = {
 /** Blockly's own statement blocks that are calls or assignments, by hand. */
 Object.assign(HAND, {
   ExpressionStatement(s) {
+    const call = this.call(s.children[0], false)
+    if (call) return call
     const method = methodCall(s.children[0])
     if (!method) return null
     // `items.pop(i)` on its own: "remove item i".
