@@ -14,6 +14,7 @@ pythonGenerator.INDENT = '    '
 // it comes back the same from Python.
 pythonGenerator.COMMENT_WRAP = Infinity
 
+import './builtins.js'
 import './basics.js'
 import './codex.js'
 import './codebot.js'

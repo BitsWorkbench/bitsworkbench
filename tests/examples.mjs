@@ -74,7 +74,7 @@ async function pick(id, title) {
 }
 
 /** Blocks whose Python does not come back as blocks yet (it stays as Python blocks). */
-const NO_WAY_BACK_YET = /^(lists_|text_join|procedures_)/
+const NO_WAY_BACK_YET = /^procedures_/
 
 const programs = []
 await fresh()

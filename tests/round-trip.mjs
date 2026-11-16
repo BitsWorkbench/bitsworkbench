@@ -44,8 +44,11 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
 
-/** Blocks whose way back comes in a later change: their Python stays as Python blocks. */
-const NOT_YET = ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length', 'text_join']
+/**
+ * Inputs a block needs filled to say what it is: `len(x)` of something
+ * unknown reads as a text's length, so "length of list" gets a list.
+ */
+const FILL = { lists_length: { VALUE: { block: { type: 'lists_create_with', extraState: { itemCount: 0 } } } } }
 
 // Helpers in the page: a block program's Python, and the same program back from it.
 await page.evaluate(() => {
@@ -102,13 +105,13 @@ async function board(id) {
 // ------------------------------------------------- every block, every choice
 for (const id of ['codebot', 'codex', 'codeair']) {
   await board(id)
-  const result = await page.evaluate((NOT_YET) => {
+  const result = await page.evaluate((FILL) => {
     const ws = window.openCodeBot.workspace.workspace
     const seen = new Set()
     const items = []
     for (const cat of ws.options.languageTree.contents) {
       for (const item of cat.contents || []) {
-        if (item.kind !== 'block' || NOT_YET.includes(item.type)) continue
+        if (item.kind !== 'block') continue
         if (['ocb_on_start', 'ocb_forever', 'ocb_python'].includes(item.type)) continue
         const key = item.type + JSON.stringify(item.extraState || {})
         if (seen.has(key)) continue
@@ -148,10 +151,18 @@ for (const id of ['codebot', 'codex', 'codeair']) {
       let combos = [{}]
       for (const d of drops) combos = combos.flatMap((c) => d.options.map((v) => ({ ...c, [d.name]: v })))
       for (const fields of combos) {
+        // A random place to take, remove, set or insert at: Blockly writes helper
+        // code for these, which comes back as Python blocks.
+        if (fields.WHERE === 'RANDOM' && fields.MODE !== 'GET') continue
         const block = { type: item.type, ...(item.extraState ? { extraState: item.extraState } : {}) }
-        block.inputs = { ...JSON.parse(JSON.stringify(item.inputs || {})), ...filled }
+        block.inputs = { ...JSON.parse(JSON.stringify(item.inputs || {})), ...filled, ...(FILL[item.type] || {}) }
         if (Object.keys(fields).length) block.fields = fields
-        const stmt = output ? { type: 'ocb_print', inputs: { TEXT: { block } } } : block
+        // The first, the last or a random item has no index.
+        if (['FIRST', 'LAST', 'RANDOM'].includes(fields.WHERE)) delete block.inputs.AT
+        // "remove" is a statement, not a value.
+        const statement = item.type === 'lists_getIndex' && fields.MODE === 'REMOVE'
+        if (statement) block.extraState = { isStatement: true }
+        const stmt = output && !statement ? { type: 'ocb_print', inputs: { TEXT: { block } } } : block
         const state = { blocks: { languageVersion: 0, blocks: [{ type: 'ocb_on_start', x: 40, y: 40, inputs: { DO: { block: stmt } } }] } }
         const r = window.rtTrip(state)
         trips++
@@ -162,7 +173,7 @@ for (const id of ['codebot', 'codex', 'codeair']) {
       }
     }
     return { failures, trips, blocks: items.length }
-  }, NOT_YET)
+  }, FILL)
   check(result.failures.length === 0, `${id}: ${result.blocks} blocks, ${result.trips} block and choice pairs, each back from its Python as itself`)
   for (const f of result.failures.slice(0, 12)) console.log(`        ${f}`)
 }
@@ -228,6 +239,18 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(each.shape[0].inputs.DO.type === 'controls_forEach' && each.shape[0].inputs.DO.fields.VAR === 'word', 'for word in words is "for each word in list"')
   const notVar = await from('print(RED)\n')
   check(notVar.shape[0].inputs.DO.inputs.TEXT.type !== 'variables_get', 'a name the program never sets is not a variable')
+}
+{
+  // Lists and joining text, written the way a student would.
+  const src = "items = [3, 1, 2]\nitems.append(4)\nitems[0] = 5\nprint(items[-1])\nprint(items.pop())\nprint(len(items))\nprint('n=' + str(len(items)) + '!')\n"
+  const r = await from(src)
+  const t = types(r.shape)
+  check(t.includes('lists_create_with') && t.includes('lists_setIndex') && t.includes('lists_getIndex') && t.includes('lists_length') && t.includes('text_join'),
+    `list, append, set, get, pop, length and join are blocks (${t.join(' ')})`)
+  check(!t.includes('ocb_python') && !t.includes('ocb_python_value'), 'with nothing left as Python')
+  check(r.back.endsWith(src.replace(/^items = /, 'items = ')) || r.back.includes(src), `and make the same Python again${r.back.includes(src) ? '' : ': ' + r.back.split('\n').slice(-8).join(' | ')}`)
+  const idx = await from('items = [1]\nprint(items[i])\n')
+  check(JSON.stringify(idx.shape).includes('"ocb_python_value"'), 'an index Python counts from 0 by a name (items[i]) stays Python, as the blocks count from 1')
 }
 {
   // The program's frame: header left out, a last `while True:` is forever.
