@@ -7,7 +7,7 @@
 // its origin. The figure's root sits at the world pose: under the drone's
 // centre at the height of its underside, facing +x.
 import * as THREE from 'three'
-import { Led, boxIn, reflect, yawIn } from './led.js'
+import { Led, boxIn, neoPixel, reflect, yawIn } from './led.js'
 import { Keys } from './keys.js'
 
 const UNDERSIDE = 0.004          // the model's lowest point above its origin
@@ -57,17 +57,15 @@ export class CodeAIRFigure {
     for (const [n, name] of [[0, 'ButtonB0'], [1, 'ButtonB1'], ['reset', 'ButtonRST']]) {
       this.keys.add(n, [gltf.scene.getObjectByName(name)], { reach: 0.0025, travel: 0.00025 })
     }
-    // Each LED seated on its part in the model: a lens over the part's top
-    // (or under a NeoPixel on the underside), as wide as its window and
-    // turned as the part is on the board (the NeoPixels sit at an angle on
-    // the arms).
+    // Each LED seated on its part in the model: a lens over the part's top,
+    // as wide as its window and turned as the part is on the board.
     const node = (name) => gltf.scene.getObjectByName(name)
-    const seat = (name, color, lens, glow, under) => {
+    const seat = (name, color, lens, glow) => {
       const part = node(name)
       const box = boxIn(this.body, part)
       const at = box.getCenter(new THREE.Vector3())
-      at.y = under ? box.min.y - lens[1] / 2 : box.max.y + lens[1] / 2
-      const led = new Led(this.body, at, lens, color, glow, under ? -1 : 1)
+      at.y = box.max.y + lens[1] / 2
+      const led = new Led(this.body, at, lens, color, glow)
       led.mesh.rotation.y = yawIn(this.body, part)
       return led
     }
@@ -76,7 +74,9 @@ export class CodeAIRFigure {
     // CHG lights while the battery charges on USB, and a simulated CodeAIR is
     // never on USB: it stays dark.
     seat('CHG', AMBER, [0.0007, 0.0003, 0.0012], 0.008)
-    this.pixels = PIXELS.map((name) => seat(name, 0xffffff, [0.0036, 0.0003, 0.0036], 0.016, name.endsWith('b')))
+    // the NeoPixels lit in the cup in each one's top (led.js), four on top
+    // and four under the board, their cups facing down
+    this.pixels = PIXELS.map((name) => neoPixel(this.body, node(name), name.endsWith('b') ? -1 : 1))
 
     const c = document.createElement('canvas')
     c.width = c.height = 64

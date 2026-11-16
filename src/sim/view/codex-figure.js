@@ -14,7 +14,7 @@
 // Two rotation arrows beside the board (an arc under it for tiltX, one at its
 // right for tiltY) are what a drag tilts it by; they stay put as it turns.
 import * as THREE from 'three'
-import { Light, glowSprite } from './led.js'
+import { Light, glowSprite, neoPixel } from './led.js'
 import { Keys } from './keys.js'
 
 export const CODEX_HEIGHT = 0.10    // m, the board's centre above the floor
@@ -110,7 +110,11 @@ export class CodeXFigure {
       }
       this.leds[n] = this._light(mesh, 7)
     }
-    for (let n = 0; n < 4; n++) this.pixels[n] = this._light(node(`Neo_${n}`), 14)
+    // the NeoPixels lit in the cup in each one's top (led.js)
+    for (let n = 0; n < 4; n++) {
+      const part = node(`Neo_${n}`)
+      this.pixels[n] = neoPixel(part.parent, part)
+    }
 
     // The screen: a texture of the program's pixels over the active area,
     // drawn as the backlight lights it.

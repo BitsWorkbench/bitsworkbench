@@ -80,11 +80,13 @@ export class CodeBotFigure {
       this.keys.add(n, [b.getObjectByName(`BTN_${n}`), b.getObjectByName(`BTN_${n}_cap`)], { reach: 0.045, travel: 0.005 })
     }
     // A 0603 LED, 2 mm across by 1.4 mm, standing 1 mm on the board: its
-    // base on the board's top face.
+    // base on the board's top face. Its glow is small and faint: the user
+    // LEDs are 5.1 mm apart, and each stays its own light over the digits
+    // printed beside it.
     const led = (group, x, z, color) => {
       // model (x left, z forward) to the body's frame after its rotation
       const at = new THREE.Vector3(z * U - AXLE_Z * U, (-AXLE_Y + BOARD_TOP) * U + LED_H / 2, -x * U)
-      this.leds[group].push(new Led(this.tilt, at, [0.0014, LED_H, 0.002], color, 0.018))
+      this.leds[group].push(new Led(this.tilt, at, [0.0014, LED_H, 0.002], color, 0.007, 1, { strength: 0.5 }))
     }
     USER.forEach(([x, z]) => led('user', x, z, RED))
     LS.forEach(([x, z]) => led('ls', x, z, GREEN))
