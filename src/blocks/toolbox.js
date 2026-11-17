@@ -8,6 +8,7 @@ import { t } from '../i18n/index.js'
 const num = (value) => ({ shadow: { type: 'math_number', fields: { NUM: value } } })
 const str = (text) => ({ shadow: { type: 'text', fields: { TEXT: text } } })
 const col = (name = 'RED') => ({ shadow: { type: 'ocb_color', fields: { COLOR: name } } })
+const bool = (on) => ({ shadow: { type: 'logic_boolean', fields: { BOOL: on ? 'TRUE' : 'FALSE' } } })
 
 const block = (type, inputs) => (inputs ? { kind: 'block', type, inputs } : { kind: 'block', type })
 
@@ -95,6 +96,7 @@ const generalTail = [
 const codexCategories = [
   category(t('cat.screen'), 'screen_category', [
     block('codex_show', { THING: str(t('sample.hi')) }),
+    block('codex_pic'),
     block('codex_print', { THING: str(t('sample.greeting')), COLOR: col('WHITE') }),
     block('codex_clear'),
     block('codex_draw_text', { TEXT: str(t('sample.score')), X: num(10), Y: num(10), COLOR: col('YELLOW') }),
@@ -115,6 +117,7 @@ const codexCategories = [
   category(t('cat.sound'), 'sound_category', [
     block('codex_note'),
     block('codex_tone', { FREQ: num(440), SECS: num(0.5) }),
+    block('codex_mp3', { FILE: str(t('sample.soundFile')) }),
     block('codex_song'),
     block('codex_sound_off'),
   ]),
@@ -142,13 +145,18 @@ const codebotCategories = [
     block('codebot_drive_for', { POWER: num(60), SECS: num(1) }),
     block('codebot_motor', { POWER: num(60) }),
     block('codebot_stop'),
+    block('codebot_motors_enable', { ON: bool(false) }),
   ]),
   category(t('cat.lights'), 'lights_category', [
     block('codebot_led'),
     block('codebot_leds_all'),
     block('codebot_leds_pattern'),
+    block('codebot_led_set', { NUM: num(0), ON: bool(true) }),
     block('codebot_ls_led'),
     block('codebot_ls_leds_all'),
+    block('codebot_ls_leds_pattern'),
+    block('codebot_ls_led_set', { NUM: num(0), ON: bool(true) }),
+    block('codebot_ls_leds_show'),
     block('codebot_prox_led'),
     block('codebot_pwr_led'),
     block('codebot_usb_led'),

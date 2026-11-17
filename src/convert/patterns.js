@@ -171,7 +171,9 @@ function combos(dropdowns) {
 }
 
 /** Text field markers: a word, and failing that, bits (for a field the generator filters). */
-const TEXT_MARKERS = [(name) => `zq${name}zq`, () => '10110100']
+// Bits fields keep only 1s and 0s and at most so many (8 for CodeBot's top
+// LEDs, 5 for its line sensor LEDs): markers they let through, longest first.
+const TEXT_MARKERS = [(name) => `zq${name}zq`, () => '10110100', () => '10110']
 
 function patternOf(block, item, ws, typed, inputs, output, combo) {
   const texts = typed.filter((t) => t.kind === 'text')
