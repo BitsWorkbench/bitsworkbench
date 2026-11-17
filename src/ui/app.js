@@ -1339,9 +1339,10 @@ export class App {
   /**
    * The Learn panel: a board switch, then that board's quick starts (its two
    * easiest examples) and, folded away, the rest of its examples; then the
-   * mission packs kept in this browser, and a button to open a pack file.
+   * mission packs that come with Codacious, those kept in this browser from
+   * a file, and a button to open a pack file.
    */
-  _learnHtml(device, moreOpen, packs) {
+  _learnHtml(device, moreOpen, { kept, builtins }) {
     const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
     const name = getTarget(device)?.name || device
     const boards = EXAMPLE_DEVICES.map(
@@ -1361,7 +1362,16 @@ export class App {
       <ol class="ex-list" start="${QUICK_STARTS + 1}" aria-label="${esc(t('examples.listLabel', { device: name }))}">${more}</ol></details>` : ''}
       <h3 class="learn-head learn-packs-head">${esc(t('learn.packsTitle'))}</h3>
       <p>${esc(t('learn.packsIntro'))}</p>
-      ${packs.length ? `<ul class="ex-list" aria-label="${esc(t('learn.packsTitle'))}">${packs.map((p) => `<li><button type="button" class="ex-item" data-pack="${esc(p.id)}"><span class="ex-num" aria-hidden="true">📘</span><span class="ex-text"><span class="ex-title">${esc(p.title)}</span><span class="ex-goal">${esc(p.brief)}</span></span></button></li>`).join('')}</ul>` : ''}
+      ${(() => {
+        const card = (attr, id, title, goal) =>
+          `<li><button type="button" class="ex-item" ${attr}="${esc(id)}"><span class="ex-num" aria-hidden="true">📘</span><span class="ex-text"><span class="ex-title">${esc(title)}</span><span class="ex-goal">${esc(goal)}</span></span></button></li>`
+        const ours = new Set(builtins.map((p) => p.id))
+        const cards = [
+          ...builtins.map((p) => card('data-builtin', p.id, p.title, t('learn.builtinGoal', { device: getTarget(p.board)?.name || p.board, brief: p.brief }))),
+          ...kept.filter((p) => !ours.has(p.id)).map((p) => card('data-pack', p.id, p.title, p.brief)),
+        ]
+        return cards.length ? `<ul class="ex-list" aria-label="${esc(t('learn.packsTitle'))}">${cards.join('')}</ul>` : ''
+      })()}
       <button type="button" class="btn btn-small btn-quiet learn-open-file" data-pack-file>${esc(t('learn.openFile'))}</button>`
   }
 
@@ -1372,9 +1382,11 @@ export class App {
   async _openLearn() {
     let device = this.workspace.targetId || this.pickedTarget
     if (!EXAMPLE_DEVICES.includes(device)) device = EXAMPLE_DEVICES[0]
-    const packs = await this.learn.packs().catch((err) => (console.warn('learn', err), []))
+    const [kept, builtins] = await Promise.all([this.learn.packs().catch((err) => (console.warn('learn', err), [])), this.learn.builtins()])
+    const packs = { kept, builtins }
     let chosen = null
     let pack = null
+    let builtin = null
     const closed = showModal({ title: t('learn.title'), bodyHtml: this._learnHtml(device, false, packs), confirmText: t('examples.close') })
     const dialog = $('modal')
     const onClick = (e) => {
@@ -1391,9 +1403,14 @@ export class App {
         chosen = item.dataset.example
         dialog.close('example')
       }
-      const kept = e.target.closest('[data-pack]')
-      if (kept) {
-        pack = kept.dataset.pack
+      const keptCard = e.target.closest('[data-pack]')
+      if (keptCard) {
+        pack = keptCard.dataset.pack
+        dialog.close('pack')
+      }
+      const ours = e.target.closest('[data-builtin]')
+      if (ours) {
+        builtin = builtins.find((p) => p.id === ours.dataset.builtin)
         dialog.close('pack')
       }
       if (e.target.closest('[data-pack-file]')) {
@@ -1406,6 +1423,7 @@ export class App {
     await closed
     dialog.removeEventListener('click', onClick)
     if (pack) return this.learn.open(pack)
+    if (builtin) return this.learn.openBuiltin(builtin)
     if (!chosen || !this._canWrite()) return
 
     const project = exampleProject(device, chosen)

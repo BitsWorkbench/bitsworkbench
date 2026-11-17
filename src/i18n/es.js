@@ -403,6 +403,8 @@ export default {
   'learn.opened': 'Se abrió «{title}»',
   'learn.badPack': '«{name}» no es un paquete de misiones que Codacious pueda abrir',
   'learn.gone': 'Ese paquete de misiones ya no está en este navegador',
+  'learn.unreachable': 'No se pudo cargar «{title}». Revisa tu conexión e inténtalo de nuevo.',
+  'learn.builtinGoal': '{device} · {brief}',
   'learn.paneLabel': 'Paquete de misiones',
   'learn.resizeLabel': 'Cambiar el tamaño del paquete de misiones',
   'learn.close': 'Cerrar el paquete de misiones',

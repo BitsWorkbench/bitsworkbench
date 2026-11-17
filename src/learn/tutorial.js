@@ -129,7 +129,8 @@ export class Tutorial extends EventTarget {
       .join('')
     return `<div class="learn-md">${this._md(pack.overview) || `<p>${esc(pack.brief)}</p>`}</div>
       <h3 class="learn-head">${esc(t('learn.missions'))}</h3>
-      <ol class="ex-list" aria-label="${esc(t('learn.missions'))}">${missions}</ol>`
+      <ol class="ex-list" aria-label="${esc(t('learn.missions'))}">${missions}</ol>
+      ${pack.licence ? `<p class="learn-licence">${esc(pack.licence)}</p>` : ''}`
   }
 
   _missionHtml({ mission: mi, step }) {

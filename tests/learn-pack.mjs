@@ -3,6 +3,7 @@
  * defaults filled in, each kind of mistake is named with where it is, and a
  * pack split in two joins back into one.
  */
+import { readFileSync } from 'node:fs'
 import { readPack, readRest, joinRest, PackError, FORMAT } from '../src/learn/pack.js'
 import { renderMarkdown } from '../src/learn/markdown.js'
 import { offersBlocks, greyShare, codeLines, MOST_GREY } from '../src/learn/offer.js'
@@ -153,6 +154,34 @@ console.log('A pack in two files')
   const lost = { ...rest, missions: [{ ...whole.missions[1], flow: [objective('T_B_1', { instructions: '![gone](nope.png)' })] }] }
   check('the rest\'s images are checked against the pack\'s', has(tryJoin(sampler, lost), 'no image nope.png'))
   check('a rest has only its own fields', has(problemsOf({ ...rest, title: 'More' }, readRest), 'title: not a field'))
+  const GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+  const own = { ...rest, assets: { 'motor.gif': GIF }, missions: [{ ...whole.missions[1], flow: [objective('T_B_1', { instructions: '![a motor](motor.gif) ![the LEDs](leds.png)' })] }] }
+  const withOwn = tryJoin(sampler, own)
+  check('a rest brings its own images, and uses the pack\'s', withOwn.length === 0, withOwn.join('; '))
+  const both = joinRest(readPack(JSON.stringify(sampler)), readRest(JSON.stringify(own)))
+  check('joined, the pack has both parts\' images', both.assets['motor.gif'] === GIF && both.assets['leds.png'] === PNG)
+  check('a rest\'s images are checked', has(problemsOf({ ...rest, assets: { 'x.svg': 'data:image/svg+xml;base64,AA==' } }, readRest), 'assets'))
+}
+
+console.log('The packs that come with Codacious')
+{
+  const dir = new URL('../public/learn/packs/', import.meta.url)
+  const index = JSON.parse(readFileSync(new URL('index.json', dir), 'utf8'))
+  check('the list names at least one pack', Array.isArray(index) && index.length > 0)
+  for (const entry of index) {
+    let pack = null
+    try {
+      pack = readPack(readFileSync(new URL(entry.file, dir), 'utf8'))
+    } catch (err) {
+      check(`${entry.file} reads`, false, (err.problems || [err.message]).slice(0, 5).join('; '))
+      continue
+    }
+    check(`${entry.file} reads, and is the pack the list says`, pack.id === entry.id && pack.title === entry.title && pack.brief === entry.brief && pack.board === entry.board)
+    check(`${entry.file} says its licence`, /CC BY-NC 4\.0/.test(pack.licence || ''))
+    const answered = pack.missions.flatMap((m) => m.flow.filter((o) => 'solution' in o).map((o) => o.id))
+    check(`${entry.file} carries no answer key (solution)`, answered.length === 0, answered.slice(0, 5).join(', '))
+    check(`${entry.file} is named in the folder's LICENSE`, readFileSync(new URL('LICENSE', dir), 'utf8').includes(entry.file))
+  }
 }
 
 console.log('A pack\'s Markdown, as HTML')

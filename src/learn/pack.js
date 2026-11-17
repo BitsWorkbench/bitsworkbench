@@ -32,6 +32,7 @@ export function readPack(text) {
     overview: [c.md, false],
     complete: [c.md, false],
     board: (v, at) => c.oneOf(v, at, BOARDS),
+    licence: [c.text, false],
     avatar: [c.asset, false],
     assets: [c.assets, false],
     missions: (v, at) => c.list(v, at, c.mission),
@@ -50,6 +51,7 @@ export function readRest(text) {
     format: c.format,
     id: c.text,
     continues: c.text,
+    assets: [c.assets, false],
     missions: (v, at) => c.list(v, at, c.mission),
   })
   c.finish()
@@ -58,21 +60,22 @@ export function readRest(text) {
 
 /**
  * A pack with its rest: the rest's missions after the pack's. The rest must
- * be this pack's and continue from its last mission; its board and assets
- * are the pack's.
+ * be this pack's and continue from its last mission; its board is the
+ * pack's, and its images are the pack's and its own.
  */
 export function joinRest(pack, rest) {
   const problems = []
   if (rest.id !== pack.id) problems.push(`id: the rest is of pack ${rest.id}, not ${pack.id}`)
   const last = pack.missions.at(-1)?.id
   if (rest.continues !== last) problems.push(`continues: the rest follows ${rest.continues}, but this pack ends with ${last}`)
-  const joined = { ...pack, missions: [...pack.missions, ...rest.missions] }
+  const assets = { ...pack.assets, ...rest.assets }
+  const joined = { ...pack, missions: [...pack.missions, ...rest.missions], ...(Object.keys(assets).length ? { assets } : {}) }
   const seen = new Map()
   allIds(joined).forEach(([id, at]) => (seen.has(id) ? problems.push(`${at}: id ${id} is also at ${seen.get(id)}`) : seen.set(id, at)))
   if (problems.length) throw new PackError(problems)
-  // The rest's Markdown may use the pack's images; it was checked without them.
+  // The rest's Markdown may use the pack's images and its own; it was checked without them.
   const c = new Checker()
-  c.assetNames = new Set(Object.keys(pack.assets || {}))
+  c.assetNames = new Set(Object.keys(assets))
   rest.missions.forEach((m, i) => c.mission(m, `missions[${pack.missions.length + i}]`))
   c.finish()
   return withDefaults(joined)

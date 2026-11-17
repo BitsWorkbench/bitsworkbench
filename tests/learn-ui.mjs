@@ -436,6 +436,23 @@ console.log('A click on a part of the board')
   check((await pane('.learn-goals li[data-met="true"]').count()) === 1, 'a click on the part the goal names meets it')
 }
 
+console.log('A pack that comes with Codacious')
+{
+  const index = await page.evaluate(() => fetch(new URL('learn/packs/index.json', document.baseURI)).then((r) => r.json()))
+  const first = index[0]
+  await page.click('#btn-learn')
+  await page.waitForFunction(() => document.getElementById('modal')?.open)
+  check((await page.locator('#modal [data-builtin]').count()) === index.length, `Learn lists the packs that come with Codacious (${index.map((p) => p.id).join(', ')})`)
+  check(await page.locator(`#modal [data-builtin="${first.id}"]`).innerText().then((s) => s.includes(first.title)), 'each card names its pack')
+  await page.click(`#modal [data-builtin="${first.id}"]`)
+  await page.waitForFunction((title) => !document.getElementById('learn-pane').hidden && document.querySelector('#learn-pane .learn-pack-title')?.textContent === title, first.title, { timeout: 30000 })
+  check((await pane('[data-mission]').count()) > 0, `it opens in the pane, with its missions (${await pane('[data-mission]').count()})`)
+  await page.click('#btn-learn')
+  await page.waitForFunction(() => document.getElementById('modal')?.open)
+  check((await page.locator(`#modal [data-pack="${first.id}"]`).count()) === 0, 'once kept, it is still one card, not two')
+  await page.keyboard.press('Escape')
+}
+
 await browser.close()
 server?.kill()
 if (problems.length) {

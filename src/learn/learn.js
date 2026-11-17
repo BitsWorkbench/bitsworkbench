@@ -94,6 +94,41 @@ export class Learn {
     return this.library.list()
   }
 
+  /**
+   * The packs that come with Codacious, from learn/packs/index.json:
+   * [{ id, file, title, brief, board }], or [] when it cannot be read.
+   */
+  async builtins() {
+    try {
+      const res = await fetch(new URL('learn/packs/index.json', document.baseURI))
+      const list = res.ok ? await res.json() : []
+      return Array.isArray(list) ? list.filter((p) => p && typeof p.id === 'string' && typeof p.file === 'string' && !/[/\\]/.test(p.file)) : []
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Open a pack that comes with Codacious: kept afresh from the site (an
+   * update replaces the copy kept before; progress and a second file opened
+   * for it stay), then opened where the student left it. Offline, the copy
+   * kept before opens.
+   */
+  async openBuiltin(entry) {
+    try {
+      const res = await fetch(new URL(`learn/packs/${entry.file}`, document.baseURI))
+      if (!res.ok) throw new Error(`${res.status}`)
+      await this.library.add(await res.text())
+    } catch (err) {
+      console.warn(`learn: ${entry.file}`, err)
+      if (!(await this.library.get(entry.id).catch(() => null))) {
+        toast({ kind: 'error', title: t('learn.unreachable', { title: entry.title }) })
+        return
+      }
+    }
+    await this.open(entry.id)
+  }
+
   /** Reopen the pack that was open before the page loaded, if any. */
   async restore() {
     const saved = this._saved()
