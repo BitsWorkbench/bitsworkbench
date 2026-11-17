@@ -63,7 +63,9 @@ export default defineConfig({
         // other rooms are fetched when chosen, and kept from then on: a
         // class need not download three rooms it may never visit.
         globPatterns: ['**/*.{js,css,html,svg,png,gif,cur,mp3,woff,woff2,webmanifest,wasm,glb,json,webp}'],
-        globIgnores: ['**/sim-assets/env/!(gym)/**'],
+        // Mission packs are fetched when opened, and kept by Learn itself
+        // (IndexedDB); only their list comes with the app.
+        globIgnores: ['**/sim-assets/env/!(gym)/**', '**/learn/packs/!(index).json'],
         runtimeCaching: [{
           urlPattern: /\/sim-assets\/env\//,
           handler: 'CacheFirst',

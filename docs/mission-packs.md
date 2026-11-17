@@ -199,5 +199,24 @@ can be shared freely. The second file continues the first:
 ```
 
 `id` is the pack's own, `continues` the id of the last mission in the first file, and
-`missions` the missions after it. It has no other fields. Opened with the first part, its
-missions follow the first part's, and progress carries across, since it is kept by id.
+`missions` the missions after it; `assets` (optional) holds the images its missions use that
+the first file does not have. It has no other fields. Opened with the first part, its missions
+follow the first part's, its images join the first part's, and progress carries across, since
+it is kept by id.
+
+## The packs that come with Codacious
+
+`public/learn/packs/` holds the packs Codacious offers in Learn, beside `index.json`, their list:
+
+```json
+[{ "id": "PWR", "file": "PWR.json", "title": "Python with Robots", "brief": "One line", "board": "codebot" }]
+```
+
+`id`, `title`, `brief` and `board` are the pack's own (a test checks they match). Opening one
+fetches it and keeps it in the browser, as a pack opened from a file is kept, so a newer
+version on the site replaces the one kept before, progress stays, and it opens offline once it
+has been opened online. The app does not download the packs themselves until one is opened.
+
+These are the first missions of Firia Labs' curriculum packs (their samplers). They are made
+in a private repository by porting the CodeSpace curriculum, and the rest of each pack is a
+second file a school is given.
