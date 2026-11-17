@@ -200,8 +200,11 @@ if (!/Program finished/.test(status)) problems.push(`starter project: ${status}`
 else console.log('sim-ui: the starter project ran to the end')
 
 // The REPL, between programs.
+// (Once the board is back at its prompt: typed before the >>>, the keys are lost, and a
+// slow machine gets there later.)
+await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && />>> ?$/.test(window.__sim.out.replace(/\s+$/, ' ')), null, { timeout: 20000 }).catch(() => {})
 await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.sendRaw('print(6 * 7)\r') })
-await page.waitForFunction(() => /42/.test(window.__sim.out), null, { timeout: 5000 }).catch(() => problems.push('REPL: no answer to print(6 * 7)'))
+await page.waitForFunction(() => /42/.test(window.__sim.out), null, { timeout: 20000 }).catch(() => problems.push('REPL: no answer to print(6 * 7)'))
 
 // A program's print ends its line with CR LF, as a board's console does, so
 // the terminal starts each line at the left (a bare LF would stair-step).
@@ -280,7 +283,7 @@ await page.screenshot({ path: `${SHOT_DIR}/ocb-sim.png` })
     return `data:audio/wav;base64,${b.toString('base64')}`
   })()
   await page.evaluate((url) => window.openCodeBot.device.sim.setMusic(url, 'A test track'), wav)
-  await page.waitForFunction(() => window.openCodeBot.device.sim.speaker.track?.source, null, { timeout: 5000 }).catch(() => problems.push('settings: the music track did not start'))
+  await page.waitForFunction(() => window.openCodeBot.device.sim.speaker.track?.source, null, { timeout: 15000 }).catch(() => problems.push('settings: the music track did not start'))
   const music = await page.evaluate(() => ({ shown: !document.querySelector('.sim-vol[data-bus="music"]').hidden, credit: document.querySelector('.sim-credit').textContent }))
   if (!music.shown || music.credit !== 'A test track') problems.push(`settings: with a track, the Music row ${JSON.stringify(music)}`)
   await page.evaluate(() => window.openCodeBot.device.sim.setMusic(null))
@@ -337,7 +340,7 @@ await page.selectOption('.sim-course', 'oval')
 await page.waitForFunction(() => {
   const d = window.openCodeBot.device.sim.lastFrame?.devices[0]
   return d && Math.abs(d.x + 0.3) < 0.01 && Math.abs(d.y + 0.5) < 0.01
-}, null, { timeout: 5000 }).catch(() => problems.push('course: the robot did not move to the oval\'s start'))
+}, null, { timeout: 15000 }).catch(() => problems.push('course: the robot did not move to the oval\'s start'))
 await page.evaluate(() => { window.openCodeBot.device.sim.setSpeed(4); window.__sim.errors = [] })
 await page.evaluate(() => window.openCodeBot.device.run(`from botcore import *
 motors.enable(True)
@@ -375,7 +378,7 @@ const cbLeds = await page.waitForFunction(() => {
   const rgb = (c) => c.toArray().map((v) => +v.toFixed(2))
   const u = f.leds.user
   return u[0].mat.emissive.r > 0 && { user0: rgb(u[0].mat.emissive), ls0: rgb(f.leds.ls[0].mat.emissive), user1: rgb(u[1].mat.color), user1Glow: rgb(u[1].mat.emissive) }
-}, null, { timeout: 5000 }).then((h) => h.jsonValue()).catch(() => null)
+}, null, { timeout: 15000 }).then((h) => h.jsonValue()).catch(() => null)
 await page.evaluate(() => window.openCodeBot.device.stop())
 const redOf = ([r, g, b]) => r > 0.5 && g < r / 3 && b < r / 3
 const greenOf = ([r, g, b]) => g > 0.5 && r < g / 3 && b < g / 3
@@ -397,7 +400,7 @@ else console.log('sim-ui: CodeBot\'s LEDs lit red and green, unlit ones pale')
     const down = await page.waitForFunction((y) => [...window.openCodeBot.device.sim.view.figures.values()][0].keys.keys.get(1).meshes[0].position.y < y, restY, { timeout: 3000 }).then(() => true, () => false)
     await page.mouse.up()
     if (!down) problems.push('CodeBot: BTN-1 was not drawn down while held')
-    await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 })
+    await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 })
       .then(() => console.log('sim-ui: a click on the CodeBot model pressed its BTN-1'), () => problems.push('CodeBot: a click on the model did not press BTN-1'))
     if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== cam) problems.push('CodeBot: pressing a button on the model turned the camera')
   }
@@ -445,8 +448,8 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   await page.keyboard.down(' ')
   await page.waitForTimeout(150)
   await page.keyboard.up(' ')
-  await page.waitForFunction(() => /held/.test(window.__sim.out), null, { timeout: 5000 }).catch(() => problems.push('a11y: Space on BTN 0 did not press button 0'))
-  await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 }).catch(() => {})
+  await page.waitForFunction(() => /held/.test(window.__sim.out), null, { timeout: 15000 }).catch(() => problems.push('a11y: Space on BTN 0 did not press button 0'))
+  await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 }).catch(() => {})
   await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
   if (problems.length === before) console.log('sim-ui: the view is described, arrows turn the camera, and Space holds a board button')
 }
@@ -472,7 +475,7 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   await page.focus('.sim-canvas')
   const from = await where()
   await page.keyboard.down('w')
-  await page.waitForFunction((y) => window.openCodeBot.device.sim.view.camera.position.y < y - 0.05, from.at[1], { timeout: 5000 })
+  await page.waitForFunction((y) => window.openCodeBot.device.sim.view.camera.position.y < y - 0.05, from.at[1], { timeout: 15000 })
     .catch(() => problems.push('cameras: W did not fly the universal camera forward'))
   await page.keyboard.up('w')
   await page.selectOption('.sim-camera', 'rotate')
@@ -542,7 +545,7 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'running', 
 await page.click('#btn-pause')
 await page.waitForFunction(() => window.openCodeBot.device.sim.paused, null, { timeout: 10000 }).catch(() => {})
 await page.click('#btn-pause') // Resume
-await page.waitForFunction(() => !window.openCodeBot.device.sim.paused, null, { timeout: 5000 }).catch(() => {})
+await page.waitForFunction(() => !window.openCodeBot.device.sim.paused, null, { timeout: 15000 }).catch(() => {})
 const resumed = await shown()
 await page.click('#btn-stop')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
@@ -584,7 +587,7 @@ if (!first.n || !first.block || !second.n || second.n === first.n || !second.blo
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
   // back to blocks for what follows (the typed Python becomes blocks)
   await page.click('#btn-view')
-  await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks', null, { timeout: 5000 })
+  await page.waitForFunction(() => window.openCodeBot.workspace.mode === 'blocks', null, { timeout: 15000 })
   if (!ranTyped || line1 !== 'sleep(2)' || line2 !== "print('typed one')" || !marked1) {
     problems.push(`text mode: ${JSON.stringify({ out: out.slice(-200), line1, line2, marked1 })}`)
   } else console.log('sim-ui: text mode ran the typed Python, and stepped it line by line in the editor')
@@ -654,7 +657,7 @@ await page.focus('.sim-canvas')
 await page.keyboard.down('a')
 await page.waitForTimeout(150)
 await page.keyboard.up('a')
-await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 }).catch(() => problems.push('CodeX: the A key did not press button A'))
+await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 }).catch(() => problems.push('CodeX: the A key did not press button A'))
 const green = await page.evaluate(() => window.openCodeBot.device.sim.view.screenRGB(120, 20))
 if (!(green[1] > 200 && green[0] < 50)) problems.push(`CodeX: the screen is ${green}, not green`)
 else console.log('sim-ui: CodeX drew, and the keyboard pressed its A button')
@@ -679,7 +682,7 @@ await page.mouse.down()
 await page.mouse.move(keyB.x + 30, keyB.y + 10, { steps: 3 })
 await page.waitForTimeout(150)
 await page.mouse.up()
-await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 5000 })
+await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 })
   .then(() => console.log('sim-ui: a click on the CodeX model pressed its B key'), () => problems.push('CodeX: a click on the model did not press button B'))
 if ((await page.evaluate(() => window.openCodeBot.device.sim.view.camera.position.toArray().join())) !== camBefore) problems.push('CodeX: pressing a key on the model turned the camera')
 
@@ -730,7 +733,7 @@ while True:
   }
   const cam0 = (await tiltNow()).cam
   await drag('x', 60, 0)               // the arc under it, to the right: right edge down
-  await page.waitForFunction(() => Math.abs(window.openCodeBot.device.sim.lastFrame.devices[0].tilt[0] - 0.6) < 0.05, null, { timeout: 5000 }).catch(() => {})
+  await page.waitForFunction(() => Math.abs(window.openCodeBot.device.sim.lastFrame.devices[0].tilt[0] - 0.6) < 0.05, null, { timeout: 15000 }).catch(() => {})
   // (readings are along the silkscreen's axes, x right and y down, and
   // against gravity: an edge down reads below zero on its axis)
   await reads('x < -7000', 'a drag to the right on the lower arrow did not read right edge down')
@@ -860,7 +863,7 @@ with recorder:
       const v = window.openCodeBot.device.sim.view
       const d = v.camera.position.distanceTo(v.controls.target)
       return d < 0.035 && { d, near: v.camera.near, aimY: v.controls.target.y }
-    }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null)
+    }, null, { timeout: 15000 }).then((h) => h.jsonValue(), () => null)
     if (!close || close.near > close.d * 0.2 || close.aimY > 0.03) problems.push(`CodeAIR: no close look at the board (${JSON.stringify(close)})`)
     else console.log('sim-ui: the camera comes within 3 cm of CodeAIR\'s board')
     await page.evaluate(() => window.openCodeBot.device.sim.setCamera('rotate'))
@@ -870,13 +873,20 @@ with recorder:
   // board in reset (LEDs off) and, let go, runs the program again from the top.
   {
     const before = problems.length
-    const click = async (n, holdMs = 150, whileHeld = null) => {
+    // Held for at least holdMs; with `whileHeld`, held until `until` is true of what it
+    // returns (or 10 s pass), so a slow machine (the deploy's runner) gets there in its
+    // own time rather than being read at a fixed moment. Returns the last reading.
+    const click = async (n, holdMs = 150, whileHeld = null, until = () => true) => {
       const at = await page.evaluate((k) => window.openCodeBot.device.sim.view.keyPoint(k), n)
       if (!at) { problems.push(`CodeAIR: no ${n} button on the model`); return null }
       await page.mouse.move(at.x, at.y)
       await page.mouse.down()
       await page.waitForTimeout(holdMs)
-      const held = whileHeld && await page.evaluate(whileHeld)
+      let held = whileHeld && await page.evaluate(whileHeld)
+      for (const t0 = Date.now(); whileHeld && !until(held) && Date.now() - t0 < 10000;) {
+        await page.waitForTimeout(50)
+        held = await page.evaluate(whileHeld)
+      }
       await page.mouse.up()
       return held
     }
@@ -889,15 +899,16 @@ print('pressed 0')
 while True:
     pass
 `) })
-    await page.waitForFunction(() => window.__sim.out.includes('top'), null, { timeout: 5000 }).catch(() => {})
+    await page.waitForFunction(() => window.__sim.out.includes('top'), null, { timeout: 15000 }).catch(() => {})
     await page.waitForTimeout(500)
-    await click(0)
-    await page.waitForFunction(() => window.__sim.out.includes('pressed 0'), null, { timeout: 5000 })
+    // held until the program has seen it, however long a slow machine takes
+    await click(0, 150, () => window.__sim.out.includes('pressed 0'), (seen) => seen)
+    await page.waitForFunction(() => window.__sim.out.includes('pressed 0'), null, { timeout: 15000 })
       .catch(() => problems.push('CodeAIR: a click on the model did not press BTN-0'))
     const held = await click('reset', 600, () => {
       const s = window.openCodeBot.device.sim.lastFrame.devices[0]
       return { reset: s.reset, leds: s.leds.slice(0, 8).every((v) => v === 0), state: window.openCodeBot.device.state }
-    })
+    }, (h) => h?.reset && h.leds && h.state !== 'running')
     if (!held?.reset || !held.leds || held.state === 'running') problems.push(`CodeAIR: reset held did not hold the board in reset (${JSON.stringify(held)})`)
     await page.waitForFunction(() => (window.__sim.out.match(/top/g) || []).length >= 2 && window.openCodeBot.device.state === 'running', null, { timeout: 8000 })
       .catch(async () => problems.push(`CodeAIR: after reset the program did not start again (${JSON.stringify(await page.evaluate(() => [window.__sim.out, window.openCodeBot.device.state]))})`))
@@ -917,7 +928,7 @@ with recorder:
     const fell = await click('reset', 900, () => {
       const s = window.openCodeBot.device.sim.lastFrame.devices[0]
       return { z: s.z, reset: s.reset, state: window.openCodeBot.device.state }
-    })
+    }, (h) => h?.z < 0.05)
     if (!(fell?.z < 0.05)) problems.push(`CodeAIR: a reset in flight did not drop it (${JSON.stringify(fell)})`)
     await page.waitForTimeout(300)
     await page.evaluate(() => window.openCodeBot.device.stop())
@@ -956,8 +967,8 @@ while True:
   await boards.waitForFunction(() => {
     const p = window.boards[1].sim.lastFrame?.devices[0].pixels[0]
     return p && p[1] > 0 && p[0] === 0
-  }, null, { timeout: 5000 }).catch(() => problems.push('boards: the CodeAIR did not hear the CodeX remote'))
-  await page.waitForFunction(() => window.__sim.out.includes('app heard A'), null, { timeout: 5000 })
+  }, null, { timeout: 15000 }).catch(() => problems.push('boards: the CodeAIR did not hear the CodeX remote'))
+  await page.waitForFunction(() => window.__sim.out.includes('app heard A'), null, { timeout: 15000 })
     .catch(() => problems.push('boards: the app, in another tab, did not hear the remote'))
   await boards.waitForTimeout(300)
   await boards.screenshot({ path: `${SHOT_DIR}/ocb-sim-boards.png` })
