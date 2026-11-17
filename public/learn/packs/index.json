@@ -5,5 +5,19 @@
     "title": "Python with Robots",
     "brief": "Use the CodeBot to build real-world projects with code.",
     "board": "codebot"
+  },
+  {
+    "id": "LCX",
+    "file": "LCX.json",
+    "title": "Python with CodeX",
+    "brief": "Learn Python fundamentals through fun projects with the CodeX.",
+    "board": "codex"
+  },
+  {
+    "id": "FLY",
+    "file": "FLY.json",
+    "title": "Fly with Python",
+    "brief": "Learn Python fundamentals as you explore the world of autonomous drones with CodeAIR",
+    "board": "codeair"
   }
 ]
