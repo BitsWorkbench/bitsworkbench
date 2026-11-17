@@ -16,6 +16,7 @@
 import * as THREE from 'three'
 import { Light, glowSprite, neoPixel } from './led.js'
 import { Keys } from './keys.js'
+import { Parts, loadParts } from './parts.js'
 
 export const CODEX_HEIGHT = 0.10    // m, the board's centre above the floor
 
@@ -67,8 +68,9 @@ export class CodeXFigure {
   }
 
   async load(loader, base) {
-    const gltf = await loader.loadAsync(`${base}models/codex.glb`)
+    const [gltf, parts] = await Promise.all([loader.loadAsync(`${base}models/codex.glb`), loadParts(`${base}models/codex.parts.json`)])
     const model = gltf.scene
+    this.parts = new Parts(model, parts)
     this.body.add(model)
     this.root.updateMatrixWorld(true)
     const node = (name) => model.getObjectByName(name)
@@ -227,6 +229,11 @@ export class CodeXFigure {
   // The key a ray meets, or -1.
   keyAt(raycaster) {
     return this.keys.keyAt(raycaster)
+  }
+
+  // The part a ray meets, by the CAD's name, or null (parts.js).
+  partAt(raycaster) {
+    return this.parts?.at(raycaster) ?? null
   }
 
   // A new picture for the screen: RGB565 pixels, top row first.

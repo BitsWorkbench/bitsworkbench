@@ -413,6 +413,29 @@ check(slow.ticks >= 3, `the page kept running meanwhile (${slow.ticks} timer tic
 check(slow.after === true, 'the next regex is tested as usual')
 check(slow.again === false, 'and the slow one is never tried again')
 
+console.log('A click on a part of the board')
+{
+  const PICK = {
+    format: 1,
+    id: 'PICK',
+    title: 'Pick pack',
+    brief: 'Parts',
+    board: 'codebot',
+    missions: [{ id: 'PICK_M', title: 'Parts', flow: [{ type: 'objective', id: 'PICK_1', title: 'Find the speaker', instructions: 'Click it.', goals: [{ md: 'Click the speaker', check: { pick: '^Cylinder$' } }] }] }],
+  }
+  await openPackFile(file('pick.json', PICK))
+  await page.waitForFunction(() => document.querySelector('#learn-pane .learn-pack-title')?.textContent === 'Pick pack')
+  await pane('[data-mission="0"]').click()
+  await pane('[data-learn="next"]').click()
+  const fire = (name) => page.evaluate((name) => window.openCodeBot.device.sim.dispatchEvent(new CustomEvent('pick', { detail: name })), name)
+  await fire('Cylinder.015')
+  await page.waitForTimeout(400)
+  check((await pane('.learn-goals li[data-met="true"]').count()) === 0, 'a click on another part does not meet it')
+  await fire('Cylinder')
+  await page.waitForFunction(() => document.querySelector('#learn-pane .learn-goals li[data-met="true"]'), null, { timeout: 5000 }).catch(() => {})
+  check((await pane('.learn-goals li[data-met="true"]').count()) === 1, 'a click on the part the goal names meets it')
+}
+
 console.log('A pack that comes with Codacious')
 {
   const index = await page.evaluate(() => fetch(new URL('learn/packs/index.json', document.baseURI)).then((r) => r.json()))
