@@ -213,6 +213,23 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(!JSON.stringify(own.shape).includes('ocb_wait'), 'a name the program sets itself is not the import')
   const plain = await from('sleep(1)\n')
   check(!JSON.stringify(plain.shape).includes('ocb_wait'), 'without the import, sleep(1) is not the wait block')
+  // Anything else binding the name, or the module's name, keeps the program's own Python
+  // (a variable named time would hide the import time the blocks write).
+  const shadows = {
+    'a variable named time': 'from time import sleep\nsleep(1)\ntime = 3\nprint(time)\n',
+    'a loop variable named time': 'from time import sleep\nfor time in range(2):\n    sleep(1)\n',
+    'a def named time': 'from time import sleep\ndef time():\n    return 1\nsleep(1)\n',
+    'a nested def named sleep': 'from time import sleep\ndef f():\n    def sleep(x):\n        print(x)\n    sleep(1)\nf()\n',
+    'a tuple assignment': 'from time import sleep\na, sleep = 1, print\nsleep(1)\n',
+    'a class named sleep': 'from time import sleep\nclass sleep:\n    pass\nsleep(1)\n',
+    'another import of the name': 'from time import sleep\nimport os as sleep\nsleep(1)\n',
+    'except ... as sleep': 'from time import sleep\ntry:\n    pass\nexcept Exception as sleep:\n    pass\nsleep(1)\n',
+    'sleep passed as a value': 'from time import sleep\nf = sleep\nsleep(1)\n',
+  }
+  for (const [what, src] of Object.entries(shadows)) {
+    const s = await from(src)
+    check(!/\btime\.sleep\(/.test(s.back) && !JSON.stringify(s.shape).includes('ocb_wait'), `${what}: sleep stays as written`)
+  }
 }
 {
   // A block may leave out what its library defaults (define.js omit), meaning the same.
@@ -227,6 +244,8 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(r.back.includes("pixels.set(0, RED, brightness=10)") && r.back.includes("display.print('Hi', WHITE)"), 'and they write what they mean in full')
   const odd = await from('from codex import *\npixels.set(0, RED, glow=3)\n')
   check(!JSON.stringify(odd.shape).includes('codex_pixel_set'), 'an argument the block does not know stays Python')
+  const wrong = await from('from codex import *\npixels.fill(brightness=20, RED)\npixels.set(0, RED, brightness=5, brightness=50)\n')
+  check(!/codex_pixel(s_fill|_set)/.test(JSON.stringify(wrong.shape)), 'a call Python would refuse (a positional after a keyword, a keyword twice) stays as typed')
   await board('codebot')
 }
 {

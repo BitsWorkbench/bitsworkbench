@@ -67,7 +67,8 @@ export function installCodeTrek(blockWorkspace, { used }) {
 function flyoutOf(trek, targetId) {
   // Every chunk's imports, which go at the top of the student's program: one
   // chunk's `from time import sleep` makes the next one's `sleep(1)` a wait block.
-  const imports = trek.flatMap((chunk) => chunk.python.match(/^(from|import)\s.*$/gm) || []).join('\n')
+  // (An import in brackets may run over several lines.)
+  const imports = trek.flatMap((chunk) => chunk.python.match(/^(from|import)\s[^\n(]*(\([^)]*\))?.*$/gm) || []).join('\n')
   return trek.flatMap((chunk, i) => {
     const label = { kind: 'label', text: caption(chunk.md, i + 1) }
     const stacks = stacksOf(chunk.python, targetId, imports)
@@ -83,7 +84,7 @@ function flyoutOf(trek, targetId) {
  * have no block (the blocks add their own), but say what names mean.
  */
 function stacksOf(python, targetId, imports) {
-  const r = pythonToBlocks(python.replace(/^(from|import)\s.*$/gm, ''), targetId, { imports })
+  const r = pythonToBlocks(python.replace(/^(from|import)\s[^\n(]*(\([^)]*\))?.*$/gm, ''), targetId, { imports })
   if (!r.ok) return []
   const names = Object.fromEntries((r.state.variables || []).map((v) => [v.id, v]))
   const stacks = []

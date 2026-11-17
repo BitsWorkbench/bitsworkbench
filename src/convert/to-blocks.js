@@ -51,9 +51,7 @@ export function pythonToBlocks(source, targetId, { imports = '' } = {}) {
   // chunk, whose imports go at the top of the student's program).
   const outside = imports ? tree(imports).root : null
   ctx.imported = new Map([...(outside && !outside.error ? importedNames(statementsOf(outside), imports) : []), ...importedNames(statementsOf(root), source)])
-  for (const name of [...ctx.imported.keys()]) {
-    if (ctx.assigned.has(name) || statementsOf(root).some((s) => functionName(s) === name)) ctx.imported.delete(name)
-  }
+  for (const [name, full] of [...ctx.imported]) if (!aliasHolds(root, source, name, full)) ctx.imported.delete(name)
 
   let top = statementsOf(root)
   // The header the blocks make: pulled out now, put back below if the
@@ -133,6 +131,42 @@ function importedNames(stmts, source) {
     }
   }
   return out
+}
+
+/**
+ * Whether `sleep` (imported as `time.sleep`) can be read as `time.sleep`
+ * everywhere: apart from import lines, the program only ever calls `sleep`
+ * (no assignment, parameter, def, class, loop variable, `as`, or use as a
+ * value, in any scope), no other import binds it, and the program never
+ * binds `time` itself (a variable named `time` would hide the `import time`
+ * the blocks write). Whatever is not plainly one of these keeps its Python.
+ */
+function aliasHolds(root, source, name, full) {
+  const module = full.split('.')[0]
+  let ok = true
+  let bindings = 0
+  const walk = (node, parent) => {
+    if (!ok) return
+    if (node.name === 'ImportStatement') {
+      const text = source.slice(node.from, node.to).replace(/#[^\n]*/g, '').replace(/\s+/g, ' ').trim()
+      const names = (node.children || []).filter((c) => c.name === 'VariableName').map((c) => c.text)
+      if (names.includes(name)) bindings++
+      // `import time` or `from time import ...` leave the module's name as it is; anything else naming it does not.
+      if (names.includes(module) && !new RegExp(`^(import ${module}|from ${module}(\\.[\\w.]+)? import .*)$`).test(text)) ok = false
+      if (/^import /.test(text) && names.includes(name)) ok = false
+      return
+    }
+    if (node.name === 'VariableName') {
+      const callee = parent?.name === 'CallExpression' && parent.children[0] === node
+      const object = parent?.name === 'MemberExpression' && parent.children[0] === node
+      if (node.text === name && !callee) ok = false
+      if (node.text === module && !object) ok = false
+      return
+    }
+    for (const c of node.children || []) walk(c, node)
+  }
+  walk(root, null)
+  return ok && bindings <= 1
 }
 
 /**
@@ -1010,9 +1044,12 @@ function argsOf(list) {
   const keyword = new Map()
   for (let i = 0; i < items.length; i++) {
     if (items[i + 1]?.name === 'AssignOp') {
+      // A keyword given twice is an error in Python: it stays Python, as typed.
+      if (keyword.has(items[i].text)) return null
       keyword.set(items[i].text, items[i + 2])
       i += 2
-    } else positional.push(items[i])
+    } else if (keyword.size) return null // a positional argument after a keyword: an error too
+    else positional.push(items[i])
   }
   return { positional, keyword }
 }
