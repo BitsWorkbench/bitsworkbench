@@ -178,6 +178,8 @@ console.log('The packs that come with Codacious')
     }
     check(`${entry.file} reads, and is the pack the list says`, pack.id === entry.id && pack.title === entry.title && pack.brief === entry.brief && pack.board === entry.board)
     check(`${entry.file} says its licence`, /CC BY-NC 4\.0/.test(pack.licence || ''))
+    const answered = pack.missions.flatMap((m) => m.flow.filter((o) => 'solution' in o).map((o) => o.id))
+    check(`${entry.file} carries no answer key (solution)`, answered.length === 0, answered.slice(0, 5).join(', '))
     check(`${entry.file} is named in the folder's LICENSE`, readFileSync(new URL('LICENSE', dir), 'utf8').includes(entry.file))
   }
 }
