@@ -225,6 +225,7 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
     'another import of the name': 'from time import sleep\nimport os as sleep\nsleep(1)\n',
     'except ... as sleep': 'from time import sleep\ntry:\n    pass\nexcept Exception as sleep:\n    pass\nsleep(1)\n',
     'sleep passed as a value': 'from time import sleep\nf = sleep\nsleep(1)\n',
+    'time.sleep replaced': 'from time import sleep\nsleep(1)\ntime.sleep = print\nsleep(2)\n',
   }
   for (const [what, src] of Object.entries(shadows)) {
     const s = await from(src)

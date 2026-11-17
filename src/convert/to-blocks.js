@@ -51,7 +51,9 @@ export function pythonToBlocks(source, targetId, { imports = '' } = {}) {
   // chunk, whose imports go at the top of the student's program).
   const outside = imports ? tree(imports).root : null
   ctx.imported = new Map([...(outside && !outside.error ? importedNames(statementsOf(outside), imports) : []), ...importedNames(statementsOf(root), source)])
-  for (const [name, full] of [...ctx.imported]) if (!aliasHolds(root, source, name, full)) ctx.imported.delete(name)
+  // (The outside imports count too: the same name imported twice is not one meaning.)
+  const extra = outside && !outside.error ? [{ ...outside, src: imports }] : []
+  for (const [name, full] of [...ctx.imported]) if (!aliasHolds(root, source, name, full, extra)) ctx.imported.delete(name)
 
   let top = statementsOf(root)
   // The header the blocks make: pulled out now, put back below if the
@@ -141,19 +143,24 @@ function importedNames(stmts, source) {
  * binds `time` itself (a variable named `time` would hide the `import time`
  * the blocks write). Whatever is not plainly one of these keeps its Python.
  */
-function aliasHolds(root, source, name, full) {
+function aliasHolds(root, source, name, full, extra = []) {
   const module = full.split('.')[0]
   let ok = true
   let bindings = 0
-  const walk = (node, parent) => {
+  const walk = (node, parent, src) => {
     if (!ok) return
     if (node.name === 'ImportStatement') {
-      const text = source.slice(node.from, node.to).replace(/#[^\n]*/g, '').replace(/\s+/g, ' ').trim()
+      const text = src.slice(node.from, node.to).replace(/#[^\n]*/g, '').replace(/\s+/g, ' ').trim()
       const names = (node.children || []).filter((c) => c.name === 'VariableName').map((c) => c.text)
       if (names.includes(name)) bindings++
       // `import time` or `from time import ...` leave the module's name as it is; anything else naming it does not.
       if (names.includes(module) && !new RegExp(`^(import ${module}|from ${module}(\\.[\\w.]+)? import .*)$`).test(text)) ok = false
       if (/^import /.test(text) && names.includes(name)) ok = false
+      return
+    }
+    // `time.sleep = ...` or `del time.sleep`: then `sleep` and `time.sleep` part ways.
+    if ((node.name === 'AssignStatement' || node.name === 'UpdateStatement' || node.name === 'DeleteStatement') && targetsModule(node, module)) {
+      ok = false
       return
     }
     if (node.name === 'VariableName') {
@@ -163,10 +170,19 @@ function aliasHolds(root, source, name, full) {
       if (node.text === module && !object) ok = false
       return
     }
-    for (const c of node.children || []) walk(c, node)
+    for (const c of node.children || []) walk(c, node, src)
   }
-  walk(root, null)
+  walk(root, null, source)
+  for (const e of extra) walk(e, null, e.src)
   return ok && bindings <= 1
+}
+
+/** Whether a statement assigns to, or deletes, something of `module` (`time.sleep = print`). */
+function targetsModule(s, module) {
+  const op = s.children.findIndex((c) => c.name === 'AssignOp' || c.name === 'UpdateOp')
+  const targets = s.name === 'DeleteStatement' ? s.children : s.children.slice(0, op < 0 ? 0 : op)
+  const holds = (n) => (n.name === 'MemberExpression' && n.children[0]?.name === 'VariableName' && n.children[0].text === module) || (n.children || []).some(holds)
+  return targets.some(holds)
 }
 
 /**
