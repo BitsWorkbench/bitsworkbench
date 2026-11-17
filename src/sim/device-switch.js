@@ -52,7 +52,6 @@ export class DeviceSwitch extends EventTarget {
 
   disconnect() { return this.active.disconnect() }
   run(source, opts) { return this.active.run(source, opts) }
-  writeFile(name, contents) { return this.active.writeFile ? this.active.writeFile(name, contents) : Promise.resolve(false) }
   stop(opts) { return this.active.stop(opts) }
   sendRaw(data) { return this.active.sendRaw(data) }
   writeFile(name, contents) { return this.active.writeFile(name, contents) }

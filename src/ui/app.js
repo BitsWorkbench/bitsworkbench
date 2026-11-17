@@ -289,7 +289,10 @@ export class App {
     try {
       found = await companionsOf(store, f.path)
     } catch (err) {
+      // The folder cannot be read (a folder on the computer not allowed again yet): the
+      // program runs, but say its other files were not copied.
       console.warn('companions', err)
+      toast({ kind: 'warn', title: t('run.folderUnreadTitle'), detail: t('run.folderUnreadDetail') })
       return true
     }
     if (found.refused.length) {

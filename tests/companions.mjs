@@ -74,6 +74,18 @@ await project({
   'proj/safety.py': SAFETY,
   'proj/colors.py': 'RED = 1\n',
   'proj/boot.py': 'print("boot")\n',
+  // The drive is FAT: these would be code.py, colors.py, main.py there.
+  'proj/Code.py': 'print("would take over the board")\n',
+  'proj/COLORS.PY': 'RED = 1\n',
+  'proj/Main.py': 'x = 1\n',
+  // Modules the boards ship that the simulator does not carry, and a package.
+  'proj/widgets.py': 'x = 1\n',
+  'proj/motion_commander.py': 'x = 1\n',
+  'proj/codex_drivers.py': 'x = 1\n',
+  'proj/random.py': 'x = 1\n',
+  // Two files the drive would hold as one.
+  'proj/helper.py': 'x = 1\n',
+  'proj/Helper.py': 'x = 2\n',
   'proj/notes.txt': 'not Python\n',
   'proj/sub/deep.py': 'x = 1\n',
   'other.py': 'y = 2\n',
@@ -83,10 +95,12 @@ await page.waitForFunction(() => window.__written.includes('main.py'))
 const first = await page.evaluate(() => [...window.__written])
 check(first.includes('safety.py') && first.indexOf('safety.py') < first.indexOf('main.py'), `the program's other .py file goes on the board before it runs (${first.join(', ')})`)
 check(!first.includes('colors.py') && !first.includes('boot.py'), 'never a name the board needs itself (a library module, boot.py)')
+check(!first.some((n) => /^(code|colors|main|widgets|motion_commander|codex_drivers|random|helper)\.py$/i.test(n) && n !== 'main.py'), `in any case, nor a module the board ships, nor two names the drive holds as one (${first.join(', ')})`)
 check(!first.some((n) => /notes|deep|other/.test(n)), 'only .py files, only from its own folder')
 check((await page.evaluate(() => window.openCodeBot.device.board.files['safety.py'])) === SAFETY, 'as it is in the folder')
 const said = await toasts()
 check(said.some((t) => /colors\.py/.test(t) && /boot\.py/.test(t)), 'and it says which files it would not copy, by name')
+check(said.some((t) => /COLORS\.PY/.test(t) && /Code\.py/.test(t) && /Helper\.py/.test(t)), 'those too, none left out unsaid')
 check((await page.textContent('#terminal-host')).includes('safety.py'), 'and which it copied')
 
 await clearToasts()
@@ -100,6 +114,22 @@ await page.evaluate(() => (window.__written.length = 0))
 await run()
 await page.waitForFunction(() => window.__written.includes('main.py'))
 check(await page.evaluate(() => window.__written.includes('safety.py')), 'changed, it is written again')
+
+// A folder that cannot be read: the program runs, and the student is told.
+await clearToasts()
+await page.evaluate(() => {
+  const store = window.openCodeBot.stores.browser
+  store.__list = store.list
+  store.list = async () => { throw new Error('no permission') }
+})
+await page.evaluate(() => (window.__written.length = 0))
+await run()
+await page.waitForFunction(() => window.__written.includes('main.py'))
+check((await toasts()).some((t) => /not copied/i.test(t)), 'a folder it cannot read: the program runs, and it says the other files were not copied')
+await page.evaluate(() => {
+  const store = window.openCodeBot.stores.browser
+  store.list = store.__list
+})
 
 console.log('In the simulator')
 // A page opened in the simulator, in this browser: the same files.
