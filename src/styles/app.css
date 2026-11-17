@@ -420,7 +420,14 @@ kbd {
 .lsec-peek > summary { cursor: pointer; font-weight: 800; color: var(--ink-soft); }
 .learn-goals { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .learn-goals li { display: flex; gap: 8px; align-items: flex-start; }
-.learn-box { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; border-radius: 5px; border: 2px solid var(--line-strong); background: var(--surface); }
+.learn-box {
+  flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; border-radius: 5px;
+  border: 2px solid var(--line-strong); background: var(--surface);
+  display: grid; place-items: center; font-size: 12px; font-weight: 900; line-height: 1; color: #fff;
+}
+.learn-goals li[data-met='true'] .learn-box { border-color: var(--green-strong); background: var(--green-strong); }
+.learn-complete { margin-top: 12px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--green-soft); border: 2px solid var(--green); }
+.learn-mission[data-done='true'] .ex-num { background: var(--green-strong); color: #fff; }
 .learn-hint { margin-top: 10px; }
 .learn-hint > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); }
 .learn-quiz { padding-left: 20px; display: grid; gap: 14px; }

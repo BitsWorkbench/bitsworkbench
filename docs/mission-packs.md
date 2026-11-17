@@ -141,9 +141,17 @@ Instructions, goals, hints and the rest are Markdown. On top of plain Markdown:
 A goal's `check` says what finishes it, as data. A pack holds no script.
 
 Code checks read the student's program as Python, whichever mode they are in, since the blocks
-make Python. A **pattern** is a piece of Python: spaces, line breaks, quotes and extra
-parentheses do not matter, `...` stands for anything (an argument, an expression, a body), and a
-call matches a call with more keyword arguments than the pattern names.
+make Python. A **pattern** is one Python statement or expression:
+
+- Spaces, line breaks, quotes and extra parentheses do not matter, and numbers match by value
+  (`1` is `1.0`, `0b11111111` is `255`).
+- `...` stands for anything: an argument, an expression or a body. `f(...)` is a call of `f`
+  with any arguments.
+- A call matches a call with more keyword arguments than the pattern names.
+- A body matches when the pattern's statements are in it in that order, with others between
+  them or not.
+- `if a: ...` matches an `if` with `elif` and `else` branches too.
+- An expression matches wherever it is in the program; a statement matches any statement.
 
 | Check | Met when |
 |---|---|
@@ -153,7 +161,15 @@ call matches a call with more keyword arguments than the pattern names.
 | `{ "prints": "regex" }` | A run prints a line matching the regular expression. |
 | `{ "runs": true }` | The program runs to its end, or is stopped, without an error. Add `"seconds": n` for at least n seconds of running. |
 | `{ "event": "name" }` | The student does something in Codacious: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
-| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches. |
+| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches. (The simulator does not report clicks on parts yet, so this check is not met today.) |
+
+A goal once met stays met, and Codacious keeps which goals each objective has met. Code checks
+are checked as the student edits, a moment after they pause.
+
+A regular expression (`prints`, `pick`) must not be able to backtrack without end: the reader
+refuses a repeat inside a repeat (`(a+)+`), a repeated choice (`(a|ab)*`) and back-references.
+Codacious also tests each one away from the page on at most 1000 characters, and one that takes
+over a tenth of a second never matches from then on.
 
 ## A pack in two files
 

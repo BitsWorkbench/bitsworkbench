@@ -59,6 +59,8 @@ export class App {
       splitter: $('learn-splitter'),
       workarea: document.querySelector('.workarea'),
       onResize: () => this._refitSide?.(),
+      device: this.device,
+      program: () => this._currentPython(),
     })
     $('pack-input').addEventListener('change', (e) => {
       this.learn.openFile(e.target.files?.[0])
@@ -275,7 +277,10 @@ export class App {
   }
 
   _step() {
-    if (this.device.simulating && this.device.state === State.RUNNING) this.device.sim.stepLine()
+    if (this.device.simulating && this.device.state === State.RUNNING) {
+      this.device.sim.stepLine()
+      this.learn.event('stepped')
+    }
   }
 
   // ------------------------------------------------------------ chrome
@@ -876,6 +881,7 @@ export class App {
   /** The program changed: save it to its file a moment later. */
   _fileChanged() {
     this._refreshFile()
+    this.learn.programChanged()
     if (this._readOnly) return
     clearTimeout(this._saveTimer)
     this._saveTimer = setTimeout(() => this._save(false), 750)
@@ -1115,7 +1121,10 @@ export class App {
     } catch (err) {
       return err.message
     }
-    if (kind === 'file') await this._openRef({ store: storeKind, path }, { text: '', left: true })
+    if (kind === 'file') {
+      await this._openRef({ store: storeKind, path }, { text: '', left: true })
+      this.learn.event('file-created', baseName(path))
+    }
     return null
   }
 

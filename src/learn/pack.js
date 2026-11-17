@@ -4,6 +4,7 @@
  * whole before anything uses it, and every problem is named with where it is.
  */
 import { tree } from '../convert/tree.js'
+import { riskyRegex } from './regex.js'
 
 export const FORMAT = 1
 export const BOARDS = ['codebot', 'codex', 'codeair']
@@ -173,19 +174,24 @@ class Checker {
     try {
       new RegExp(v)
     } catch {
-      this.problem(at, 'is not a regular expression')
+      return this.problem(at, 'is not a regular expression')
     }
+    const risk = riskyRegex(v)
+    if (risk) this.problem(at, `could take forever to match: it has ${risk}`)
   }
 
   python(v, at) {
     if (typeof v !== 'string') return this.problem(at, 'should be Python, as text')
     const { root } = tree(v)
     if (root.error) this.problem(at, `Python does not parse at line ${root.error.line}`)
+    return root
   }
 
   pattern(v, at) {
     this.text(v, at)
-    if (typeof v === 'string') this.python(v, at)
+    if (typeof v !== 'string') return
+    const root = this.python(v, at)
+    if (root && !root.error && root.children.length !== 1) this.problem(at, 'a pattern is one statement or expression (use order for several)')
   }
 
   asset(v, at) {
