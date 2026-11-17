@@ -1,5 +1,12 @@
 [
   {
+    "id": "CTE",
+    "file": "CTE.json",
+    "title": "Python Level 1 with CodeBot",
+    "brief": "Learn Python with robotics challenges on CodeBot, real or simulated.",
+    "board": "codebot"
+  },
+  {
     "id": "PWR",
     "file": "PWR.json",
     "title": "Python with Robots",
