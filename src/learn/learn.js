@@ -10,6 +10,7 @@ import { PackError } from './pack.js'
 import { Tutorial } from './tutorial.js'
 import { GoalWatcher } from './goals.js'
 import { RegexTester } from './regex.js'
+import { offersBlocks } from './offer.js'
 
 const OPEN = 'opencodebot.learn.v1' // { id, width }
 const MIN_WIDTH = 260
@@ -21,16 +22,25 @@ export class Learn {
    * opens, closes or changes width, for the editor and the side to fit again;
    * `device`, the app's device, and `program()`, the student's program as
    * Python, for the goals; `onTrek(trek)` with the CodeTrek of the objective
-   * on show (null when none is), for the palettes.
+   * on show (null when none is), for the palettes; `blocksFromPython(python,
+   * board)`, the app's Python to blocks, to judge whether an objective is
+   * taught in blocks; `toPython()` when the student asks to switch to Python.
    */
-  constructor({ pane, splitter, workarea, onResize, device, program, onTrek }) {
+  constructor({ pane, splitter, workarea, onResize, device, program, onTrek, blocksFromPython, toPython }) {
     this.pane = pane
     this.splitter = splitter
     this.workarea = workarea
     this.onResize = onResize
     this.onTrek = onTrek
     this.library = new Library()
-    this.tutorial = new Tutorial(pane)
+    const offered = new WeakMap() // objective: taught in blocks? Packs do not change once read.
+    this.tutorial = new Tutorial(pane, {
+      offersBlocks: (objective, board) => {
+        if (!offered.has(objective)) offered.set(objective, offersBlocks(objective, board, blocksFromPython))
+        return offered.get(objective)
+      },
+    })
+    this.tutorial.addEventListener('python', () => toPython())
     this.tutorial.addEventListener('place', (e) => {
       this.library.setPlace(this.tutorial.pack.id, e.detail)
       this._watch()

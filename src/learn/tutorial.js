@@ -1,8 +1,10 @@
 /**
  * The tutorial pane: a pack's overview and missions, then a mission one step
  * at a time (its introduction, its objectives and quizzes, its finish), with
- * Back and Next. It shows the text for the mode the student is in. It fires
- * `place` when the student moves, and `close` when they close it.
+ * Back and Next. It shows the text for the mode the student is in, and, in
+ * blocks, says when an objective is taught in Python. It fires `place` when
+ * the student moves, `close` when they close it, and `python` when they ask to
+ * switch to Python.
  *
  * A place is null (the pack's overview) or { mission, step }: step -1 is the
  * mission's introduction, 0 to n-1 its flow, n its finish.
@@ -11,9 +13,11 @@ import { t } from '../i18n/index.js'
 import { renderMarkdown, esc } from './markdown.js'
 
 export class Tutorial extends EventTarget {
-  constructor(root) {
+  /** `offersBlocks(objective, board)`: whether the objective is taught in blocks. */
+  constructor(root, { offersBlocks = () => true } = {}) {
     super()
     this.root = root
+    this.offersBlocks = offersBlocks
     this.pack = null
     this.place = null
     this.mode = 'blocks'
@@ -83,6 +87,8 @@ export class Tutorial extends EventTarget {
     switch (el.dataset.learn) {
       case 'close':
         return this.dispatchEvent(new Event('close'))
+      case 'python':
+        return this.dispatchEvent(new Event('python'))
       case 'up':
         return this._go(null)
       case 'back':
@@ -137,10 +143,17 @@ export class Tutorial extends EventTarget {
   _objectiveHtml(o) {
     const hints = (o.hints || []).map((h, i) => `<details class="learn-hint"><summary>${esc(t('learn.hint', { n: i + 1 }))}</summary><div class="learn-md">${this._md(h)}</div></details>`).join('')
     return `<h3 class="learn-title">${esc(o.title)}</h3>
+      ${this._pythonHtml(o)}
       <div class="learn-md">${this._md(o.instructions)}</div>
       <h4 class="learn-head">${esc(t('learn.goals'))}</h4>
       <div class="learn-goals-wrap" aria-live="polite">${this._goalsHtml(o)}</div>
       ${hints}`
+  }
+
+  /** In blocks, a word that this objective is taught in Python, with the switch. */
+  _pythonHtml(o) {
+    if (this.mode !== 'blocks' || this.offersBlocks(o, o.board || this.pack.board)) return ''
+    return `<div class="learn-python" role="note"><p>${esc(t('learn.pythonOnly'))}</p><button type="button" class="btn btn-small" data-learn="python">${esc(t('learn.toPython'))}</button></div>`
   }
 
   /** The goals, each ticked once met, and the objective's cheer when they all are. */
