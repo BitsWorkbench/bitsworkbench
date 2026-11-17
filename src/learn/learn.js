@@ -20,13 +20,15 @@ export class Learn {
    * `pane`, `splitter`, `workarea`: the elements; `onResize()` after the pane
    * opens, closes or changes width, for the editor and the side to fit again;
    * `device`, the app's device, and `program()`, the student's program as
-   * Python, for the goals.
+   * Python, for the goals; `onTrek(trek)` with the CodeTrek of the objective
+   * on show (null when none is), for the palettes.
    */
-  constructor({ pane, splitter, workarea, onResize, device, program }) {
+  constructor({ pane, splitter, workarea, onResize, device, program, onTrek }) {
     this.pane = pane
     this.splitter = splitter
     this.workarea = workarea
     this.onResize = onResize
+    this.onTrek = onTrek
     this.library = new Library()
     this.tutorial = new Tutorial(pane)
     this.tutorial.addEventListener('place', (e) => {
@@ -55,6 +57,7 @@ export class Learn {
     const objective = this.isOpen && this.tutorial.objective
     this.watcher.stop()
     this.watching = null
+    this.onTrek(objective?.trek ?? null)
     if (!objective) return
     const before = await this.library.goals(pack.id, objective.id)
     if (this.tutorial.objective !== objective) return
@@ -116,7 +119,7 @@ export class Learn {
   close() {
     this._save({ id: null })
     this._setOpen(false)
-    this.watcher.stop()
+    this._watch()
   }
 
   /** 'blocks' or 'python': the tutorial shows that mode's text. A change is the `switched` event. */

@@ -129,7 +129,7 @@ async function open(board, { fresh = true, lang = 'en-XA' } = {}) {
 
 /** Every category of the palette, one after another. */
 async function palette(label) {
-  const sel = '.blocklyToolboxCategory'
+  const sel = '.blocklyToolboxCategory:visible' // CodeTrek is hidden until an objective has one
   const count = (await page.$$(sel)).length
   const words = new Set()
   for (let i = 0; i < count; i++) {
@@ -240,7 +240,7 @@ await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.cl
 await page.waitForFunction(() => !!window.openCodeBot)
 check(await page.evaluate(() => document.documentElement.lang === 'es'), 'picking Español switches the page to Spanish')
 check(await page.evaluate(() => document.getElementById('btn-run').textContent.trim() !== 'Run'), 'the buttons are in Spanish')
-await (await page.$$('.blocklyToolboxCategory'))[0].click()
+await (await page.$$('.blocklyToolboxCategory:visible'))[0].click()
 await page.waitForTimeout(200)
 const words = await page.evaluate(() =>
   [...document.querySelectorAll('.blocklyFlyout .blocklyText')].map((t) => t.textContent).join(' | '),

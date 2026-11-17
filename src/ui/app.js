@@ -22,6 +22,8 @@ import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
 import { Learn } from '../learn/learn.js'
+import { installCodeTrek } from '../learn/trek-blocks.js'
+import { trekSnippets } from '../learn/trek.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -61,7 +63,11 @@ export class App {
       onResize: () => this._refitSide?.(),
       device: this.device,
       program: () => this._currentPython(),
+      onTrek: (trek) => this._showTrek(trek),
     })
+    // The open objective's CodeTrek, in the block palette (and the Python one, below).
+    this.trek = null
+    this.codeTrek = installCodeTrek(this.workspace, { used: () => this.learn.event('trek-used') })
     $('pack-input').addEventListener('change', (e) => {
       this.learn.openFile(e.target.files?.[0])
       e.target.value = ''
@@ -92,6 +98,13 @@ export class App {
     // A board that is already plugged in and paired can just come back.
     this.device.autoConnect().catch(() => {})
     if (kind === 'sim') this._toggleSimulate()
+  }
+
+  /** The CodeTrek of the objective on show (null for none), in both palettes. */
+  _showTrek(trek) {
+    this.trek = trek
+    this.codeTrek.set(trek)
+    this.palette?.refresh()
   }
 
   _greet() {
@@ -732,6 +745,8 @@ export class App {
       editor: () => this.pythonEditor,
       beforeUse: () => {},
       myBlocks: () => this.myBlocks.list(),
+      trek: () => (this.trek ? trekSnippets(this.trek) : []),
+      used: (snippet) => snippet.trek && this.learn.event('trek-used'),
     })
     this.myBlocks.addEventListener('change', () => this.palette.refresh())
     $('btn-view').addEventListener('click', () => this._toggleView())

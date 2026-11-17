@@ -69,7 +69,7 @@ async function audit(label) {
  * drawn dark. axe cannot see into Blockly's SVG, so this measures it here.
  */
 async function blockText(label) {
-  const sel = '.blocklyToolboxCategory'
+  const sel = '.blocklyToolboxCategory:visible' // CodeTrek is hidden until an objective has one
   const bad = new Set()
   const colours = new Set()
   let words = 0
@@ -296,7 +296,8 @@ check(after < before, `arrow keys move the divider (${before} -> ${after})`)
 // (Stop shows only while the program runs.)
 if (await page.isVisible('#btn-stop')) await page.click('#btn-stop')
 const blocksBefore = await page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).length)
-await page.evaluate(() => document.querySelector('.blocklyToolboxCategoryContainer')?.focus())
+// The first category shown (CodeTrek's, above it, is hidden until an objective has one).
+await page.evaluate(() => [...document.querySelectorAll('.blocklyToolboxCategoryContainer')].find((c) => c.offsetParent)?.focus())
 await page.keyboard.press('ArrowDown') // Drive
 await page.keyboard.press('ArrowRight') // into its blocks
 await page.keyboard.press('Enter') // add it

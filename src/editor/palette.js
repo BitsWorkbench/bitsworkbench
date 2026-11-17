@@ -17,12 +17,16 @@ export class SnippetPalette {
   /**
    * @param {HTMLElement} host the palette's element
    * @param {{ editor: () => import('./python-editor.js').PythonEditor, beforeUse: () => void,
-   *   myBlocks?: () => Array<{ name: string, code: string, value: boolean }> }} options
-   *   myBlocks gives the student's saved blocks, for the My blocks category
+   *   myBlocks?: () => Array<{ name: string, code: string, value: boolean }>,
+   *   trek?: () => Array<object>, used?: (snippet: object) => void }} options
+   *   myBlocks gives the student's saved blocks, for the My blocks category;
+   *   trek the open objective's CodeTrek snippets; used runs after a snippet goes in
    */
-  constructor(host, { editor, beforeUse, myBlocks }) {
+  constructor(host, { editor, beforeUse, myBlocks, trek, used }) {
     this.host = host
     this.myBlocks = myBlocks || (() => [])
+    this.trek = trek || (() => [])
+    this.used = used || (() => {})
     this.editor = editor
     this.beforeUse = beforeUse
     this.targetId = undefined
@@ -74,12 +78,14 @@ export class SnippetPalette {
   render(targetId) {
     if (targetId === this.targetId) return
     this.targetId = targetId
-    this.categories = snippetsFor(targetId, this.myBlocks())
+    this.categories = snippetsFor(targetId, this.myBlocks(), this.trek())
     this.cats.innerHTML = this.categories
       .map((c, i) =>
         c.kind === 'sep'
           ? '<div class="py-sep" role="separator"></div>'
-          : `<button type="button" class="py-cat" data-i="${i}" style="--c: ${c.colour}" aria-expanded="false" aria-controls="py-flyout">${esc(c.name)}</button>`,
+          : c.hidden
+            ? ''
+            : `<button type="button" class="py-cat" data-i="${i}" style="--c: ${c.colour}" aria-expanded="false" aria-controls="py-flyout">${esc(c.name)}</button>`,
       )
       .join('')
     this.show(-1)
@@ -127,6 +133,7 @@ export class SnippetPalette {
     this.beforeUse()
     this.show(-1)
     this.editor().insert(snippet)
+    this.used(snippet)
   }
 
   /** Up and down move between the cards. */
@@ -180,7 +187,7 @@ export class SnippetPalette {
     const up = (ev) => {
       if (ghost) {
         const p = at(ev)
-        this.editor().drop(snippet, p.x, p.y, p.bottom)
+        if (this.editor().drop(snippet, p.x, p.y, p.bottom)) this.used(snippet)
         // The click that follows a drag is not a click on the card (until the
         // next press: a timer here lost to a quick tap, since the browser
         // takes input ahead of timers when it is busy).

@@ -38,6 +38,7 @@ const NOT_GENERIC = new Set([
   'ocb_forever', // a last `while True:` at top level
   'ocb_python', // what anything with no block becomes
   'ocb_python_value',
+  'ocb_todo', // `pass  # TODO: ...`, its text in the comment: to-blocks.js todoAt
   // Blockly's own blocks whose Python is not one fixed shape (a mutator, any
   // number of items, a loop variable): their way back is written by hand.
   'controls_if', // to-blocks.js HAND

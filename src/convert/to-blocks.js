@@ -293,6 +293,15 @@ class Context {
     if (end) block.data = endOfLineData(end.text)
   }
 
+  /** The "to do" block, if this `pass` ends with `# TODO: what to do`; any other comments go on it. */
+  todoAt(s) {
+    const own = (this.notes.get(s) || []).find((c) => !c.ownLine && /^TODO:/.test(c.text))
+    if (!own) return null
+    const block = { type: 'ocb_todo', fields: { TEXT: own.text.replace(/^TODO:\s*/, '') } }
+    this.note(block, [s], own.text)
+    return block
+  }
+
   // ---------------------------------------------------------- statements
 
   /** A list of statements as a list of blocks, not yet linked. */
@@ -319,6 +328,9 @@ class Context {
 
   statementAt(stmts, i) {
     const s = stmts[i]
+    // `pass  # TODO: ...` is a step left for the student: the "to do" block.
+    const todo = s.name === 'PassStatement' && this.todoAt(s)
+    if (todo) return { block: todo, count: 1 }
     // `pass` holds a place only Python needs; an empty slot is the block's.
     if (s.name === 'PassStatement' && !this.notes.has(s)) return { block: null, count: 1 }
     const byHand = HAND[s.name]?.call(this, s)

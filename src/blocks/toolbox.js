@@ -218,12 +218,18 @@ const DEVICE_CATEGORIES = {
   codeair: codeairCategories,
 }
 
+/** The CodeTrek category's toolbox id, for showing and hiding it. */
+export const CODETREK_ID = 'codetrek'
+
 /** Build the toolbox for a board. Pass null for the "nothing picked" view. */
 export function toolboxFor(targetId) {
   const deviceCats = DEVICE_CATEGORIES[targetId] || []
   return {
     kind: 'categoryToolbox',
     contents: [
+      // A mission's CodeTrek (src/learn/trek-blocks.js): shown only while an
+      // objective with one is open, filled in as it opens.
+      { kind: 'category', toolboxitemid: CODETREK_ID, name: t('cat.codetrek'), categorystyle: 'trek_category', custom: 'CODETREK', hidden: 'true' },
       category(t('cat.basics'), 'basics_category', basics),
       ...(deviceCats.length ? [SEP, ...deviceCats] : []),
       ...generalTail,

@@ -365,6 +365,8 @@ export default {
   'cat.functions': '🧰 Funciones',
   'cat.python': '🐍 Python',
   'cat.myBlocks': '⭐ Mis bloques',
+  'cat.codetrek': '🧭 CodeTrek',
+  'trek.noBlocks': '(Aquí no hay nada que arrastrar: los bloques hacen esta parte por ti.)',
   'myBlocks.empty1': 'Haz clic derecho en un bloque gris de Python',
   'myBlocks.empty2': 'y elige Guardar en Mis bloques.',
   'myBlocks.emptyPython': 'Tus bloques de Python guardados aparecen aquí. Guarda uno en bloques: clic derecho en un bloque gris de Python.',
@@ -683,6 +685,8 @@ export default {
   'block.ocb_seconds_since_start.tooltip': 'Cuánto tiempo lleva ejecutándose tu programa.',
   'block.ocb_python.message0': '🐍 ejecutar Python %1',
   'block.ocb_python.tooltip': 'Python que no tiene un bloque propio. Escribe aquí cualquier Python, con tantas líneas como quieras.',
+  'block.ocb_todo.message0': '📝 por hacer: %1',
+  'block.ocb_todo.tooltip': 'Un paso que queda para ti. Pon aquí los bloques que pide y luego quita este. No hace nada al ejecutarse.',
   'block.ocb_python_value.message0': '🐍 %1',
   'block.ocb_python_value.tooltip': 'Un trozo de Python que no tiene un bloque propio.',
 
