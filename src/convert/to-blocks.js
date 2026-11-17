@@ -37,14 +37,23 @@ const HEADER_COMMENT = (text) =>
 /**
  * { ok: true, state, targetId }: the blocks, as a Blockly workspace state, and
  * the board they are for. { ok: false, line }: the code does not parse there.
+ * `imports`: import lines the code runs under but does not hold, read only
+ * for what names mean (`from time import sleep`).
  */
-export function pythonToBlocks(source, targetId) {
+export function pythonToBlocks(source, targetId, { imports = '' } = {}) {
   const { root, comments } = tree(source)
   if (root.error) return { ok: false, line: root.error.line }
   const board = boardOf(source) || targetId
   const ctx = new Context(source, patterns(board))
   ctx.assigned = assignedNames(root)
   ctx.lists = listNames(root)
+  // `imports`: import lines the code runs with but does not hold (a CodeTrek
+  // chunk, whose imports go at the top of the student's program).
+  const outside = imports ? tree(imports).root : null
+  ctx.imported = new Map([...(outside && !outside.error ? importedNames(statementsOf(outside), imports) : []), ...importedNames(statementsOf(root), source)])
+  for (const name of [...ctx.imported.keys()]) {
+    if (ctx.assigned.has(name) || statementsOf(root).some((s) => functionName(s) === name)) ctx.imported.delete(name)
+  }
 
   let top = statementsOf(root)
   // The header the blocks make: pulled out now, put back below if the
@@ -92,8 +101,11 @@ export function pythonToBlocks(source, targetId) {
   const foreverBlock = forever ? ctx.foreverBlock(forever) : null
 
   // The header lines the blocks would not write again stay, in order, first.
+  // A `from time import sleep` the blocks have no more need of goes: they
+  // write `import time` and `time.sleep(...)` themselves (see importedNames).
   const made = new Set(madeLines(ctx.state(defBlocks, start, foreverBlock), board))
-  const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')))
+  const greyCode = ctx.greyCode([...defBlocks, ...start, foreverBlock])
+  const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')) && !absorbed(ctx.text(s), made, greyCode))
   start.unshift(...kept.map((s) => ctx.grey(s)))
   return {
     ok: true,
@@ -101,6 +113,38 @@ export function pythonToBlocks(source, targetId) {
     targetId: board,
     pythonLines: ctx.greyLines([...defBlocks, ...start, foreverBlock]),
   }
+}
+
+/**
+ * Names a program imports from a module by name: `from time import sleep` (or
+ * `sleep as wait`) makes `sleep` mean `time.sleep`, so `sleep(1)` is the block
+ * that writes `time.sleep(1)`. Only imports at the top level, and only names
+ * the program never assigns or defines itself. Map: local name -> 'module.name'.
+ */
+function importedNames(stmts, source) {
+  const out = new Map()
+  for (const s of stmts) {
+    if (s.name !== 'ImportStatement') continue
+    const m = /^from\s+([A-Za-z_][\w.]*)\s+import\s+\(?([^()*]+?)\)?\s*$/s.exec(source.slice(s.from, s.to).replace(/#[^\n]*/g, ''))
+    if (!m) continue
+    for (const part of m[2].split(',')) {
+      const n = /^\s*([A-Za-z_]\w*)(?:\s+as\s+([A-Za-z_]\w*))?\s*$/.exec(part)
+      if (n) out.set(n[2] || n[1], `${m[1]}.${n[1]}`)
+    }
+  }
+  return out
+}
+
+/**
+ * A `from M import a, b` line the blocks have taken over: they import M
+ * themselves (`import M` is among the lines they make), and no Python left
+ * grey uses a or b, so nothing needs the line any more.
+ */
+function absorbed(line, made, greyCode) {
+  const m = /^from\s+([A-Za-z_][\w.]*)\s+import\s+\(?([^()*]+?)\)?$/s.exec(line.replace(/\s+/g, ' ').trim())
+  if (!m || !made.has(`import ${m[1]}`)) return false
+  const names = m[2].split(',').map((p) => p.trim().split(/\s+as\s+/).pop())
+  return names.every((n) => /^[A-Za-z_]\w*$/.test(n) && !new RegExp(`\\b${n}\\b`).test(greyCode))
 }
 
 /** Where the last statement's code ends (a body's last statement, in turn). */
@@ -429,6 +473,23 @@ class Context {
     }
     blocks.forEach(walk)
     return [...lines].sort((a, b) => a - b)
+  }
+
+  /** All the Python these blocks keep as grey Python blocks, as one text. */
+  greyCode(blocks) {
+    const parts = []
+    const walk = (b) => {
+      if (!b) return
+      const node = this.greyAt.get(b)
+      if (node) parts.push(this.source.slice(node.from, node.to))
+      for (const input of Object.values(b.inputs || {})) {
+        walk(input.block)
+        walk(input.shadow)
+      }
+      walk(b.next?.block)
+    }
+    blocks.forEach(walk)
+    return parts.join('\n')
   }
 
   /** A statement with no block: a grey Python block holding its text. */
@@ -882,7 +943,10 @@ function match(p, u, binds, pat, ctx) {
   }
   const field = fieldAt(p, pat)
   if (field) return matchField(field, p, u, binds)
+  // `from time import sleep`: the program's `sleep` is the pattern's `time.sleep`.
+  if (p.name === 'MemberExpression' && u.name === 'VariableName' && ctx?.imported?.get(u.text) === dotted(p)) return true
   if (p.name !== u.name) return false
+  if (p.name === 'ArgList' && pat.omit) return matchArgs(p, u, binds, pat, ctx)
   if (p.name === 'Body') {
     const ps = statementsOf(p)
     const s = ps.length === 1 && /^__s_(\w+)__$/.exec(ps[0].children[0]?.text || '')
@@ -894,6 +958,72 @@ function match(p, u, binds, pat, ctx) {
   if (p.text !== undefined || u.text !== undefined) return sameLeaf(p, u)
   if (p.children.length !== u.children.length) return false
   return p.children.every((pc, k) => match(pc, u.children[k], binds, pat, ctx))
+}
+
+/**
+ * A call's arguments, for a block whose Python may leave some out
+ * (define.js omittable): positional ones in order, keyword ones by name, in
+ * any order. A pattern argument the call does not give is fine if the block
+ * says it may be left out: a field then takes the value the block gives for
+ * that (the library's default), an input keeps its default block. Positional
+ * arguments past the pattern's fill its keyword ones, in order, as Python
+ * passes them.
+ */
+function matchArgs(p, u, binds, pat, ctx) {
+  const pa = argsOf(p)
+  const ua = argsOf(u)
+  if (!pa || !ua) return false
+  const keywords = [...pa.keyword.keys()]
+  const extra = ua.positional.slice(pa.positional.length)
+  if (extra.length > keywords.length) return false
+  for (const [k, node] of extra.entries()) {
+    if (ua.keyword.has(keywords[k])) return false
+    ua.keyword.set(keywords[k], node)
+  }
+  for (const name of ua.keyword.keys()) if (!pa.keyword.has(name)) return false
+  const leftOut = (pn) => {
+    const slot = /^__v_(\w+)__$/.exec(pn.name === 'VariableName' ? pn.text : '')
+    if (slot) return pat.omit[slot[1]] !== undefined
+    const field = fieldAt(pn, pat)
+    if (!field || pat.omit[field.name] === undefined) return false
+    if (field.name in binds.fields) return binds.fields[field.name] === pat.omit[field.name]
+    binds.fields[field.name] = pat.omit[field.name]
+    return true
+  }
+  for (const [k, pn] of pa.positional.entries()) {
+    if (k < ua.positional.length) {
+      if (!match(pn, ua.positional[k], binds, pat, ctx)) return false
+    } else if (!leftOut(pn)) return false
+  }
+  for (const [name, pn] of pa.keyword) {
+    const un = ua.keyword.get(name)
+    if (un ? !match(pn, un, binds, pat, ctx) : !leftOut(pn)) return false
+  }
+  return true
+}
+
+/** An ArgList's arguments: { positional: [node], keyword: Map name -> node }, or null for `*args`/`**kw`. */
+function argsOf(list) {
+  const items = list.children.filter((c) => !['(', ')', ','].includes(c.name))
+  if (items.some((c) => /^\*\*?$/.test(c.text ?? c.name))) return null
+  const positional = []
+  const keyword = new Map()
+  for (let i = 0; i < items.length; i++) {
+    if (items[i + 1]?.name === 'AssignOp') {
+      keyword.set(items[i].text, items[i + 2])
+      i += 2
+    } else positional.push(items[i])
+  }
+  return { positional, keyword }
+}
+
+/** A pattern's `module.name` (names only, no placeholder), as text; else null. */
+function dotted(p) {
+  if (p.name === 'VariableName') return /^__/.test(p.text) ? null : p.text
+  if (p.name !== 'MemberExpression' || p.children.length !== 3) return null
+  const [obj, dot, prop] = p.children
+  const left = dotted(obj)
+  return left && dot.text === '.' && prop.name === 'PropertyName' ? `${left}.${prop.text}` : null
 }
 
 /** The field whose marker is in this pattern node, if any. */

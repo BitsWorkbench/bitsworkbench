@@ -65,9 +65,12 @@ export function installCodeTrek(blockWorkspace, { used }) {
 
 /** The flyout: each chunk's caption, then its blocks (or a word on why it has none). */
 function flyoutOf(trek, targetId) {
+  // Every chunk's imports, which go at the top of the student's program: one
+  // chunk's `from time import sleep` makes the next one's `sleep(1)` a wait block.
+  const imports = trek.flatMap((chunk) => chunk.python.match(/^(from|import)\s.*$/gm) || []).join('\n')
   return trek.flatMap((chunk, i) => {
     const label = { kind: 'label', text: caption(chunk.md, i + 1) }
-    const stacks = stacksOf(chunk.python, targetId)
+    const stacks = stacksOf(chunk.python, targetId, imports)
     if (!stacks.length) return [label, { kind: 'label', text: t('trek.noBlocks') }]
     return [label, ...stacks.map((s) => ({ kind: 'block', ...s, data: JSON.stringify({ trek: i }) }))]
   })
@@ -77,10 +80,10 @@ function flyoutOf(trek, targetId) {
  * A chunk's Python as stacks of blocks for the flyout: what would sit in
  * "when program starts" comes out of it, since the chunk goes into the
  * student's own program; a forever loop and functions stay whole. Imports
- * have no block (the blocks add their own).
+ * have no block (the blocks add their own), but say what names mean.
  */
-function stacksOf(python, targetId) {
-  const r = pythonToBlocks(python.replace(/^(from|import)\s.*$/gm, ''), targetId)
+function stacksOf(python, targetId, imports) {
+  const r = pythonToBlocks(python.replace(/^(from|import)\s.*$/gm, ''), targetId, { imports })
   if (!r.ok) return []
   const names = Object.fromEntries((r.state.variables || []).map((v) => [v.id, v]))
   const stacks = []

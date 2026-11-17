@@ -302,8 +302,9 @@ const TREK = {
           title: 'Blocks trek',
           instructions: 'Drag the chunks in.',
           trek: [
-            { md: 'Turn **every** light on', python: 'leds.user(0b11111111)\n' },
-            { md: 'Wait, then the next step is yours', python: 'from time import sleep\nsleep(1)\npass  # TODO: turn them off\n' },
+            // The import in one chunk makes the next one's sleep(1) the wait block.
+            { md: 'Turn **every** light on', python: 'from time import sleep\nleds.user(0b11111111)\n' },
+            { md: 'Wait, then the next step is yours', python: 'sleep(1)\npass  # TODO: turn them off\n' },
           ],
           goals: [{ md: 'Use the CodeTrek', check: { event: 'trek-used' } }],
         },
@@ -342,6 +343,7 @@ const flyout = await page.evaluate(() => {
 })
 check(flyout.labels.join('|') === '1. Turn every light on|2. Wait, then the next step is yours', `its chunks, under their captions (${flyout.labels.join('|')})`)
 check(flyout.blocks.length === 2 && flyout.blocks[0] === 'codebot_leds_pattern' && flyout.blocks[1].includes('ocb_todo'), `as blocks, the to-do a "to do" block (${flyout.blocks.join(' ; ')})`)
+check(flyout.blocks[1]?.startsWith('ocb_wait'), `a chunk's sleep(1) is the wait block, by another chunk's from time import sleep (${flyout.blocks[1]})`)
 
 // Drag the second chunk out of the flyout onto the canvas.
 const from = await page.evaluate(() => {

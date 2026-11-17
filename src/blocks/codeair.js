@@ -152,6 +152,8 @@ defineBlocks([
       air()
       return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
     },
+    // Left out, the library's brightness is 10 (codeair.py DEFAULT_BRIGHTNESS).
+    omit: { BRIGHT: 10 },
   },
   {
     json: {
@@ -169,6 +171,7 @@ defineBlocks([
       air()
       return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
     },
+    omit: { BRIGHT: 10 },
   },
   {
     json: {

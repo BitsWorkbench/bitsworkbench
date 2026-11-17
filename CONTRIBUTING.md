@@ -56,6 +56,15 @@ for each choice in its dropdowns. `tests/round-trip.mjs` checks that your
 block's Python turns back into your block. If it fails, two blocks probably
 make the same Python; give each its own.
 
+If people often leave out an argument your block always writes, because the
+library has a default for it, say so with `omit` beside `json` and `python`:
+`omit: { BRIGHT: 10 }` for a field (left out, it is 10: the library's own default,
+so the program means the same as blocks), `omit: { COLOR: true }` for a value
+input (left out, it keeps the default block the toolbox gives it). Then
+`pixels.set(0, RED)` finds the block that writes `pixels.set(0, RED, brightness=10)`.
+A name imported with `from time import sleep` is found as `time.sleep` without
+any of this.
+
 ### Things worth knowing
 
 - **Statement generators** return a string ending in `\n`. **Value generators**
