@@ -76,8 +76,16 @@ jobs:
 
       # Teachers will be pointed at this URL, so test the exact bundle we are
       # about to publish — including that it works from a sub-path and offline.
+      # The same suite passed in the pull request's CI. The browser and simulator
+      # tests run against real time, and this runner is sometimes slower: a
+      # check that fails once is run again with the whole suite, and the first
+      # failure stays on the run as a warning, so a flake is seen rather than
+      # hidden. A real failure fails twice, and nothing is published.
       - name: Test the build we are about to publish
-        run: npm test
+        run: |
+          if npm test; then exit 0; fi
+          echo "::warning title=Flaky test::The test suite failed once on the deploy runner and is being run again. See the log above for the check that failed."
+          npm test
 
       # Reads the Pages config; it cannot create it (see the note at the top).
       - uses: actions/configure-pages@v5

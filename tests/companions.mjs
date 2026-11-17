@@ -101,7 +101,9 @@ check((await page.evaluate(() => window.openCodeBot.device.board.files['safety.p
 const said = await toasts()
 check(said.some((t) => /colors\.py/.test(t) && /boot\.py/.test(t)), 'and it says which files it would not copy, by name')
 check(said.some((t) => /COLORS\.PY/.test(t) && /Code\.py/.test(t) && /Helper\.py/.test(t)), 'those too, none left out unsaid')
-check((await page.textContent('#terminal-host')).includes('safety.py'), 'and which it copied')
+// The terminal draws what it is told a moment later (xterm writes asynchronously): wait for it.
+const told = await page.waitForFunction(() => document.getElementById('terminal-host').textContent.includes('safety.py'), null, { timeout: 10000 }).then(() => true, () => false)
+check(told, 'and which it copied')
 
 await clearToasts()
 await page.evaluate(() => (window.__written.length = 0))
