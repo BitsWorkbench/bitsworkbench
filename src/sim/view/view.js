@@ -30,10 +30,12 @@ export class SimView {
   // `onTilt(x, y)` too (radians, world/codex.js tiltX and tiltY), a drag on
   // the figure's rotation arrows tilts the board, as do Shift and the arrow
   // keys (5 degrees a press); Home sets it level.
-  constructor(host, { assetsBase, buttons = null }) {
+  // `onPick(name)`: a click on a board names the part it lands on (parts.js).
+  constructor(host, { assetsBase, buttons = null, onPick = null }) {
     this.host = host
     this.assetsBase = assetsBase
     this.buttons = buttons
+    this.onPick = onPick
     this.down = new Set()
     this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     this.figures = new Map()
@@ -311,7 +313,22 @@ export class SimView {
     }
     const arrowAt = (e) => (this.buttons.onTilt && this._tiltFigure()?.arrowAt(aim(e))) || null
     let held = null                 // { id, n } a key, or { id, axis, x, y, from } an arrow
+    // A click (not a drag that turns the camera) names the part it lands on:
+    // `onPick(name)`, by the CAD's name for it (parts.js), for mission packs.
+    let press = null                // { id, x, y, at } where the last press began
+    canvas.addEventListener('pointerup', (e) => {
+      const p = press
+      press = null
+      if (!p || p.id !== e.pointerId || !this.onPick) return
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6 || performance.now() - p.at > 600) return
+      aim(e)
+      for (const f of this.figures.values()) {
+        const name = f.partAt?.(ray)
+        if (name) return this.onPick(name)
+      }
+    })
     canvas.addEventListener('pointerdown', (e) => {
+      if (e.button === 0) press = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() }
       if (e.button !== 0 || held) return
       const axis = arrowAt(e)
       const n = axis ? -1 : keyAt(e)

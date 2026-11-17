@@ -9,6 +9,7 @@
 import * as THREE from 'three'
 import { Led, boxIn, neoPixel, reflect, yawIn } from './led.js'
 import { Keys } from './keys.js'
+import { Parts, loadParts } from './parts.js'
 
 const UNDERSIDE = 0.004          // the model's lowest point above its origin
 
@@ -38,8 +39,9 @@ export class CodeAIRFigure {
 
   // env: studio light for the metal to reflect (view.js)
   async load(loader, base, env) {
-    const gltf = await loader.loadAsync(`${base}models/codeair.glb`)
+    const [gltf, parts] = await Promise.all([loader.loadAsync(`${base}models/codeair.glb`), loadParts(`${base}models/codeair.parts.json`)])
     this.body.add(gltf.scene)
+    this.parts = new Parts(gltf.scene, parts)
     gltf.scene.traverse((o) => {
       if (/^Prop\d$/.test(o.name)) this.props.push(o)
       // The model comes without normals (sim/tools/build-models.mjs): shade it flat.
@@ -98,6 +100,8 @@ export class CodeAIRFigure {
   // A button's centre in the world; the button a ray meets, or -1 (view.js).
   keyCentre(n) { return this.keys?.keyCentre(n) }
   keyAt(raycaster) { return this.keys?.keyAt(raycaster) ?? -1 }
+  // The part a ray meets, by the CAD's name, or null (parts.js).
+  partAt(raycaster) { return this.parts?.at(raycaster) ?? null }
 
   update(s) {
     this.root.position.set(s.x, s.z, -s.y)

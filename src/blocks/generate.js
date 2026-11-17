@@ -10,6 +10,22 @@ import { resetNeeds, allNeeds } from './context.js'
 import { getTarget } from '../device/targets.js'
 import { notesPython } from './comments.js'
 
+/**
+ * A text as a Python string literal. Blockly's own writes a line break as a
+ * backslash and a line break, which in Python joins the lines: `print("a\nb")`
+ * came back from blocks as printing "ab". A line break is `\n` here, and a
+ * carriage return and a NUL their escapes too, so the text means what it did.
+ */
+pythonGenerator.quote_ = (text) => {
+  let s = text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\0/g, '\\x00')
+  let q = "'"
+  if (s.includes("'")) {
+    if (s.includes('"')) s = s.replace(/'/g, "\\'")
+    else q = '"'
+  }
+  return q + s + q
+}
+
 export const DEVICE_IMPORT = {
   codex: 'from codex import *',
   codebot: 'from botcore import *',

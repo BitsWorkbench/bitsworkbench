@@ -193,6 +193,14 @@ finds the one under the pointer that can be seen: a button the model hides is no
 through it (CodeX's reset is on its back, by the power switch, so the face-on view never
 reaches it; a CodeAIR's buttons are on top, so seen from below they are out of reach).
 
+**Parts by name** (`src/sim/view/parts.js`). A click on a board (a press and release in
+place, not a drag that turns the camera) also names the part it lands on, as the board's CAD
+model names it, for a mission pack's `pick` goal ("click the speaker"). The built model joins
+most parts into one mesh, so `build-models.mjs` writes each source part's box beside it
+(`<model>.parts.json`, before its renames) and the view takes the smallest box around the
+point the click meets. The names are the CAD's (CodeBot's speaker is `Cylinder`), so
+CodeSpace's packs, written against the same models, ask for parts as they always did.
+
 A board's reset button does what a real reset does. Held, the board is held in reset: its
 program is cut off at once, with no time to clean up, and everything it drives goes off (a
 CodeAIR in flight drops rather than lands; CodeX's LEDs, NeoPixels, sound and backlight go

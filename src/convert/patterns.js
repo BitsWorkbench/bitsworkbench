@@ -16,6 +16,7 @@ import * as Blockly from 'blockly/core'
 import { pythonGenerator, Order } from 'blockly/python'
 import { toolboxFor } from '../blocks/index.js'
 import { resetNeeds } from '../blocks/context.js'
+import { omittable } from '../blocks/define.js'
 import { tree, unwrap, statementsOf } from './tree.js'
 
 // Stand-ins plugged into inputs while a pattern is generated. Never in a toolbox.
@@ -212,6 +213,8 @@ function build(code, item, inputs, output, combo, fields) {
     fields,
     inputs,
     shadows: item.inputs || {},
+    // Arguments the Python may leave out (define.js omittable).
+    omit: omittable(item.type),
     output,
     code,
   }

@@ -74,6 +74,8 @@ defineBlocks([
       codex()
       return `display.print(${value(gen, block, 'THING', "''")}, ${value(gen, block, 'COLOR', 'WHITE')})\n`
     },
+    // display.print(text) prints in WHITE, the block's own default colour.
+    omit: { COLOR: true },
   },
   {
     json: {
@@ -247,6 +249,8 @@ defineBlocks([
       codex()
       return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
     },
+    // Left out, the library's brightness is 10 (codex.py DEFAULT_BRIGHTNESS).
+    omit: { BRIGHT: 10 },
   },
   {
     json: {
@@ -264,6 +268,7 @@ defineBlocks([
       codex()
       return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
     },
+    omit: { BRIGHT: 10 },
   },
   {
     json: {

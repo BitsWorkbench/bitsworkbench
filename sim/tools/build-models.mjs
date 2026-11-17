@@ -31,7 +31,7 @@ const MODELS = {
     source: 'BotBody.glb', simplify: 0.5, keep: /^BTN_\d(_cap)?$/,
     rename: { 'Cylinder.006': 'BTN_0', 'Cylinder.007': 'BTN_0_cap', 'Cylinder.004': 'BTN_1', 'Cylinder.005': 'BTN_1_cap' },
   },
-  'codebot-wheel.glb': { source: 'WheelAssy.glb' },
+  'codebot-wheel.glb': { source: 'WheelAssy.glb', parts: false },
   // CodeAIR keeps apart its propellers, and the parts the figure lights: the
   // NeoPixels (top and underside), the eight BYTE LEDs (0 at the front) and
   // the CHG and STA LEDs, named here from the CAD's part numbers; and what a
@@ -65,8 +65,26 @@ await MeshoptSimplifier.ready
 const dropNormals = (doc) => {
   for (const m of doc.getRoot().listMeshes()) for (const p of m.listPrimitives()) p.setAttribute('NORMAL', null)
 }
-for (const [name, { source, keep, rename = {}, simplify: ratio, error = 0.001, flat, minPart }] of Object.entries(MODELS)) {
+/**
+ * The model's parts as the source names them, each by its box in the model's
+ * own coordinates (which the repacked model keeps): what a click on the
+ * simulated board reports (src/sim/view/parts.js), so a mission pack can ask
+ * for "the speaker" by the CAD's name for it, as CodeSpace's packs do.
+ */
+function partsOf(doc) {
+  const r = (v) => Math.round(v * 1e5) / 1e5
+  return doc.getRoot().listNodes()
+    .filter((n) => n.getMesh() && n.getName())
+    .map((n) => {
+      const { min, max } = getBounds(n)
+      return { name: n.getName(), min: min.map(r), max: max.map(r) }
+    })
+    .filter((p) => p.min.every(Number.isFinite) && p.max.every(Number.isFinite))
+}
+
+for (const [name, { source, keep, rename = {}, simplify: ratio, error = 0.001, flat, minPart, parts = true }] of Object.entries(MODELS)) {
   const doc = await io.read(path.join(ROOT, 'sim/assets', source))
+  if (parts) await fs.writeFile(path.join(out, name.replace(/\.glb$/, '.parts.json')), JSON.stringify(partsOf(doc)) + '\n')
   for (const n of doc.getRoot().listNodes()) if (rename[n.getName()]) n.setName(rename[n.getName()])
   for (const n of doc.getRoot().listNodes()) if (n.getCamera() || n.getExtension('KHR_lights_punctual')) n.dispose()
   doc.getRoot().listExtensionsUsed().filter((e) => e instanceof KHRDracoMeshCompression).forEach((e) => e.dispose())

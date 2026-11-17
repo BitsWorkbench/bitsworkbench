@@ -302,8 +302,9 @@ const TREK = {
           title: 'Blocks trek',
           instructions: 'Drag the chunks in.',
           trek: [
-            { md: 'Turn **every** light on', python: 'leds.user(0b11111111)\n' },
-            { md: 'Wait, then the next step is yours', python: 'from time import sleep\nsleep(1)\npass  # TODO: turn them off\n' },
+            // The import in one chunk makes the next one's sleep(1) the wait block.
+            { md: 'Turn **every** light on', python: 'from time import sleep\nleds.user(0b11111111)\n' },
+            { md: 'Wait, then the next step is yours', python: 'sleep(1)\npass  # TODO: turn them off\n' },
           ],
           goals: [{ md: 'Use the CodeTrek', check: { event: 'trek-used' } }],
         },
@@ -342,6 +343,7 @@ const flyout = await page.evaluate(() => {
 })
 check(flyout.labels.join('|') === '1. Turn every light on|2. Wait, then the next step is yours', `its chunks, under their captions (${flyout.labels.join('|')})`)
 check(flyout.blocks.length === 2 && flyout.blocks[0] === 'codebot_leds_pattern' && flyout.blocks[1].includes('ocb_todo'), `as blocks, the to-do a "to do" block (${flyout.blocks.join(' ; ')})`)
+check(flyout.blocks[1]?.startsWith('ocb_wait'), `a chunk's sleep(1) is the wait block, by another chunk's from time import sleep (${flyout.blocks[1]})`)
 
 // Drag the second chunk out of the flyout onto the canvas.
 const from = await page.evaluate(() => {
@@ -412,6 +414,29 @@ check(slow.slowMatch === false && slow.took < 1000, `it is stopped in ${Math.rou
 check(slow.ticks >= 3, `the page kept running meanwhile (${slow.ticks} timer ticks)`)
 check(slow.after === true, 'the next regex is tested as usual')
 check(slow.again === false, 'and the slow one is never tried again')
+
+console.log('A click on a part of the board')
+{
+  const PICK = {
+    format: 1,
+    id: 'PICK',
+    title: 'Pick pack',
+    brief: 'Parts',
+    board: 'codebot',
+    missions: [{ id: 'PICK_M', title: 'Parts', flow: [{ type: 'objective', id: 'PICK_1', title: 'Find the speaker', instructions: 'Click it.', goals: [{ md: 'Click the speaker', check: { pick: '^Cylinder$' } }] }] }],
+  }
+  await openPackFile(file('pick.json', PICK))
+  await page.waitForFunction(() => document.querySelector('#learn-pane .learn-pack-title')?.textContent === 'Pick pack')
+  await pane('[data-mission="0"]').click()
+  await pane('[data-learn="next"]').click()
+  const fire = (name) => page.evaluate((name) => window.openCodeBot.device.sim.dispatchEvent(new CustomEvent('pick', { detail: name })), name)
+  await fire('Cylinder.015')
+  await page.waitForTimeout(400)
+  check((await pane('.learn-goals li[data-met="true"]').count()) === 0, 'a click on another part does not meet it')
+  await fire('Cylinder')
+  await page.waitForFunction(() => document.querySelector('#learn-pane .learn-goals li[data-met="true"]'), null, { timeout: 5000 }).catch(() => {})
+  check((await pane('.learn-goals li[data-met="true"]').count()) === 1, 'a click on the part the goal names meets it')
+}
 
 console.log('A pack that comes with Codacious')
 {
