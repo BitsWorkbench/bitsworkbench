@@ -63,9 +63,16 @@ export function riskyRegex(source) {
 
 /** Tests a pack's regexes in a worker, time-boxed. */
 export class RegexTester {
-  constructor(makeWorker = () => new Worker(new URL('./regex-worker.js', import.meta.url), { type: 'module' })) {
+  /**
+   * `makeWorker()` makes a worker that posts `{ ready: true }` once loaded and
+   * answers `{ id, source, text }` with `{ id, match }`. `startLimitMs`: how long
+   * a worker may take to load (a slow phone, a cold cache) before the test is
+   * given up, without blaming the regex.
+   */
+  constructor({ makeWorker = () => new Worker(new URL('./regex-worker.js', import.meta.url), { type: 'module' }), startLimitMs = 10000 } = {}) {
     this.makeWorker = makeWorker
-    this.worker = null
+    this.startLimitMs = startLimitMs
+    this.worker = null // { worker, ready: Promise<boolean> }
     this.slow = new Set()
     this.queue = Promise.resolve()
     this.id = 0
@@ -78,9 +85,33 @@ export class RegexTester {
     return this.queue
   }
 
-  _ask(source, text) {
-    this.worker ??= this.makeWorker()
-    const worker = this.worker
+  /** A loaded worker, or null if one would not load in time (it is dropped, and the next test makes another). */
+  async _loaded() {
+    if (!this.worker) {
+      const worker = this.makeWorker()
+      const ready = new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), this.startLimitMs)
+        worker.addEventListener('message', function onReady(e) {
+          if (!e.data?.ready) return
+          clearTimeout(timer)
+          worker.removeEventListener('message', onReady)
+          resolve(true)
+        })
+      })
+      this.worker = { worker, ready }
+    }
+    const { worker, ready } = this.worker
+    if (await ready) return worker
+    worker.terminate()
+    if (this.worker?.worker === worker) this.worker = null
+    console.warn('The worker that tests mission packs\' regular expressions did not start in time.')
+    return null
+  }
+
+  async _ask(source, text) {
+    // The clock starts once the worker has loaded: its start-up is not the regex's time.
+    const worker = await this._loaded()
+    if (!worker) return false
     const id = ++this.id
     return new Promise((resolve) => {
       const timer = setTimeout(() => {

@@ -10,3 +10,5 @@ self.onmessage = (e) => {
   }
   self.postMessage({ id, match })
 }
+// Loaded: from now on a test's time is the regex's own.
+self.postMessage({ ready: true })

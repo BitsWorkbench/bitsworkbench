@@ -5,7 +5,7 @@
  * what happened, and the regular-expression shapes a pack may not use.
  */
 import { met } from '../src/learn/checks.js'
-import { riskyRegex } from '../src/learn/regex.js'
+import { riskyRegex, RegexTester } from '../src/learn/regex.js'
 
 let failures = 0
 const check = (name, condition, detail = '') => {
@@ -59,6 +59,74 @@ check('all and any', met({ all: [{ has: 'x = 1' }, { any: [{ event: 'stepped' },
 console.log('Regular expressions a pack may not use')
 for (const r of ['(a+)+$', '(a*)*b', '(\\w+\\s?)*$', '(a|aa)+', '((ab)*)+', '(x+x+)+y', '(.*a){2,}', '(a)\\1', '(?<n>a)\\k<n>']) check(`refused: /${r}/ (${riskyRegex(r)})`, riskyRegex(r) !== null)
 for (const r of ['^hello', '\\d+ cm', '(ab)+', '(\\d+)?', '[a-z(+]+$', '(?:x|y)z', '(?<n>a)b', '(?<=a)b', '\\(a+\\)+', 'temp: -?\\d+(\\.\\d+)?', '(a|b)?c']) check(`allowed: /${r}/`, riskyRegex(r) === null, riskyRegex(r))
+
+console.log('The time-box starts once its worker has loaded')
+{
+  /**
+   * A stand-in worker: loads in `startMs` (never, if null), answers each test
+   * in `matchMs`. Like a real one, what is sent before it loads waits until it has.
+   */
+  class FakeWorker extends EventTarget {
+    constructor({ startMs, matchMs }) {
+      super()
+      this.matchMs = matchMs
+      this.terminated = false
+      this.waiting = []
+      if (startMs !== null) {
+        setTimeout(() => {
+          this.loaded = true
+          this._send({ ready: true })
+          this.waiting.forEach((m) => this.postMessage(m))
+        }, startMs)
+      }
+    }
+    postMessage(m) {
+      if (!this.loaded) return this.waiting.push(m)
+      setTimeout(() => this._send({ id: m.id, match: new RegExp(m.source).test(m.text) }), this.matchMs)
+    }
+    terminate() {
+      this.terminated = true
+    }
+    _send(data) {
+      if (this.terminated) return
+      const e = new Event('message')
+      e.data = data
+      this.dispatchEvent(e)
+    }
+  }
+  const quietly = async (fn) => {
+    const warn = console.warn
+    console.warn = () => {}
+    try {
+      return await fn()
+    } finally {
+      console.warn = warn
+    }
+  }
+  const made = []
+  const tester = (startMs, matchMs, startLimitMs) =>
+    new RegexTester({ startLimitMs, makeWorker: () => (made.push(new FakeWorker({ startMs, matchMs })), made.at(-1)) })
+
+  // A worker 300 ms in loading (well past the 100 ms limit), then quick.
+  const coldStart = tester(300, 5)
+  check('a good regex on a slow-loading worker matches', (await coldStart.test('^ok', 'ok')) === true)
+  check('and is not marked slow', !coldStart.slow.has('^ok'))
+
+  // A worker that loads at once, but a test that takes 200 ms.
+  made.length = 0
+  const slowMatch = tester(0, 200)
+  check('a test over 100 ms counts as not matching', (await quietly(() => slowMatch.test('^ok', 'ok'))) === false)
+  check('marks the regex slow and ends its worker', slowMatch.slow.has('^ok') && made[0].terminated)
+  check('the slow regex is not tried again', (await slowMatch.test('^ok', 'ok')) === false && made.length === 1)
+
+  // A worker that never loads: given up after its start limit, the regex not blamed, a new worker next time.
+  made.length = 0
+  const neverStarts = tester(null, 5, 150)
+  check('a worker that never loads gives up the test', (await quietly(() => neverStarts.test('^ok', 'ok'))) === false)
+  check('without marking the regex slow', !neverStarts.slow.has('^ok') && made[0].terminated)
+  await quietly(() => neverStarts.test('^ok', 'ok'))
+  check('and the next test makes a new worker', made.length === 2)
+}
 
 if (failures) {
   console.log(`\n${failures} failed`)
