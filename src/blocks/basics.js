@@ -145,6 +145,19 @@ defineBlocks([
     },
     python: (block) => `${block.getFieldValue('CODE')}\n`,
   },
+  // A step left for the student, from a mission's CodeTrek: a placeholder
+  // that runs as nothing, saying what goes there. In Python, `pass  # TODO:
+  // what to do`. Not in the palette: it comes in with the code around it.
+  {
+    json: {
+      type: 'ocb_todo',
+      args0: [{ type: 'field_input', name: 'TEXT', text: '', spellcheck: false }],
+      previousStatement: null,
+      nextStatement: null,
+      style: 'trek_blocks',
+    },
+    python: (block) => `pass  # TODO: ${block.getFieldValue('TEXT')}\n`,
+  },
   {
     json: {
       type: 'ocb_python_value',

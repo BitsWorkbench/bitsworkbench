@@ -51,9 +51,10 @@ const CUSTOM = {
 /**
  * The palette for a board: categories and separators, in the toolbox's order.
  * Category: { kind: 'category', name, colour, snippets, hint? }; separator: { kind: 'sep' }.
- * `myBlocks` is the student's library ([{ name, code, value }]), for its category.
+ * `myBlocks` is the student's library ([{ name, code, value }]), for its category;
+ * `trek` the open objective's CodeTrek, as snippets: its category is hidden without one.
  */
-export function snippetsFor(targetId, myBlocks = []) {
+export function snippetsFor(targetId, myBlocks = [], trek = []) {
   const scratch = new Blockly.Workspace()
   try {
     return toolboxFor(targetId).contents.map((entry) => {
@@ -61,12 +62,15 @@ export function snippetsFor(targetId, myBlocks = []) {
       const mine = entry.custom === 'MY_BLOCKS'
       const snippets = mine
         ? myBlocks.map((i) => complete({ code: i.code, line: !i.value, name: i.name }))
-        : entry.custom
+        : entry.custom === 'CODETREK'
+          ? trek.map(complete)
+          : entry.custom
           ? CUSTOM[entry.custom].map(complete)
           : entry.contents.filter((item) => item.kind === 'block').map((item) => snippetOf(item, scratch)).filter(Boolean)
       const colour = HUE[entry.categorystyle.replace(/_category$/, '')]
       const category = { kind: 'category', name: entry.name, colour, snippets: snippets.map((s) => ({ ...s, colour })) }
       if (mine && !snippets.length) category.hint = t('myBlocks.emptyPython')
+      if (entry.custom === 'CODETREK') category.hidden = !snippets.length
       return category
     })
   } finally {

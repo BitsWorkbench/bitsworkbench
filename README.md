@@ -178,6 +178,8 @@ src/
     checks.js          a goal's check against the program (Python patterns) and what happened
     goals.js           watches the program, runs, output and actions; ticks goals as they are met
     regex.js           a pack's regexes: risky shapes refused, every test time-boxed in a worker
+    trek.js            an objective's CodeTrek: captions, and its chunks as Python palette cards
+    trek-blocks.js     the CodeTrek category in the block palette, its chunks made into blocks
     learn.js           the pane in the app: opening packs, its divider, reopening after a reload
   ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language

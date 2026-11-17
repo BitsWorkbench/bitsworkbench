@@ -366,6 +366,8 @@ export default {
   'cat.functions': '🧰 Functions',
   'cat.python': '🐍 Python',
   'cat.myBlocks': '⭐ My blocks',
+  'cat.codetrek': '🧭 CodeTrek',
+  'trek.noBlocks': '(Nothing to drag here: the blocks do this part for you.)',
   'myBlocks.empty1': 'Right-click a grey Python block',
   'myBlocks.empty2': 'and choose Save to My blocks.',
   'myBlocks.emptyPython': 'Your saved Python blocks show here. Save one in blocks: right-click a grey Python block.',
@@ -684,6 +686,8 @@ export default {
   'block.ocb_seconds_since_start.tooltip': 'How long your program has been running.',
   'block.ocb_python.message0': '🐍 run Python %1',
   'block.ocb_python.tooltip': 'Python with no block of its own. Type any Python here, as many lines as you like.',
+  'block.ocb_todo.message0': '📝 to do: %1',
+  'block.ocb_todo.tooltip': 'A step left for you. Put the blocks it asks for here, then take this one away. It does nothing when it runs.',
   'block.ocb_python_value.message0': '🐍 %1',
   'block.ocb_python_value.tooltip': 'A piece of Python with no block of its own.',
 

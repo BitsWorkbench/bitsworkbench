@@ -76,7 +76,8 @@ async function drag(cardText, n, { dx = 0, where = 0.25 } = {}) {
 // ------------------------------------------------- the palette is the blocks'
 await page.click('#btn-view')
 const blockCats = await page.evaluate(() =>
-  window.openCodeBot.workspace.workspace.getToolbox().getToolboxItems().filter((i) => i.getName).map((i) => i.getName()),
+  // CodeTrek's category is hidden in both until an objective has one.
+  window.openCodeBot.workspace.workspace.getToolbox().getToolboxItems().filter((i) => i.getName && i.isVisible()).map((i) => i.getName()),
 )
 const pyCats = await page.$$eval('.py-cat', (b) => b.map((x) => x.textContent))
 check(JSON.stringify(blockCats) === JSON.stringify(pyCats), `the Python palette has the blocks' categories (${pyCats.length})`)

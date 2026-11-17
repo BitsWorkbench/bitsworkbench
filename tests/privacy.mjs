@@ -56,8 +56,9 @@ await page.waitForFunction(() => !!window.openCodeBot)
 await page.evaluate(() => navigator.serviceWorker.ready)
 
 // The palette, every category.
-for (let i = 0; i < (await page.$$('.blocklyToolboxCategory')).length; i++) {
-  await (await page.$$('.blocklyToolboxCategory'))[i].click()
+// (CodeTrek's is hidden until an objective has one.)
+for (let i = 0; i < (await page.$$('.blocklyToolboxCategory:visible')).length; i++) {
+  await (await page.$$('.blocklyToolboxCategory:visible'))[i].click()
   await page.waitForTimeout(100)
 }
 await page.keyboard.press('Escape')

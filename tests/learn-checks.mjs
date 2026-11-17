@@ -6,6 +6,7 @@
  */
 import { met } from '../src/learn/checks.js'
 import { riskyRegex, RegexTester } from '../src/learn/regex.js'
+import { caption, trekSnippets } from '../src/learn/trek.js'
 
 let failures = 0
 const check = (name, condition, detail = '') => {
@@ -59,6 +60,21 @@ check('all and any', met({ all: [{ has: 'x = 1' }, { any: [{ event: 'stepped' },
 console.log('Regular expressions a pack may not use')
 for (const r of ['(a+)+$', '(a*)*b', '(\\w+\\s?)*$', '(a|aa)+', '((ab)*)+', '(x+x+)+y', '(.*a){2,}', '(a)\\1', '(?<n>a)\\k<n>']) check(`refused: /${r}/ (${riskyRegex(r)})`, riskyRegex(r) !== null)
 for (const r of ['^hello', '\\d+ cm', '(ab)+', '(\\d+)?', '[a-z(+]+$', '(?:x|y)z', '(?<n>a)b', '(?<=a)b', '\\(a+\\)+', 'temp: -?\\d+(\\.\\d+)?', '(a|b)?c']) check(`allowed: /${r}/`, riskyRegex(r) === null, riskyRegex(r))
+
+console.log('CodeTrek chunks for the Python palette')
+{
+  const [first, second, third] = trekSnippets([
+    { md: 'Turn **every** light on: `leds.user(0b11111111)` and see [why](https://firialabs.com)', python: 'leds.user(0b11111111)\n' },
+    { md: '--Concept--Wait a while, then turn the lights off again so the bot rests and nobody squints--/Concept--', python: 'from time import sleep\nsleep(1)\npass  # TODO: turn them off\n' },
+    { md: 'Import', python: 'from botcore import *\n' },
+  ])
+  check('a caption is numbered plain text', first.name === '1. Turn every light on: leds.user(0b11111111) and see why', first.name)
+  check('a long caption is cut short', second.name.length <= 73 && second.name.endsWith('…'), second.name)
+  check('a chunk is a line snippet of its code', first.code === 'leds.user(0b11111111)' && first.line && first.trek)
+  check('its imports go to the top when dropped', second.imports.join() === 'from time import sleep' && second.code === 'sleep(1)\npass  # TODO: turn them off')
+  check('a chunk that is only an import is that import', third.code === 'from botcore import *' && !third.imports.length)
+  check('caption() numbers from 1', caption('x', 1) === '1. x')
+}
 
 console.log('The time-box starts once its worker has loaded')
 {

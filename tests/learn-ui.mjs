@@ -258,6 +258,116 @@ check(true, 'met goals stay met after a reload')
 await pane('[data-learn="up"]').click()
 check((await pane('[data-mission="0"]').getAttribute('data-done')) === 'true', 'and the mission shows as finished')
 
+console.log('CodeTrek in the palette')
+const TREK = {
+  format: 1,
+  id: 'TREK',
+  title: 'Trek pack',
+  brief: 'CodeTrek',
+  board: 'codebot',
+  missions: [
+    {
+      id: 'TREK_M',
+      title: 'Trek',
+      flow: [
+        {
+          type: 'objective',
+          id: 'TREK_1',
+          title: 'Blocks trek',
+          instructions: 'Drag the chunks in.',
+          trek: [
+            { md: 'Turn **every** light on', python: 'leds.user(0b11111111)\n' },
+            { md: 'Wait, then the next step is yours', python: 'from time import sleep\nsleep(1)\npass  # TODO: turn them off\n' },
+          ],
+          goals: [{ md: 'Use the CodeTrek', check: { event: 'trek-used' } }],
+        },
+        {
+          type: 'objective',
+          id: 'TREK_2',
+          title: 'Python trek',
+          instructions: 'Drag the chunk in.',
+          trek: [{ md: 'Wait a moment', python: 'from time import sleep\nsleep(0.25)\n' }],
+          goals: [{ md: 'Use the CodeTrek', check: { event: 'trek-used' } }],
+        },
+        { type: 'objective', id: 'TREK_3', title: 'No trek', instructions: 'Nothing provided.', goals: [{ md: 'Run', check: { runs: true } }] },
+      ],
+    },
+  ],
+}
+const trekShown = () => page.evaluate(() => window.openCodeBot.workspace.workspace.getToolbox().getToolboxItemById('codetrek').isVisible())
+await page.evaluate(() => window.openCodeBot._toBlocks())
+check(!(await trekShown()), 'with no objective open, the block palette has no CodeTrek')
+await openPackFile(file('trek.json', TREK))
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-body')?.innerText.includes('Trek'))
+await pane('[data-mission="0"]').click()
+await pane('[data-learn="next"]').click()
+await page.waitForFunction(() => window.openCodeBot.workspace.workspace.getToolbox().getToolboxItemById('codetrek').isVisible())
+check(true, 'an objective with a CodeTrek shows it in the block palette')
+const flyout = await page.evaluate(() => {
+  const ws = window.openCodeBot.workspace.workspace
+  const toolbox = ws.getToolbox()
+  toolbox.setSelectedItem(toolbox.getToolboxItemById('codetrek'))
+  const fly = toolbox.getFlyout().getWorkspace()
+  const types = (b) => [b.type, ...b.getChildren(true).flatMap(types)]
+  return {
+    blocks: fly.getTopBlocks(true).map((b) => types(b).join('>')),
+    labels: [...document.querySelectorAll('.blocklyFlyout .blocklyFlyoutLabelText')].map((l) => l.textContent),
+  }
+})
+check(flyout.labels.join('|') === '1. Turn every light on|2. Wait, then the next step is yours', `its chunks, under their captions (${flyout.labels.join('|')})`)
+check(flyout.blocks.length === 2 && flyout.blocks[0] === 'codebot_leds_pattern' && flyout.blocks[1].includes('ocb_todo'), `as blocks, the to-do a "to do" block (${flyout.blocks.join(' ; ')})`)
+
+// Drag the second chunk out of the flyout onto the canvas.
+const from = await page.evaluate(() => {
+  const fly = window.openCodeBot.workspace.workspace.getToolbox().getFlyout().getWorkspace()
+  const r = fly.getTopBlocks(true)[1].getSvgRoot().getBoundingClientRect()
+  return { x: r.left + 10, y: r.top + 10 }
+})
+const canvas = await page.locator('#blockly-root').boundingBox()
+await page.mouse.move(from.x, from.y)
+await page.mouse.down()
+await page.mouse.move(from.x + 40, from.y + 10, { steps: 5 })
+await page.mouse.move(canvas.x + canvas.width * 0.6, canvas.y + canvas.height * 0.6, { steps: 10 })
+await page.mouse.up()
+await page.waitForFunction(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).some((b) => b.type === 'ocb_todo'))
+check(true, 'a chunk drags onto the canvas, its to-do with it')
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-goals li')?.dataset.met === 'true', null, { timeout: 5000 })
+check(true, 'and dragging it in meets the trek-used goal')
+check(
+  await page.evaluate(() => !window.openCodeBot.workspace.workspace.getAllBlocks(false).some((b) => b.data?.includes('"trek"'))),
+  'the dropped blocks are the student\'s own (no CodeTrek mark left on them)',
+)
+// The "to do" block is `pass  # TODO: ...` in Python, and the same block again back from it.
+await page.evaluate(() => window.openCodeBot._toText())
+check((await page.evaluate(() => window.openCodeBot.pythonEditor.value)).includes('pass  # TODO: turn them off'), 'in Python, the to-do is pass  # TODO: turn them off')
+await page.evaluate(() => {
+  const app = window.openCodeBot
+  app.pythonEditor.value = app.pythonEditor.value.replace('# TODO: turn them off', '# TODO: turn them all off')
+})
+await page.evaluate(() => window.openCodeBot._toBlocks())
+check(
+  await page.evaluate(() => window.openCodeBot.workspace.workspace.getAllBlocks(false).some((b) => b.type === 'ocb_todo' && b.getFieldValue('TEXT') === 'turn them all off')),
+  'and back in blocks it is the "to do" block, with the words changed in Python',
+)
+
+await pane('[data-learn="next"]').click()
+await page.evaluate(() => window.openCodeBot._toText())
+await page.waitForSelector('#py-palette .py-cat >> text=CodeTrek')
+await page.click('#py-palette .py-cat >> text=CodeTrek')
+check((await page.locator('#py-flyout .snippet-name').innerText()) === '1. Wait a moment', 'in Python, the CodeTrek is a palette category of the chunks')
+await page.click('#py-flyout .snippet')
+const typed = await page.evaluate(() => window.openCodeBot.pythonEditor.value)
+check(typed.includes('sleep(0.25)') && /^(from time import sleep|import time)/m.test(typed), 'clicking a chunk puts it in, its import at the top')
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-goals li')?.dataset.met === 'true', null, { timeout: 5000 })
+check(true, 'and meets the trek-used goal')
+
+await pane('[data-learn="next"]').click()
+await page.waitForTimeout(200)
+check((await page.locator('#py-palette .py-cat', { hasText: 'CodeTrek' }).count()) === 0, 'an objective with no CodeTrek has no CodeTrek category')
+await page.evaluate(() => window.openCodeBot._toBlocks())
+check(!(await trekShown()), 'in either palette')
+await pane('[data-learn="close"]').click()
+
 console.log('A slow regular expression cannot hang the page')
 const slow = await page.evaluate(async () => {
   const tester = window.openCodeBot.learn.watcher.tester

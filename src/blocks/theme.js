@@ -18,6 +18,8 @@ export const HUE = {
   functions: '#8894a8',
   // Python with no block of its own: plain grey, so it reads as "not a block yet".
   python: '#b4b8bf',
+  // A mission's CodeTrek, and the "to do" steps it leaves for the student.
+  trek: '#c58b00',
 }
 
 /** The style names Blockly's built-in blocks use, and the category each belongs to. */

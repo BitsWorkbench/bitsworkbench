@@ -97,6 +97,13 @@ or `quiz`, and the fields below.
 The code is always Python. In blocks mode the student sees the same program as blocks, made by
 the round trip, so goals, code and solution are written once.
 
+While an objective with a `trek` is open, both palettes have a **CodeTrek** category at the
+top: each chunk under its caption (the start of its `md`, as plain text), as blocks in blocks
+mode and as a card of Python in Python mode. A chunk's imports go in once at the top of the
+program, wherever it is dropped; in blocks they are the blocks' own business. A chunk's
+`pass  # TODO: ...` lines are "to do" blocks, and stay "to do" blocks through the round trip.
+Dragging a chunk in (or clicking its card) is the `trek-used` event.
+
 ## Quizzes
 
 ```json
