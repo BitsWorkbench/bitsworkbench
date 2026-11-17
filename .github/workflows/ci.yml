@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # The whole suite, the simulator's included, takes a few minutes; a hung
     # browser should not hold a runner for hours.
     timeout-minutes: 20
