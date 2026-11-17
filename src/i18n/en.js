@@ -420,6 +420,8 @@ export default {
   'learn.goalMet': 'Done:',
   'learn.goalOpen': 'To do:',
   'learn.objectiveDone': 'Every goal met. On to the next step!',
+  'learn.pythonOnly': 'This step is taught in Python: most of its code has no blocks yet. Your program stays the same, just as text.',
+  'learn.toPython': 'Switch to Python',
   'learn.missionFinished': '(finished)',
   'learn.hint': 'Hint {n}',
   'learn.answers': 'Answers to question {n}',

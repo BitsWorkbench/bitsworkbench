@@ -429,6 +429,8 @@ kbd {
 .learn-complete { margin-top: 12px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--green-soft); border: 2px solid var(--green); }
 .learn-mission[data-done='true'] .ex-num { background: var(--green-strong); color: #fff; }
 .learn-hint { margin-top: 10px; }
+.learn-python { margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--sky-soft); border: 2px solid var(--sky); display: grid; gap: 8px; justify-items: start; }
+.learn-python p { margin: 0; }
 .learn-hint > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); }
 .learn-quiz { padding-left: 20px; display: grid; gap: 14px; }
 .learn-answers { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; }

@@ -91,11 +91,22 @@ or `quiz`, and the fields below.
 | `goals` | yes | What finishes the objective: `{ "md", "check" }` each (below). |
 | `hints` | no | Markdown, up to three. |
 | `complete` | no | Markdown shown when the goals are met. |
-| `blocks` | no | `false` when the objective is not offered in blocks. Left out, Codacious offers blocks when the code becomes real blocks rather than mostly Python blocks. |
+| `blocks` | no | Whether the objective is taught in blocks, `true` or `false`. Left out, Codacious decides (below). |
 | `sim` | no | `{ "room", "course" }`: where the simulated board starts, by the ids in `src/sim/kinds.js` (`ROOMS`) and `src/sim/world/courses.js` (`COURSES`). |
 
 The code is always Python. In blocks mode the student sees the same program as blocks, made by
 the round trip, so goals, code and solution are written once.
+
+The student can switch between blocks and Python at any time, mid-objective: the program is the
+same, and the text, the CodeTrek and the palette follow the switch. But some Python has no
+block (a `def` that returns a value, lists and dicts, f-strings, `try`), and stays a grey Python
+block; an objective whose code is mostly grey blocks is Python in disguise. So each objective is
+**taught in blocks** or not. Unless its `blocks` field says, Codacious works it out from the
+program the objective builds toward (its `solution`, else its `code`, else its CodeTrek's
+chunks): taught in blocks when at most a quarter of its lines, not counting blank lines,
+comments and imports, would be grey Python blocks, and not when more are or the code does not
+parse. When a student is in blocks on an objective not taught in blocks, the objective says so,
+with a button that switches to Python. Blocks stay there for a student who wants them.
 
 While an objective with a `trek` is open, both palettes have a **CodeTrek** category at the
 top: each chunk under its caption (the start of its `md`, as plain text), as blocks in blocks

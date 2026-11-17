@@ -419,6 +419,8 @@ export default {
   'learn.goalMet': 'Hecho:',
   'learn.goalOpen': 'Por hacer:',
   'learn.objectiveDone': 'Todas las metas cumplidas. ¡Al siguiente paso!',
+  'learn.pythonOnly': 'Este paso se enseña en Python: la mayor parte de su código aún no tiene bloques. Tu programa sigue igual, solo que como texto.',
+  'learn.toPython': 'Cambiar a Python',
   'learn.missionFinished': '(terminada)',
   'learn.hint': 'Pista {n}',
   'learn.answers': 'Respuestas a la pregunta {n}',

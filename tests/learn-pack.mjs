@@ -5,6 +5,7 @@
  */
 import { readPack, readRest, joinRest, PackError, FORMAT } from '../src/learn/pack.js'
 import { renderMarkdown } from '../src/learn/markdown.js'
+import { offersBlocks, greyShare, codeLines, MOST_GREY } from '../src/learn/offer.js'
 
 let failures = 0
 const check = (name, condition, detail = '') => {
@@ -174,6 +175,31 @@ console.log('A pack\'s Markdown, as HTML')
   check('a Peek section is folded', html('--Peek--hidden--/Peek--').startsWith('<details class="lsec lsec-peek"><summary>Peek</summary>'))
   check('a new file names the file', html('--File title={blink.py}/--').includes('File:blink.py'))
   check('sections inside sections', /lsec-concept.*lsec-caution.*inner/s.test(html('--Concept--a--Caution--inner--/Caution--b--/Concept--')))
+}
+
+console.log('Taught in blocks')
+{
+  // A stand-in for the app's Python to blocks: a line with "grey" in it has no block.
+  const asked = []
+  const convert = (python, board) => {
+    asked.push({ python, board })
+    if (python.includes('syntax error')) return { ok: false, line: 1 }
+    return { ok: true, pythonLines: python.split('\n').flatMap((l, i) => (l.includes('grey') ? [i + 1] : [])) }
+  }
+  const lines = (n, grey) => ['from botcore import *', '# a comment', '', ...Array.from({ length: n }, (_, i) => (i < grey ? `grey(${i})` : `leds.user(${i})`))].join('\n')
+  check('blank lines, comments and imports do not count', codeLines(lines(4, 0)).join() === '4,5,6,7', codeLines(lines(4, 0)).join())
+  check('a quarter grey is still blocks', offersBlocks({ solution: lines(4, 1) }, 'codebot', convert) === true)
+  check('over a quarter grey is Python', offersBlocks({ solution: lines(4, 2) }, 'codebot', convert) === false)
+  check('the board is the one given', asked.at(-1).board === 'codebot')
+  check('greyShare is the share of counted lines', greyShare(lines(4, 1), (p) => convert(p)) === 0.25)
+  check('the solution is judged first', offersBlocks({ solution: lines(4, 0), code: lines(4, 4) }, 'codex', convert) === true)
+  check('then the starting code', offersBlocks({ code: lines(4, 4), trek: [{ md: '', python: 'leds.user(1)\n' }] }, 'codex', convert) === false)
+  check('then the CodeTrek', offersBlocks({ trek: [{ md: '', python: 'grey()\n' }, { md: '', python: 'leds.user(1)\n' }] }, 'codex', convert) === false)
+  check('no code at all: blocks', offersBlocks({}, 'codex', convert) === true)
+  check('code that does not parse: Python', offersBlocks({ solution: 'syntax error' }, 'codex', convert) === false)
+  check('the pack says blocks: blocks', offersBlocks({ solution: lines(4, 4), blocks: true }, 'codex', convert) === true)
+  check('the pack says no blocks: Python', offersBlocks({ solution: lines(4, 0), blocks: false }, 'codex', convert) === false)
+  check('MOST_GREY is a quarter', MOST_GREY === 0.25)
 }
 
 if (failures) {

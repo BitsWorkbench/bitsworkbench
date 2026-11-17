@@ -76,7 +76,18 @@ const REST = {
   format: 1,
   id: 'UI',
   continues: 'UI_A',
-  missions: [{ id: 'UI_B', title: 'Motors', brief: 'Drive', flow: [objective('UI_B_1', 'Drive On')] }],
+  missions: [
+    {
+      id: 'UI_B',
+      title: 'Motors',
+      brief: 'Drive',
+      flow: [
+        objective('UI_B_1', 'Drive On', { solution: 'from botcore import *\n\nleds.user(0b11111111)\n' }),
+        // Mostly Python with no block: taught in Python.
+        objective('UI_B_2', 'Careful Driving', { solution: 'from botcore import *\n\ntry:\n    leds.user(255)\nexcept OSError as err:\n    print(err)\n' }),
+      ],
+    },
+  ],
 }
 const file = (name, data) => ({ name, mimeType: 'application/json', buffer: Buffer.from(typeof data === 'string' ? data : JSON.stringify(data)) })
 
@@ -177,6 +188,21 @@ await page.waitForSelector('.toast[data-kind="info"]')
 check((await text('.learn-title')) === 'Unsafe', 'a pack\'s second file opens it where the student was')
 await pane('[data-learn="up"]').click()
 check((await pane('[data-mission]').count()) === 2 && (await text('.learn-body')).includes('Motors'), 'and its missions follow the first file\'s')
+
+console.log('Taught in blocks, or in Python')
+await pane('[data-mission="1"]').click()
+await pane('[data-learn="next"]').click()
+check((await text('.learn-title')) === 'Drive On' && (await pane('.learn-python').count()) === 0, 'code that is all blocks: no word about Python')
+await pane('[data-learn="next"]').click()
+check((await text('.learn-title')) === 'Careful Driving' && (await pane('.learn-python').count()) === 1, 'code that is mostly Python blocks: in blocks, the step says it is taught in Python')
+await pane('[data-learn="python"]').click()
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-body').innerText.includes('type the line'))
+check((await page.evaluate(() => window.openCodeBot.workspace.mode)) === 'text', 'its button switches to Python')
+check((await pane('.learn-python').count()) === 0, 'and in Python the word is gone')
+await page.evaluate(() => window.openCodeBot._toBlocks())
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-python'))
+check(true, 'back in blocks, it is there again')
+await pane('[data-learn="up"]').click()
 
 console.log('Kept, and closed')
 await page.click('#btn-learn')

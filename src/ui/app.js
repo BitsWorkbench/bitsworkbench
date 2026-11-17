@@ -64,6 +64,8 @@ export class App {
       device: this.device,
       program: () => this._currentPython(),
       onTrek: (trek) => this._showTrek(trek),
+      blocksFromPython: (python, board) => pythonToBlocks(python, board),
+      toPython: () => this.workspace.mode === 'text' || this._toText(),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
     this.trek = null
