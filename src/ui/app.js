@@ -18,6 +18,7 @@ import { PythonEditor } from '../editor/python-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
 import { pythonToBlocks } from '../convert/to-blocks.js'
 import { createFileStores } from '../files/store.js'
+import { companionsOf, CopiedFiles } from '../files/companions.js'
 import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
@@ -45,6 +46,8 @@ export class App {
     // sits beside it, behind Simulate. ?device=sim opens in the simulator.
     const kind = deviceKindFromUrl()
     this.device = new DeviceSwitch(createDevice(kind === 'sim' ? 'serial' : kind), createDevice('sim'))
+    // The program's other .py files, as copied to the board before a run (_copyCompanions).
+    this.copiedFiles = new CopiedFiles()
     this.simPanel = new SimPanel($('sim-host'), this.device.sim)
     this.pickedTarget = localStorage.getItem(PICKED_DEVICE) || null
 
@@ -131,6 +134,8 @@ export class App {
     })
 
     device.addEventListener('device', (e) => {
+      // Another board, or a new simulator: what was copied before may not be there.
+      this.copiedFiles = new CopiedFiles()
       const { targetId, target, firmware } = e.detail
       if (targetId && target?.supported) {
         this._adoptConnectedTarget(targetId)
@@ -264,8 +269,46 @@ export class App {
       ? { code: this.workspace.pythonText, blockAt: {} }
       : generateWithLines(this.workspace.workspace, this.workspace.targetId)
     this._ran = { code, blockAt, text: textMode }
+    if (!(await this._copyCompanions())) return
     this.terminal.say(t('term.sending'))
     await this.device.run(code)
+  }
+
+  /**
+   * The open program's companion files (files/companions.js) onto the board
+   * or the simulator's drive, before it runs: the other .py files in its
+   * folder, the ones changed since they were last copied there. Says what it
+   * copied and what it would not. False if a copy failed (the run waits).
+   */
+  async _copyCompanions() {
+    const f = this.openFile
+    const store = f && this.stores[f.store]
+    // With no board, Run itself says so.
+    if (!store || !this.device.isConnected) return true
+    let found
+    try {
+      found = await companionsOf(store, f.path)
+    } catch (err) {
+      // The folder cannot be read (a folder on the computer not allowed again yet): the
+      // program runs, but say its other files were not copied.
+      console.warn('companions', err)
+      toast({ kind: 'warn', title: t('run.folderUnreadTitle'), detail: t('run.folderUnreadDetail') })
+      return true
+    }
+    if (found.refused.length) {
+      toast({ kind: 'warn', title: t('run.notCopiedTitle'), detail: t('run.notCopiedDetail', { files: found.refused.join(', ') }) })
+    }
+    const board = `${this.device.kind}:${this.device.targetId}`
+    const changed = this.copiedFiles.changed(board, found.files)
+    for (const file of changed) {
+      if (!(await this.device.writeFile(file.name, file.text))) {
+        toast({ kind: 'error', title: t('run.copyFailedTitle', { file: file.name }), detail: t('run.copyFailedDetail') })
+        return false
+      }
+      this.copiedFiles.copied(board, [file])
+    }
+    if (changed.length) this.terminal.say(t('run.copied', { files: changed.map((x) => x.name).join(', ') }))
+    return true
   }
 
   // Mark the line a paused program is at (null: none): typed Python's line in
