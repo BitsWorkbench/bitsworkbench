@@ -109,6 +109,9 @@ npm run preview  # serve dist/ locally
   every choice in its dropdowns, made into Python and turned back into
   blocks, must be the same block making the same Python. Then Python with no
   block, comments, and code that does not parse.
+- **`tests/learn-pack.mjs`**: mission packs, with no browser: a good pack
+  reads with its defaults, each kind of mistake is named with where it is,
+  and a pack split into two files joins back into one.
 
 ### Hosting on GitHub Pages
 
@@ -158,6 +161,8 @@ src/
     snippets.js        each block's Python, for the palette beside the editor
     palette.js         that palette: categories, cards, drag (mouse and touch), click
     snippet-drop.js    where a dragged snippet lands, and the one change that puts it there
+  learn/       mission packs (docs/mission-packs.md)
+    pack.js            reads a pack file and checks it whole, naming every problem
   ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language
 ```

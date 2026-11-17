@@ -1,0 +1,167 @@
+# Mission packs
+
+A mission pack is an interactive textbook: missions of short objectives, each with
+instructions, the code it builds toward, the goals that finish it, hints, and quizzes along
+the way. This file is the format; `src/learn/pack.js` reads it and refuses a pack that breaks
+it, naming every problem it finds.
+
+The structure follows Firia Labs' CodeSpace curriculum (pack, mission, objective, quiz), with
+three changes: every objective can be done in blocks or in Python, and the student can switch
+between them at any time; a pack holds no script, since packs arrive as files and from teachers;
+and the CodeTrek, the code an objective provides, is a set of chunks the student drags from
+the palette into their own program.
+
+## A pack file
+
+One JSON file per pack. Every `id` is unique across the whole pack (missions, objectives,
+quizzes and questions together), and progress is kept by these ids, so an id never changes
+once a pack is in use.
+
+```json
+{
+  "format": 1,
+  "id": "SAMPLE",
+  "title": "Pack title",
+  "brief": "One line for the pack's card",
+  "overview": "Markdown shown when the pack is opened",
+  "complete": "Markdown shown when every mission is done",
+  "board": "codebot",
+  "avatar": "pack.png",
+  "assets": { "pack.png": "data:image/png;base64,..." },
+  "missions": []
+}
+```
+
+| Field | Required | What it is |
+|---|---|---|
+| `format` | yes | `1`. A pack with a higher number needs a newer Codacious. |
+| `id`, `title`, `brief` | yes | Text. |
+| `overview`, `complete` | no | Markdown. |
+| `board` | yes | `codebot`, `codex` or `codeair`: the board an objective runs on unless it names its own. The student runs it in the simulator or on a board over USB. |
+| `avatar` | no | The name of an image in `assets`. |
+| `assets` | no | Images the Markdown and avatars use, by name: `data:` URLs of PNG, JPEG, GIF or WebP. A pack is one file, so its pictures travel inside it. |
+| `missions` | yes | The missions, in order. |
+
+Any other field is an error, so a misspelt field name is caught rather than ignored.
+
+## Missions
+
+```json
+{
+  "id": "SAMPLE_Lights",
+  "title": "Lights",
+  "brief": "One line for the mission's card",
+  "overview": "Markdown: what the student will build, and why",
+  "complete": "Markdown: well done, and ideas to remix it",
+  "avatar": "lights.png",
+  "flow": []
+}
+```
+
+`flow` is the mission's objectives and quizzes, in order. Each item has `type`, `objective`
+or `quiz`, and the fields below.
+
+## Objectives
+
+```json
+{
+  "type": "objective",
+  "id": "SAMPLE_Lights_01",
+  "title": "Lights On",
+  "xp": 5,
+  "instructions": "Markdown",
+  "code": "from botcore import *\n\nleds.user(0b11110000)\n",
+  "solution": "from botcore import *\n\nleds.user(0b11111111)\n",
+  "trek": [{ "md": "Turn every light on.", "python": "leds.user(0b11111111)\n" }],
+  "goals": [{ "md": "Light all eight user LEDs", "check": { "has": "leds.user(0b11111111)" } }],
+  "hints": ["Markdown"],
+  "complete": "Markdown: a short cheer, puns welcome"
+}
+```
+
+| Field | Required | What it is |
+|---|---|---|
+| `id`, `title` | yes | Text. |
+| `xp` | no | Points for finishing it; 5 when left out. |
+| `board` | no | The board, when it is not the pack's. |
+| `instructions` | yes | Markdown: the concept, then what to do. |
+| `code` | no | The program the objective starts from: the student's program from the objective before, plus any scaffolding. Python that parses; a part left for the student is a `pass  # TODO: ...` line. |
+| `solution` | no | A program that meets every goal. The answer key: never shown to the student. |
+| `trek` | no | The CodeTrek: the chunks this objective adds, in order, each `{ "md", "python" }`. The palette shows them as cards in Python and as block stacks in blocks, `md` as each one's caption. A chunk's `python` parses; its to-dos are `pass  # TODO: ...` lines, which become "to do" blocks. |
+| `goals` | yes | What finishes the objective: `{ "md", "check" }` each (below). |
+| `hints` | no | Markdown, up to three. |
+| `complete` | no | Markdown shown when the goals are met. |
+| `blocks` | no | `false` when the objective is not offered in blocks. Left out, Codacious offers blocks when the code becomes real blocks rather than mostly Python blocks. |
+| `sim` | no | `{ "room", "course" }`: where the simulated board starts, by the ids in `src/sim/kinds.js` (`ROOMS`) and `src/sim/world/courses.js` (`COURSES`). |
+
+The code is always Python. In blocks mode the student sees the same program as blocks, made by
+the round trip, so goals, code and solution are written once.
+
+## Quizzes
+
+```json
+{
+  "type": "quiz",
+  "id": "SAMPLE_Lights_Quiz",
+  "title": "Checkpoint",
+  "overview": "Markdown",
+  "complete": "Markdown",
+  "questions": [
+    {
+      "id": "SAMPLE_Lights_Q1",
+      "q": "Markdown: the question",
+      "xp": 5,
+      "answers": [{ "a": "Markdown" }, { "a": "Markdown", "correct": true }]
+    }
+  ]
+}
+```
+
+Every question has at least two answers and at least one correct one. Codacious shuffles the
+answers; with several correct, the student finds them all.
+
+## Markdown
+
+Instructions, goals, hints and the rest are Markdown. On top of plain Markdown:
+
+- **Blocks or Python.** `--Blocks--` ... `--/Blocks--` shows only in blocks mode, and
+  `--Python--` ... `--/Python--` only in Python mode. Write the text once, and mark only what
+  differs: "drag the block" against "type the line".
+- **Sections**, as in CodeSpace: `--Concept--` ... `--/Concept--` sets text apart as a panel.
+  The kinds: `Concept` (a new idea), `Caution`, `Peek` (folded until opened), `Remix` (try it
+  your own way), `Run` (run the program now), `Debug`, `Touch` (try it on the board),
+  `ConsoleData` (read what the program prints) and `CheckTheTrek` (the CodeTrek has the code).
+  `--File title={blink.py}/--` asks the student to make a new file of that name.
+- **Images**: `<img src="name.png">` with a name from `assets`. No other HTML is shown.
+
+## Checks
+
+A goal's `check` says what finishes it, as data. A pack holds no script.
+
+Code checks read the student's program as Python, whichever mode they are in, since the blocks
+make Python. A **pattern** is a piece of Python: spaces, line breaks, quotes and extra
+parentheses do not matter, `...` stands for anything (an argument, an expression, a body), and a
+call matches a call with more keyword arguments than the pattern names.
+
+| Check | Met when |
+|---|---|
+| `{ "has": "pattern" }` | The program contains code matching the pattern. Add `"min": n` for at least n matches, `"max": n` for at most n (`"max": 0` for none), `"in": "pattern"` to count only matches inside a statement matching that pattern (`"in": "if buttons.was_pressed(0): ..."`). |
+| `{ "order": ["pattern", ...] }` | Code matching each pattern appears, each after the one before. |
+| `{ "all": [check, ...] }`, `{ "any": [check, ...] }` | Every check, or any one, is met. |
+| `{ "prints": "regex" }` | A run prints a line matching the regular expression. |
+| `{ "runs": true }` | The program runs to its end, or is stopped, without an error. Add `"seconds": n` for at least n seconds of running. |
+| `{ "event": "name" }` | The student does something in Codacious: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
+| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches. |
+
+## A pack in two files
+
+A pack can be split: its first missions in one file and the rest in another, so the first part
+can be shared freely. The second file continues the first:
+
+```json
+{ "format": 1, "id": "SAMPLE", "continues": "SAMPLE_Lights", "missions": [] }
+```
+
+`id` is the pack's own, `continues` the id of the last mission in the first file, and
+`missions` the missions after it. It has no other fields. Opened with the first part, its
+missions follow the first part's, and progress carries across, since it is kept by id.
