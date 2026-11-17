@@ -212,6 +212,7 @@ await audit('device menu open')
 await page.keyboard.press('Escape')
 
 await page.click('#btn-learn')
+await page.waitForFunction(() => document.getElementById('modal')?.open)
 await page.evaluate(() => (document.querySelector('#modal .ex-more').open = true))
 await audit('Learn panel')
 check(
@@ -219,6 +220,39 @@ check(
   'the Learn panel says which board it shows (aria-pressed)',
 )
 await page.keyboard.press('Escape')
+
+// A mission pack's tutorial pane, at a pack, at an objective and at a quiz.
+{
+  const pack = {
+    format: 1,
+    id: 'A11Y',
+    title: 'Pack',
+    brief: 'For the audit',
+    board: 'codebot',
+    missions: [
+      {
+        id: 'A11Y_M',
+        title: 'Mission',
+        brief: 'Its brief',
+        flow: [
+          { type: 'objective', id: 'A11Y_O', title: 'Objective', instructions: '--Concept--An idea.--/Concept--\n\nDo this.', goals: [{ md: 'A goal', check: { runs: true } }], hints: ['A hint'] },
+          { type: 'quiz', id: 'A11Y_Q', title: 'Quiz', questions: [{ id: 'A11Y_Q1', q: 'Which?', answers: [{ a: 'This', correct: true }, { a: 'That' }] }] },
+        ],
+      },
+    ],
+  }
+  await page.setInputFiles('#pack-input', { name: 'pack.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) })
+  await page.waitForFunction(() => !document.getElementById('learn-pane').hidden)
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()))
+  await audit('tutorial pane, a pack')
+  await page.click('#learn-pane [data-mission="0"]')
+  await page.click('#learn-pane [data-learn="next"]')
+  await audit('tutorial pane, an objective')
+  await page.click('#learn-pane [data-learn="next"]')
+  await page.click('#learn-pane .learn-answer >> text=That')
+  await audit('tutorial pane, a quiz with a wrong answer picked')
+  await page.click('#learn-pane [data-learn="close"]')
+}
 
 await page.click('#btn-menu')
 await page.click('[data-action="help"]')

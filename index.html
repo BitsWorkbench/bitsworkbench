@@ -149,6 +149,11 @@
             </div>
           </section>
         </section>
+
+        <!-- A mission pack's tutorial, opened from Learn: at the right, or under the side on a narrow screen. -->
+        <div class="splitter learn-splitter" id="learn-splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-controls="learn-pane"
+             data-i18n-attr="aria-label=learn.resizeLabel" hidden></div>
+        <section class="learn-pane" id="learn-pane" data-i18n-attr="aria-label=learn.paneLabel" hidden></section>
       </main>
 
       <footer class="statusbar">
@@ -162,6 +167,7 @@
     <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
     <dialog id="modal" class="modal"></dialog>
     <input type="file" id="file-input" accept=".py,.ocb,.json,text/x-python" hidden />
+    <input type="file" id="pack-input" accept=".json,application/json" hidden />
 
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -132,7 +132,9 @@ Instructions, goals, hints and the rest are Markdown. On top of plain Markdown:
   your own way), `Run` (run the program now), `Debug`, `Touch` (try it on the board),
   `ConsoleData` (read what the program prints) and `CheckTheTrek` (the CodeTrek has the code).
   `--File title={blink.py}/--` asks the student to make a new file of that name.
-- **Images**: `<img src="name.png">` with a name from `assets`. No other HTML is shown.
+- **Images**: `![what it shows](name.png)` with a name from `assets`.
+- **No HTML.** HTML in a pack shows as the text it is, and links go only to `http` and
+  `https` addresses, opening in a new tab.
 
 ## Checks
 

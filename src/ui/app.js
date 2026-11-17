@@ -21,6 +21,7 @@ import { createFileStores } from '../files/store.js'
 import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
+import { Learn } from '../learn/learn.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -52,6 +53,17 @@ export class App {
       saved: () => toast({ kind: 'info', title: t('myBlocks.saved'), detail: t('myBlocks.savedDetail') }),
     })
     this.terminal = new TerminalPanel($('terminal-host'), (data) => this.device.sendRaw(data))
+    // Mission packs: the tutorial pane at the right of the work area.
+    this.learn = new Learn({
+      pane: $('learn-pane'),
+      splitter: $('learn-splitter'),
+      workarea: document.querySelector('.workarea'),
+      onResize: () => this._refitSide?.(),
+    })
+    $('pack-input').addEventListener('change', (e) => {
+      this.learn.openFile(e.target.files?.[0])
+      e.target.value = ''
+    })
 
     this._bindDevice()
     this._bindChrome()
@@ -73,6 +85,7 @@ export class App {
     this._refreshDeviceChip()
     this._checkBrowser()
     this._maybeWelcome()
+    this.learn.restore().catch((err) => console.warn('learn', err))
 
     // A board that is already plugged in and paired can just come back.
     this.device.autoConnect().catch(() => {})
@@ -467,11 +480,15 @@ export class App {
       const rect = workarea.getBoundingClientRect()
       let pct
       if (vertical()) {
-        const height = Math.min(Math.max(px, 120), rect.height - 140)
-        workarea.style.gridTemplateRows = `1fr 6px ${height}px`
+        // An open tutorial pane is a row of its own, under the side, taking 40% of the height.
+        const learnH = this.learn.isOpen ? Math.round(rect.height * 0.4) : 0
+        // With the tutorial open, the side gives the editor most of what is left.
+        const most = learnH ? (rect.height - learnH) * 0.4 : rect.height - 140
+        const height = Math.min(Math.max(px, 120), most)
+        workarea.style.gridTemplateRows = `1fr 6px ${height}px${learnH ? ` ${learnH}px` : ''}`
         pct = 100 - (height / rect.height) * 100
       } else {
-        const width = Math.min(Math.max(px, 220), rect.width - 280)
+        const width = Math.min(Math.max(px, 220), rect.width - 280 - this.learn.width)
         workarea.style.setProperty('--side-w', `${width}px`)
         pct = 100 - (width / rect.width) * 100
       }
@@ -507,6 +524,8 @@ export class App {
       setSide(sideNow() + grow[e.key])
     })
     requestAnimationFrame(() => setSide(sideNow()))
+    // The tutorial pane opened, closed or changed width: the side fits again.
+    this._refitSide = () => setSide(sideNow())
 
     // On a narrow screen the side is a strip under the blocks: the simulator
     // and the terminal both need more of it, so starting the simulator grows it.
@@ -777,6 +796,7 @@ export class App {
     if (python) this.palette.render(this.workspace.targetId)
     $('blocks-pane').classList.toggle('is-python', python)
     $('btn-view').setAttribute('aria-checked', String(python))
+    this.learn.setMode(python ? 'python' : 'blocks')
     if (!python) this.workspace.resize()
     this._refreshHint()
   }
@@ -1290,9 +1310,10 @@ export class App {
 
   /**
    * The Learn panel: a board switch, then that board's quick starts (its two
-   * easiest examples) and, folded away, the rest of its examples.
+   * easiest examples) and, folded away, the rest of its examples; then the
+   * mission packs kept in this browser, and a button to open a pack file.
    */
-  _learnHtml(device, moreOpen) {
+  _learnHtml(device, moreOpen, packs) {
     const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
     const name = getTarget(device)?.name || device
     const boards = EXAMPLE_DEVICES.map(
@@ -1309,23 +1330,31 @@ export class App {
       <div class="ex-boards" role="group" aria-label="${esc(t('examples.boards'))}">${boards}</div>
       <ol class="ex-list" aria-label="${esc(t('learn.quickLabel', { device: name }))}">${quick}</ol>
       ${more ? `<details class="ex-more"${moreOpen ? ' open' : ''}><summary>${esc(t('learn.more', { device: name }))}</summary>
-      <ol class="ex-list" start="${QUICK_STARTS + 1}" aria-label="${esc(t('examples.listLabel', { device: name }))}">${more}</ol></details>` : ''}`
+      <ol class="ex-list" start="${QUICK_STARTS + 1}" aria-label="${esc(t('examples.listLabel', { device: name }))}">${more}</ol></details>` : ''}
+      <h3 class="learn-head learn-packs-head">${esc(t('learn.packsTitle'))}</h3>
+      <p>${esc(t('learn.packsIntro'))}</p>
+      ${packs.length ? `<ul class="ex-list" aria-label="${esc(t('learn.packsTitle'))}">${packs.map((p) => `<li><button type="button" class="ex-item" data-pack="${esc(p.id)}"><span class="ex-num" aria-hidden="true">📘</span><span class="ex-text"><span class="ex-title">${esc(p.title)}</span><span class="ex-goal">${esc(p.brief)}</span></span></button></li>`).join('')}</ul>` : ''}
+      <button type="button" class="btn btn-small btn-quiet learn-open-file" data-pack-file>${esc(t('learn.openFile'))}</button>`
   }
 
-  /** The Learn panel; a picked example opens as a new file beside the open one. */
+  /**
+   * The Learn panel. A picked example opens as a new file beside the open one;
+   * a picked pack opens in the tutorial pane.
+   */
   async _openLearn() {
-    if (!this._canWrite()) return
     let device = this.workspace.targetId || this.pickedTarget
     if (!EXAMPLE_DEVICES.includes(device)) device = EXAMPLE_DEVICES[0]
+    const packs = await this.learn.packs().catch((err) => (console.warn('learn', err), []))
     let chosen = null
-    const closed = showModal({ title: t('learn.title'), bodyHtml: this._learnHtml(device, false), confirmText: t('examples.close') })
+    let pack = null
+    const closed = showModal({ title: t('learn.title'), bodyHtml: this._learnHtml(device, false, packs), confirmText: t('examples.close') })
     const dialog = $('modal')
     const onClick = (e) => {
       const board = e.target.closest('[data-ex-device]')
       if (board) {
         device = board.dataset.exDevice
         const moreOpen = !!dialog.querySelector('.ex-more')?.open
-        dialog.querySelector('.modal-body').innerHTML = this._learnHtml(device, moreOpen)
+        dialog.querySelector('.modal-body').innerHTML = this._learnHtml(device, moreOpen, packs)
         dialog.querySelector(`[data-ex-device="${device}"]`).focus()
         return
       }
@@ -1334,11 +1363,22 @@ export class App {
         chosen = item.dataset.example
         dialog.close('example')
       }
+      const kept = e.target.closest('[data-pack]')
+      if (kept) {
+        pack = kept.dataset.pack
+        dialog.close('pack')
+      }
+      if (e.target.closest('[data-pack-file]')) {
+        // Within the click, so the browser lets the file picker open.
+        $('pack-input').click()
+        dialog.close('pack-file')
+      }
     }
     dialog.addEventListener('click', onClick)
     await closed
     dialog.removeEventListener('click', onClick)
-    if (!chosen) return
+    if (pack) return this.learn.open(pack)
+    if (!chosen || !this._canWrite()) return
 
     const project = exampleProject(device, chosen)
     const goal = t(`example.${device}.${chosen}.goal`)

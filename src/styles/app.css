@@ -241,6 +241,10 @@ kbd {
   min-height: 0;
   background: var(--paper);
 }
+/* A mission pack's tutorial, a column of its own at the right. */
+.workarea[data-learn='open'] {
+  grid-template-columns: minmax(280px, 1fr) 6px minmax(220px, var(--side-w, 420px)) 6px var(--learn-w, 380px);
+}
 
 .blocks-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* Isolated: what lies over the program (the veil below) stays under menus and panels elsewhere. */
@@ -370,6 +374,65 @@ kbd {
 }
 .splitter:hover { background: var(--green-soft); }
 .splitter:hover::after { background: var(--green); }
+
+/* --------------------------------------------------------- tutorial pane */
+.learn-pane {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  background: var(--surface); border-left: 1px solid var(--line);
+}
+.learn-pane[hidden], .learn-splitter[hidden] { display: none; }
+.btn-plain {
+  font: inherit; font-weight: 700; color: var(--ink-soft); cursor: pointer;
+  background: none; border: 0; padding: 4px 6px; border-radius: var(--r-xs);
+}
+.btn-plain:hover { background: var(--paper-2); color: var(--ink); }
+.btn-quiet { background: var(--paper-2); color: var(--ink); box-shadow: 0 3px 0 var(--line-strong); }
+.btn-quiet:active:not(:disabled) { box-shadow: 0 0 0 var(--line-strong); }
+.learn-bar {
+  display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+  border-bottom: 1px solid var(--line); background: var(--paper-2);
+}
+.learn-pack-title { flex: 1 1 auto; margin: 0; font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learn-body { flex: 1 1 auto; overflow-y: auto; padding: 14px 16px 20px; line-height: 1.55; outline: none; }
+.learn-nav { display: flex; align-items: center; gap: 8px; padding: 8px 10px 12px; border-top: 1px solid var(--line); }
+.learn-nav[hidden] { display: none; }
+.learn-count { flex: 1 1 auto; text-align: center; font-size: 13px; color: var(--ink-soft); }
+.learn-kicker { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.learn-title { margin: 2px 0 10px; font-size: 20px; color: var(--green-deep); }
+.learn-head { margin: 16px 0 6px; font-size: 16px; color: var(--ink); }
+.learn-packs-head { margin-top: 22px; }
+.learn-open-file { margin-top: 8px; }
+.learn-mission { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; padding: 8px 12px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface); }
+.learn-mission:hover { border-color: var(--green); background: var(--green-mist); }
+.learn-md > :first-child { margin-top: 0; }
+.learn-md > :last-child { margin-bottom: 0; }
+.learn-md img { max-width: 100%; height: auto; border-radius: var(--r-xs); }
+.learn-md pre { background: var(--paper-2); padding: 8px 10px; border-radius: var(--r-xs); overflow-x: auto; }
+.learn-md code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.92em; }
+.lsec { margin: 12px 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--paper-2); border-left: 4px solid var(--line-strong); }
+.lsec > :last-child { margin-bottom: 0; }
+.lsec-label { margin: 0 0 4px; font-weight: 800; font-size: 13px; color: var(--ink-soft); }
+.lsec-concept { border-left-color: var(--sky); background: var(--sky-soft); }
+.lsec-caution { border-left-color: var(--coral); background: var(--coral-soft); }
+.lsec-remix { border-left-color: var(--berry); background: var(--berry-soft); }
+.lsec-run, .lsec-touch { border-left-color: var(--green); background: var(--green-mist); }
+.lsec-file { border-left-color: var(--gold); background: var(--gold-soft); font-weight: 700; }
+.lsec-peek > summary { cursor: pointer; font-weight: 800; color: var(--ink-soft); }
+.learn-goals { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.learn-goals li { display: flex; gap: 8px; align-items: flex-start; }
+.learn-box { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; border-radius: 5px; border: 2px solid var(--line-strong); background: var(--surface); }
+.learn-hint { margin-top: 10px; }
+.learn-hint > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); }
+.learn-quiz { padding-left: 20px; display: grid; gap: 14px; }
+.learn-answers { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; }
+.learn-answer { width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; padding: 6px 10px; border-radius: var(--r-xs); border: 2px solid var(--line); background: var(--surface); }
+.learn-answer:hover:not(:disabled) { border-color: var(--green); }
+.learn-answer[data-verdict='right'] { border-color: var(--green-deep); background: var(--green-soft); }
+.learn-answer[data-verdict='right']::before { content: '✓ '; font-weight: 800; color: var(--green-deep); }
+.learn-answer[data-verdict='wrong'] { border-color: var(--coral); background: var(--coral-soft); cursor: default; }
+.learn-answer[data-verdict='wrong']::before { content: '✗ '; font-weight: 800; color: var(--coral-strong); }
+.learn-answer .learn-md { display: inline; }
+.learn-answer .learn-md > p { display: inline; margin: 0; }
 
 /* ------------------------------------------------------------- side pane */
 /* The simulator (while it is on) over the terminal panel; hidden parts take no row. */
@@ -811,6 +874,9 @@ kbd {
   .splitter { cursor: row-resize; }
   .splitter::after { width: 36px; height: 4px; }
   .side-pane { border-left: 0; border-top: 1px solid var(--line); }
+  .workarea[data-learn='open'] { grid-template-columns: 1fr; }
+  .learn-splitter { display: none; }
+  .learn-pane { border-left: 0; border-top: 1px solid var(--line); }
 }
 
 /* --------------------------------------------------------------- blockly */

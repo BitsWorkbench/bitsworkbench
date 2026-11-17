@@ -31,7 +31,7 @@ waiting for them.
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Every program is a Python `.py` file, even one made of blocks, and it saves itself as you go. Click its name over the program for your files: open another, make files and folders, rename or delete them. Files are kept in this browser, or in Chrome and Edge in a folder on your computer. A file made of blocks opens again just as you left it. |
-| 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. |
+| 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. Then mission packs ([the format](docs/mission-packs.md)): open a pack file and it shows in a tutorial pane at the right, a mission at a time, kept in this browser for next time. |
 
 ## No device? Simulate one
 
@@ -111,7 +111,11 @@ npm run preview  # serve dist/ locally
   block, comments, and code that does not parse.
 - **`tests/learn-pack.mjs`**: mission packs, with no browser: a good pack
   reads with its defaults, each kind of mistake is named with where it is,
-  and a pack split into two files joins back into one.
+  a pack split into two files joins back into one, and its Markdown renders
+  with no HTML, script or outside image getting through.
+- **`tests/learn-ui.mjs`**: a pack file opens from Learn into the tutorial
+  pane; its steps, the blocks/Python text, a quiz, the place kept across a
+  reload, a broken pack refused, a pack's second file, and closing the pane.
 
 ### Hosting on GitHub Pages
 
@@ -163,6 +167,10 @@ src/
     snippet-drop.js    where a dragged snippet lands, and the one change that puts it there
   learn/       mission packs (docs/mission-packs.md)
     pack.js            reads a pack file and checks it whole, naming every problem
+    markdown.js        a pack's Markdown as HTML, its sections, no HTML of its own
+    library.js         the packs kept in this browser, and where the student is in each
+    tutorial.js        the tutorial pane: a pack's missions, a step at a time
+    learn.js           the pane in the app: opening packs, its divider, reopening after a reload
   ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language
 ```

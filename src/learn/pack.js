@@ -222,7 +222,7 @@ class Checker {
       else this.problem(at, `--/${name}-- closes ${open.length ? `--${open.at(-1)}--` : 'nothing'}`)
     }
     if (open.length) this.problem(at, `--${open.at(-1)}-- is not closed`)
-    for (const [, src] of v.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) this.images.push([src, at])
+    for (const [, src] of v.matchAll(/!\[[^\]]*\]\(\s*([^)\s]+)/g)) this.images.push([src, at])
   }
 
   mission(v, at) {
