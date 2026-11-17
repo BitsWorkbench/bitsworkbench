@@ -1337,6 +1337,10 @@ export class App {
 
   async _menuAction(action) {
     switch (action) {
+      // The examples live in Learn (quick starts, and "More examples"): this is the old way in.
+      case 'examples':
+        this._openLearn()
+        break
       case 'open':
         $('file-input').click()
         break

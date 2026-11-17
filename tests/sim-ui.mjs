@@ -206,6 +206,19 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && 
 await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.sendRaw('print(6 * 7)\r') })
 await page.waitForFunction(() => /42/.test(window.__sim.out), null, { timeout: 20000 }).catch(() => problems.push('REPL: no answer to print(6 * 7)'))
 
+// A program's input() reads a line typed at the terminal (Python Level 1): what it
+// printed before shows while it waits, the keys are echoed, Backspace takes one back.
+{
+  await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.run('ages = {"Ann": 12}\nprint("ages:", ages)\nname = input("Name? ")\nprint("Hello,", name, ages["Ann"])\n') })
+  const waiting = await page.waitForFunction(() => /ages: \{'Ann': 12\}\r\nName\? $/.test(window.__sim.out), null, { timeout: 15000 }).then(() => true, () => false)
+  if (!waiting) problems.push(`input: the prompt, and what came before it, did not show while it waited (${JSON.stringify(await page.evaluate(() => window.__sim.out))})`)
+  await page.evaluate(() => window.openCodeBot.device.sendRaw('Jilx\x7fl\r'))
+  const answered = await page.waitForFunction(() => window.__sim.out.includes('Name? Jilx\b \bl\r\nHello, Jill 12'), null, { timeout: 15000 }).then(() => true, () => false)
+  if (!answered) problems.push(`input: the typed line did not reach the program (${JSON.stringify(await page.evaluate(() => window.__sim.out))})`)
+  else console.log('sim-ui: a program\'s input() reads a line typed at the terminal')
+  await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 }).catch(() => {})
+}
+
 // A program's print ends its line with CR LF, as a board's console does, so
 // the terminal starts each line at the left (a bare LF would stair-step).
 await page.evaluate(() => { window.__sim.out = '' })

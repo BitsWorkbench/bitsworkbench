@@ -167,6 +167,14 @@ check(
   'the program\'s own words are Spanish',
 )
 
+// The examples were in the ⋯ menu before Learn: that way in still leads to them.
+await page.keyboard.press('Escape')
+await page.evaluate(() => document.querySelectorAll('dialog[open]').forEach((d) => d.close()))
+await page.click('#btn-menu')
+await page.click('#app-menu [data-action="examples"]')
+await page.waitForFunction(() => document.getElementById('modal')?.open && document.querySelector('#modal [data-example]'), null, { timeout: 10000 })
+  .then(() => check(true, 'the ⋯ menu\'s Examples opens Learn, at the examples'), () => check(false, 'the ⋯ menu\'s Examples opens Learn, at the examples'))
+
 await browser.close()
 server?.kill()
 
