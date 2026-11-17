@@ -79,6 +79,8 @@ export class App {
     this._bindChrome()
     // A paused program's line, on its block and in the Python view.
     this.device.sim.addEventListener('line', (e) => this._showLine(e.detail.line))
+    // A click on a part of the simulated board, for a mission's `pick` goal.
+    this.device.sim.addEventListener('pick', (e) => this.learn.pick(e.detail))
     this._bindWorkspace()
     this._bindTextMode()
 

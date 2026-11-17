@@ -56,6 +56,11 @@ export class Learn {
     this.watcher.programChanged()
   }
 
+  /** The student clicked a part of the simulated board (docs/mission-packs.md, `pick`). */
+  pick(part) {
+    this.watcher.pick(part)
+  }
+
   /** Something the student did that a goal can ask for (docs/mission-packs.md, `event`). */
   event(name, detail) {
     this.watcher.event(name, detail)

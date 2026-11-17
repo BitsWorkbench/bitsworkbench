@@ -105,6 +105,46 @@ await page.evaluate(() => {
   d.sim.setSpeed(8)
 })
 
+// A click on a part of the board names it, by the CAD's name (parts.js), for
+// mission packs' `pick` goals; a drag that turns the camera names nothing.
+{
+  await page.evaluate(() => { window.__picks = []; window.openCodeBot.device.sim.addEventListener('pick', (e) => window.__picks.push(e.detail)) })
+  const centre = (name) => page.evaluate((name) => {
+    const view = window.openCodeBot.device.sim.view
+    const parts = [...view.figures.values()][0].parts
+    const part = parts.boxes.find((b) => b.name === name)
+    if (!part) return null
+    const c = part.box.getCenter(part.box.min.clone())
+    parts.model.localToWorld(c).project(view.camera)
+    const r = view.renderer.domElement.getBoundingClientRect()
+    return { x: r.left + ((c.x + 1) / 2) * r.width, y: r.top + ((1 - c.y) / 2) * r.height }
+  }, name)
+  const picked = async (act) => {
+    await page.evaluate(() => (window.__picks.length = 0))
+    await act()
+    await page.waitForTimeout(100)
+    return page.evaluate(() => window.__picks.slice())
+  }
+  await page.waitForTimeout(1500)
+  const speaker = await centre('Cylinder') // the speaker, as CodeSpace's PWR pack names it
+  if (!speaker) problems.push('pick: CodeBot has no part named Cylinder (codebot-body.parts.json)')
+  else {
+    const got = await picked(() => page.mouse.click(speaker.x, speaker.y))
+    if (got.join() !== 'Cylinder') problems.push(`pick: a click on the speaker named ${got.join() || 'nothing'}, not Cylinder`)
+    const dragged = await picked(async () => {
+      await page.mouse.move(speaker.x, speaker.y)
+      await page.mouse.down()
+      await page.mouse.move(speaker.x + 60, speaker.y + 10, { steps: 5 })
+      await page.mouse.up()
+    })
+    if (dragged.length) problems.push(`pick: a drag named ${dragged.join()}`)
+    const button = await centre('Cylinder.006') // BTN-0's plunger, under its press target
+    const pressed = button ? await picked(() => page.mouse.click(button.x, button.y)) : []
+    if (!/^(Cylinder\.00[2456])|(Plane\.00[235689])$/.test(pressed.join())) problems.push(`pick: a click on BTN-0 named ${pressed.join() || 'nothing'}`)
+    if (!problems.some((p) => p.startsWith('pick'))) console.log('sim-ui: a click names the part of CodeBot it lands on; a drag names none')
+  }
+}
+
 // Every CodeBot block, alone, generated and run.
 const codes = await page.evaluate(() => {
   const { Blockly, toolboxFor, generatePython } = window.openCodeBotInternals

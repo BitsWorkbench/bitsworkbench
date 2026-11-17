@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import { CB3_BODY, CB3_PITCH } from '../world/codebot.js'
 import { Led, reflect } from './led.js'
 import { Keys } from './keys.js'
+import { Parts, loadParts } from './parts.js'
 
 const U = 0.1                 // model units to metres
 const AXLE_Z = CB3_BODY.axle[0] / 100    // model units
@@ -45,14 +46,18 @@ export class CodeBotFigure {
   // Button n's centre in the world; the button a ray meets, or -1 (view.js).
   keyCentre(n) { return this.keys.keyCentre(n) }
   keyAt(raycaster) { return this.keys.keyAt(raycaster) }
+  // The part of the body a ray meets, by the CAD's name, or null (parts.js).
+  partAt(raycaster) { return this.parts?.at(raycaster) ?? null }
 
   // env: studio light for the metal to reflect (view.js)
   async load(loader, base, env) {
-    const [body, wheel] = await Promise.all([
+    const [body, wheel, parts] = await Promise.all([
       loader.loadAsync(`${base}models/codebot-body.glb`),
       loader.loadAsync(`${base}models/codebot-wheel.glb`),
+      loadParts(`${base}models/codebot-body.parts.json`),
     ])
     const b = body.scene
+    this.parts = new Parts(b, parts)
     b.scale.setScalar(U)
     // Model forward (+z) to the figure's forward (+x); axle to the origin.
     b.rotation.y = Math.PI / 2

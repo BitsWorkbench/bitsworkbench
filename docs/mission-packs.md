@@ -179,7 +179,7 @@ make Python. A **pattern** is one Python statement or expression:
 | `{ "prints": "regex" }` | A run prints a line matching the regular expression. |
 | `{ "runs": true }` | The program runs to its end, or is stopped, without an error. Add `"seconds": n` for at least n seconds of running. |
 | `{ "event": "name" }` | The student does something in Codacious: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
-| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches. (The simulator does not report clicks on parts yet, so this check is not met today.) |
+| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches: the name the board's CAD model gives it, as listed in the built model's `public/sim-assets/models/<model>.parts.json` (made from `sim/assets/` by `sim/tools/build-models.mjs`). These are the names CodeSpace's packs use, such as `Cylinder.015` for CodeBot's wheel encoder or `BTN_A` on CodeX. A click is a press and release in place; a drag that turns the camera is not one. |
 
 A goal once met stays met, and Codacious keeps which goals each objective has met. Code checks
 are checked as the student edits, a moment after they pause.
