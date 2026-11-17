@@ -18,6 +18,8 @@ export class Tutorial extends EventTarget {
     this.place = null
     this.mode = 'blocks'
     this.quiz = new Map() // question id: { order, picked: Set }, while the pack is open
+    this.done = [] // the open objective's goals: met?
+    this.finished = new Set() // the pack's objectives with every goal met, by id
     root.innerHTML = `
       <div class="learn-bar">
         <button type="button" class="learn-up btn-plain" data-learn="up"></button>
@@ -38,7 +40,14 @@ export class Tutorial extends EventTarget {
     if (this.pack?.id !== pack.id) this.quiz.clear()
     this.pack = pack
     this.place = this._valid(place) ? place : null
+    this.done = []
     this._render()
+  }
+
+  /** The objective on show, or null. */
+  get objective() {
+    const item = this.place && this.pack.missions[this.place.mission].flow[this.place.step]
+    return item?.type === 'objective' ? item : null
   }
 
   setMode(mode) {
@@ -54,6 +63,7 @@ export class Tutorial extends EventTarget {
 
   _go(place) {
     this.place = place
+    this.done = []
     this._render()
     this.root.querySelector('.learn-body').scrollTop = 0
     this.root.querySelector('.learn-body').focus({ preventScroll: true })
@@ -105,10 +115,11 @@ export class Tutorial extends EventTarget {
   _packHtml() {
     const { pack } = this
     const missions = pack.missions
-      .map(
-        (m, i) =>
-          `<li><button type="button" class="learn-mission" data-mission="${i}"><span class="ex-num" aria-hidden="true">${i + 1}</span><span class="ex-text"><span class="ex-title">${esc(m.title)}</span>${m.brief ? `<span class="ex-goal">${esc(m.brief)}</span>` : ''}</span></button></li>`,
-      )
+      .map((m, i) => {
+        const objectives = m.flow.filter((s) => s.type === 'objective')
+        const done = objectives.length > 0 && objectives.every((s) => this.finished.has(s.id))
+        return `<li><button type="button" class="learn-mission" data-mission="${i}" data-done="${done}"><span class="ex-num" aria-hidden="true">${done ? '✓' : i + 1}</span><span class="ex-text"><span class="ex-title">${esc(m.title)}${done ? `<span class="sr-only"> ${esc(t('learn.missionFinished'))}</span>` : ''}</span>${m.brief ? `<span class="ex-goal">${esc(m.brief)}</span>` : ''}</span></button></li>`
+      })
       .join('')
     return `<div class="learn-md">${this._md(pack.overview) || `<p>${esc(pack.brief)}</p>`}</div>
       <h3 class="learn-head">${esc(t('learn.missions'))}</h3>
@@ -124,13 +135,35 @@ export class Tutorial extends EventTarget {
   }
 
   _objectiveHtml(o) {
-    const goals = o.goals.map((g) => `<li><span class="learn-box" aria-hidden="true"></span><div class="learn-md">${this._md(g.md)}</div></li>`).join('')
     const hints = (o.hints || []).map((h, i) => `<details class="learn-hint"><summary>${esc(t('learn.hint', { n: i + 1 }))}</summary><div class="learn-md">${this._md(h)}</div></details>`).join('')
     return `<h3 class="learn-title">${esc(o.title)}</h3>
       <div class="learn-md">${this._md(o.instructions)}</div>
       <h4 class="learn-head">${esc(t('learn.goals'))}</h4>
-      <ul class="learn-goals">${goals}</ul>
+      <div class="learn-goals-wrap" aria-live="polite">${this._goalsHtml(o)}</div>
       ${hints}`
+  }
+
+  /** The goals, each ticked once met, and the objective's cheer when they all are. */
+  _goalsHtml(o) {
+    const goals = o.goals
+      .map((g, i) => {
+        const done = !!this.done[i]
+        return `<li data-met="${done}"><span class="learn-box" aria-hidden="true">${done ? '✓' : ''}</span><span class="sr-only">${esc(t(done ? 'learn.goalMet' : 'learn.goalOpen'))}</span><div class="learn-md">${this._md(g.md)}</div></li>`
+      })
+      .join('')
+    const all = o.goals.length > 0 && o.goals.every((_, i) => this.done[i])
+    return `<ul class="learn-goals">${goals}</ul>${all ? `<div class="learn-complete learn-md">${this._md(o.complete) || `<p>${esc(t('learn.objectiveDone'))}</p>`}</div>` : ''}`
+  }
+
+  /**
+   * Which of the open objective's goals are met, and which objectives of the
+   * pack are finished. Only the goals are drawn again, so open hints stay open.
+   */
+  setDone(done, finished = this.finished) {
+    this.done = done
+    this.finished = finished
+    const wrap = this.root.querySelector('.learn-goals-wrap')
+    if (wrap && this.objective) wrap.innerHTML = this._goalsHtml(this.objective)
   }
 
   _quizHtml(q) {

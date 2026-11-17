@@ -9,6 +9,7 @@ import { readPack, readRest, joinRest, PackError } from './pack.js'
 const DB = 'opencodebot-learn'
 const PACKS = 'packs' // { id, text, rest? }
 const PLACES = 'places' // { id, mission, step }
+const DONE = 'done' // { key: 'pack/objective', goals: [met?] }
 
 export class Library {
   /** Every pack kept, joined with its rest where it has one, by title. */
@@ -59,6 +60,26 @@ export class Library {
   async setPlace(id, place) {
     await tx(PLACES, 'readwrite', (s) => (place ? s.put({ id, ...place }) : s.delete(id)))
   }
+
+  /** Which of an objective's goals the student has met: [true, false, ...], or [] if none yet. */
+  async goals(packId, objectiveId) {
+    return (await tx(DONE, 'readonly', (s) => s.get(`${packId}/${objectiveId}`)))?.goals ?? []
+  }
+
+  async setGoals(packId, objectiveId, goals) {
+    await tx(DONE, 'readwrite', (s) => s.put({ key: `${packId}/${objectiveId}`, goals }))
+  }
+
+  /** Every objective of a pack with all its goals met, by id. */
+  async finished(pack) {
+    const all = await tx(DONE, 'readonly', (s) => s.getAll(IDBKeyRange.bound(`${pack.id}/`, `${pack.id}/￿`)))
+    const goalsOf = new Map(all.map((d) => [d.key.slice(pack.id.length + 1), d.goals]))
+    const out = new Set()
+    for (const m of pack.missions) {
+      for (const s of m.flow) if (s.type === 'objective' && s.goals.every((_, i) => goalsOf.get(s.id)?.[i])) out.add(s.id)
+    }
+    return out
+  }
 }
 
 /** A kept pack, with its rest if the rest still follows it. */
@@ -75,10 +96,13 @@ function joined(entry) {
 /** One transaction on one store; resolves with the request's result once it commits. */
 function tx(store, mode, request) {
   return new Promise((resolve, reject) => {
-    const open = indexedDB.open(DB, 1)
+    const open = indexedDB.open(DB, 2)
     open.onupgradeneeded = () => {
-      open.result.createObjectStore(PACKS, { keyPath: 'id' })
-      open.result.createObjectStore(PLACES, { keyPath: 'id' })
+      const db = open.result
+      const add = (name, keyPath) => db.objectStoreNames.contains(name) || db.createObjectStore(name, { keyPath })
+      add(PACKS, 'id')
+      add(PLACES, 'id')
+      add(DONE, 'key')
     }
     open.onerror = () => reject(open.error)
     open.onsuccess = () => {

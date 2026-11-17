@@ -195,6 +195,88 @@ await page.click('#modal [data-pack="UI"]')
 await page.waitForFunction(() => !document.getElementById('learn-pane').hidden)
 check((await pane('[data-mission]').count()) === 2, 'opened again from Learn, it is where the student left it (its missions)')
 
+console.log('Goals')
+const GOALS = {
+  format: 1,
+  id: 'GOALS',
+  title: 'Goals pack',
+  brief: 'Goals',
+  board: 'codebot',
+  missions: [
+    {
+      id: 'GOALS_M',
+      title: 'Goals',
+      flow: [
+        {
+          type: 'objective',
+          id: 'GOALS_1',
+          title: 'Reach the goals',
+          instructions: 'Do it.',
+          goals: [
+            { md: 'Light every other one', check: { has: 'leds.user(0b10101010)' } },
+            { md: 'Run it', check: { runs: true } },
+            { md: 'It says it runs', check: { prints: 'running main\\.py' } },
+            { md: 'Switch to blocks', check: { event: 'switched' } },
+          ],
+          complete: 'All lit up!',
+        },
+      ],
+    },
+  ],
+}
+const ticked = () => page.$$eval('#learn-pane .learn-goals li', (lis) => lis.map((li) => li.dataset.met === 'true'))
+await page.evaluate(() => window.openCodeBot._toText())
+await openPackFile(file('goals.json', GOALS))
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-body')?.innerText.includes('Goals'))
+await pane('[data-mission="0"]').click()
+await pane('[data-learn="next"]').click()
+await page.waitForTimeout(400)
+check((await ticked()).join() === 'false,false,false,false', `an objective opens with its goals to do (${(await ticked()).join()})`)
+
+await page.click('#python-editor .cm-content')
+await page.keyboard.press('Control+End')
+await page.keyboard.type('\nleds.user(0b10101010)\n')
+await page.waitForFunction(() => document.querySelector('#learn-pane .learn-goals li')?.dataset.met === 'true', null, { timeout: 5000 })
+check((await ticked()).join() === 'true,false,false,false', 'typing the line meets the code goal, and only it')
+
+await page.click('#btn-connect')
+await page.waitForFunction(() => !document.getElementById('btn-run').disabled)
+await page.click('#btn-run')
+await page.waitForFunction(() => !document.getElementById('btn-stop').hidden)
+await page.click('#btn-stop')
+await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 3, null, { timeout: 5000 })
+check((await ticked()).join() === 'true,true,true,false', 'a run meets the run goal, and its output the prints goal')
+
+await page.click('#btn-view')
+await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 4, null, { timeout: 5000 })
+check((await pane('.learn-complete').innerText()).includes('All lit up!'), 'switching meets the last goal, and the objective cheers')
+
+await page.waitForTimeout(300)
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 4, null, { timeout: 5000 })
+check(true, 'met goals stay met after a reload')
+await pane('[data-learn="up"]').click()
+check((await pane('[data-mission="0"]').getAttribute('data-done')) === 'true', 'and the mission shows as finished')
+
+console.log('A slow regular expression cannot hang the page')
+const slow = await page.evaluate(async () => {
+  const tester = window.openCodeBot.learn.watcher.tester
+  let ticks = 0
+  const timer = setInterval(() => ticks++, 10)
+  const started = performance.now()
+  // Allowed by the pack reader (no repeat inside a repeat), but polynomial: hours on 1000 characters.
+  const slowMatch = await tester.test('.*.*.*.*.*.*x', 'a'.repeat(1000))
+  const took = performance.now() - started
+  clearInterval(timer)
+  const after = await tester.test('^ok', 'ok then')
+  const again = await tester.test('.*.*.*.*.*.*x', 'a')
+  return { slowMatch, took, ticks, after, again }
+})
+check(slow.slowMatch === false && slow.took < 1000, `it is stopped in ${Math.round(slow.took)} ms and counts as not matching`)
+check(slow.ticks >= 3, `the page kept running meanwhile (${slow.ticks} timer ticks)`)
+check(slow.after === true, 'the next regex is tested as usual')
+check(slow.again === false, 'and the slow one is never tried again')
+
 await browser.close()
 server?.kill()
 if (problems.length) {

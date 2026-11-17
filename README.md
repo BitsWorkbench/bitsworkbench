@@ -113,9 +113,14 @@ npm run preview  # serve dist/ locally
   reads with its defaults, each kind of mistake is named with where it is,
   a pack split into two files joins back into one, and its Markdown renders
   with no HTML, script or outside image getting through.
+- **`tests/learn-checks.mjs`**: goal checks, with no browser: Python
+  patterns against programs written many ways, counts, scopes and order,
+  the checks of what happened, and the regex shapes a pack may not use.
 - **`tests/learn-ui.mjs`**: a pack file opens from Learn into the tutorial
   pane; its steps, the blocks/Python text, a quiz, the place kept across a
   reload, a broken pack refused, a pack's second file, and closing the pane.
+  Then goals ticking as the student types, runs and switches, staying met
+  after a reload, and a slow regex stopped without hanging the page.
 
 ### Hosting on GitHub Pages
 
@@ -170,6 +175,9 @@ src/
     markdown.js        a pack's Markdown as HTML, its sections, no HTML of its own
     library.js         the packs kept in this browser, and where the student is in each
     tutorial.js        the tutorial pane: a pack's missions, a step at a time
+    checks.js          a goal's check against the program (Python patterns) and what happened
+    goals.js           watches the program, runs, output and actions; ticks goals as they are met
+    regex.js           a pack's regexes: risky shapes refused, every test time-boxed in a worker
     learn.js           the pane in the app: opening packs, its divider, reopening after a reload
   ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language

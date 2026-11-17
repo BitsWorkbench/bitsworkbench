@@ -95,6 +95,8 @@ const mistakes = [
   ['two kinds in one check', 'should be one check of', (p) => ((p.missions[0].flow[0].goals[0].check = { has: 'x', prints: 'y' }), p)],
   ['a field of another check kind', 'goals[0].check.seconds: not a field', (p) => ((p.missions[0].flow[0].goals[0].check = { has: 'x', seconds: 1 }), p)],
   ['a bad regular expression', 'is not a regular expression', (p) => ((p.missions[0].flow[0].goals[0].check = { prints: '(' }), p)],
+  ['a regular expression that can backtrack without end', 'could take forever to match: it has a repeat inside a repeat', (p) => ((p.missions[0].flow[0].goals[0].check = { prints: '(a+)+$' }), p)],
+  ['a pattern of two statements', 'a pattern is one statement', (p) => ((p.missions[0].flow[0].goals[0].check = { has: 'x = 1\ny = 2' }), p)],
   ['an unknown event', 'should be one of edited', (p) => ((p.missions[0].flow[0].goals[0].check = { event: 'clicked' }), p)],
   ['a new file with no name', 'file-created needs', (p) => ((p.missions[0].flow[0].goals[0].check = { event: 'file-created' }), p)],
   ['max under min', 'max is less than min', (p) => ((p.missions[0].flow[0].goals[0].check = { has: 'x', min: 3, max: 1 }), p)],
