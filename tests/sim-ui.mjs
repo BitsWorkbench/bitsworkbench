@@ -141,6 +141,15 @@ await page.evaluate(() => {
     const button = await centre('Cylinder.006') // BTN-0's plunger, under its press target
     const pressed = button ? await picked(() => page.mouse.click(button.x, button.y)) : []
     if (!/^(Cylinder\.00[2456])|(Plane\.00[235689])$/.test(pressed.join())) problems.push(`pick: a click on BTN-0 named ${pressed.join() || 'nothing'}`)
+    // The LEDs are the figure's own: user LED 3, by name.
+    const led = await page.evaluate(() => {
+      const view = window.openCodeBot.device.sim.view
+      const c = [...view.figures.values()][0].leds.user[3].mesh.getWorldPosition(view.camera.position.clone()).project(view.camera)
+      const r = view.renderer.domElement.getBoundingClientRect()
+      return { x: r.left + ((c.x + 1) / 2) * r.width, y: r.top + ((1 - c.y) / 2) * r.height }
+    })
+    const lit = await picked(() => page.mouse.click(led.x, led.y))
+    if (lit.join() !== 'LED_user_3') problems.push(`pick: a click on user LED 3 named ${lit.join() || 'nothing'}`)
     if (!problems.some((p) => p.startsWith('pick'))) console.log('sim-ui: a click names the part of CodeBot it lands on; a drag names none')
   }
 }

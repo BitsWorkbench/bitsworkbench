@@ -47,7 +47,24 @@ export class CodeBotFigure {
   keyCentre(n) { return this.keys.keyCentre(n) }
   keyAt(raycaster) { return this.keys.keyAt(raycaster) }
   // The part of the body a ray meets, by the CAD's name, or null (parts.js).
-  partAt(raycaster) { return this.parts?.at(raycaster) ?? null }
+  // The LEDs are the figure's own, not the model's: one the ray passes within
+  // 3 mm of is LED_<group>_<n> (LED_user_0 to 7, LED_ls_0 to 4, LED_prox_0 and 1,
+  // LED_pwr_0), the nearest first.
+  partAt(raycaster) {
+    let best = null
+    let nearest = 0.003
+    const at = new THREE.Vector3()
+    for (const [group, leds] of Object.entries(this.leds)) {
+      leds.forEach((led, n) => {
+        const d = raycaster.ray.distanceToPoint(led.mesh.getWorldPosition(at))
+        if (d < nearest) {
+          nearest = d
+          best = `LED_${group}_${n}`
+        }
+      })
+    }
+    return best ?? this.parts?.at(raycaster) ?? null
+  }
 
   // env: studio light for the metal to reflect (view.js)
   async load(loader, base, env) {
