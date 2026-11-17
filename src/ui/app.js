@@ -28,6 +28,8 @@ const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
 const LAYOUTS = 'opencodebot.layouts.v1'
 const TAB_LOCK = 'opencodebot.editing'
+/** How many of a board's examples, easiest first, Learn shows as quick starts. */
+const QUICK_STARTS = 2
 
 /** A path's last part: its file name. */
 const baseName = (path) => path.split('/').pop()
@@ -266,6 +268,7 @@ export class App {
   // ------------------------------------------------------------ chrome
 
   _bindChrome() {
+    $('btn-learn').addEventListener('click', () => this._openLearn())
     $('btn-connect').addEventListener('click', () => this._toggleConnect())
     $('btn-sim').addEventListener('click', () => this._toggleSimulate())
     $('btn-run').addEventListener('click', () => this._run())
@@ -1243,9 +1246,6 @@ export class App {
 
   async _menuAction(action) {
     switch (action) {
-      case 'examples':
-        this._openExamples()
-        break
       case 'open':
         $('file-input').click()
         break
@@ -1288,37 +1288,44 @@ export class App {
 
   // ------------------------------------------------------------- examples
 
-  /** The example picker: a board switch, then that board's examples, easiest first. */
-  _examplesHtml(device) {
+  /**
+   * The Learn panel: a board switch, then that board's quick starts (its two
+   * easiest examples) and, folded away, the rest of its examples.
+   */
+  _learnHtml(device, moreOpen) {
     const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+    const name = getTarget(device)?.name || device
     const boards = EXAMPLE_DEVICES.map(
       (id) =>
         `<button type="button" class="ex-board" data-ex-device="${id}" aria-pressed="${id === device}">${esc(getTarget(id)?.name || id)}</button>`,
     ).join('')
-    const items = examplesFor(device)
-      .map(
-        (ex, i) =>
-          `<li><button type="button" class="ex-item" data-example="${ex.id}"><span class="ex-num" aria-hidden="true">${i + 1}</span><span class="ex-text"><span class="ex-title">${esc(ex.title)}</span><span class="ex-goal">${esc(ex.goal)}</span></span></button></li>`,
-      )
-      .join('')
-    return `<p>${esc(t('examples.intro'))}</p>
+    const item = (ex, i) =>
+      `<li><button type="button" class="ex-item" data-example="${ex.id}"><span class="ex-num" aria-hidden="true">${i + 1}</span><span class="ex-text"><span class="ex-title">${esc(ex.title)}</span><span class="ex-goal">${esc(ex.goal)}</span></span></button></li>`
+    const all = examplesFor(device)
+    const quick = all.slice(0, QUICK_STARTS).map(item).join('')
+    const more = all.slice(QUICK_STARTS).map((ex, i) => item(ex, QUICK_STARTS + i)).join('')
+    return `<h3 class="learn-head">${esc(t('learn.quickTitle'))}</h3>
+      <p>${esc(t('learn.quickIntro'))}</p>
       <div class="ex-boards" role="group" aria-label="${esc(t('examples.boards'))}">${boards}</div>
-      <ol class="ex-list" aria-label="${esc(t('examples.listLabel', { device: getTarget(device)?.name || device }))}">${items}</ol>`
+      <ol class="ex-list" aria-label="${esc(t('learn.quickLabel', { device: name }))}">${quick}</ol>
+      ${more ? `<details class="ex-more"${moreOpen ? ' open' : ''}><summary>${esc(t('learn.more', { device: name }))}</summary>
+      <ol class="ex-list" start="${QUICK_STARTS + 1}" aria-label="${esc(t('examples.listLabel', { device: name }))}">${more}</ol></details>` : ''}`
   }
 
-  /** Open a starter project, asking first if there are blocks to lose. */
-  async _openExamples() {
+  /** The Learn panel; a picked example opens as a new file beside the open one. */
+  async _openLearn() {
     if (!this._canWrite()) return
     let device = this.workspace.targetId || this.pickedTarget
     if (!EXAMPLE_DEVICES.includes(device)) device = EXAMPLE_DEVICES[0]
     let chosen = null
-    const closed = showModal({ title: t('examples.title'), bodyHtml: this._examplesHtml(device), confirmText: t('examples.close') })
+    const closed = showModal({ title: t('learn.title'), bodyHtml: this._learnHtml(device, false), confirmText: t('examples.close') })
     const dialog = $('modal')
     const onClick = (e) => {
       const board = e.target.closest('[data-ex-device]')
       if (board) {
         device = board.dataset.exDevice
-        dialog.querySelector('.modal-body').innerHTML = this._examplesHtml(device)
+        const moreOpen = !!dialog.querySelector('.ex-more')?.open
+        dialog.querySelector('.modal-body').innerHTML = this._learnHtml(device, moreOpen)
         dialog.querySelector(`[data-ex-device="${device}"]`).focus()
         return
       }

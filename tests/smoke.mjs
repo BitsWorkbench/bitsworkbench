@@ -181,14 +181,16 @@ for (const device of DEVICES) {
 }
 
 // On a phone the ⋯ button wraps to the left edge: its menu must still open on
-// screen and above the block palette, or Open, Save, the examples and the
-// language cannot be reached.
+// screen and above the block palette, or Open, Save and the language cannot
+// be reached. Learn, the first of the top bar's buttons, must be on screen too.
 for (const width of [360, 412, 683]) {
   const narrow = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true })
   await narrow.goto(URL, { waitUntil: 'networkidle' })
   if (await narrow.evaluate(() => document.getElementById('modal')?.open)) {
     await narrow.click('#modal button[value="ok"]')
   }
+  const learn = await narrow.locator('#btn-learn').boundingBox()
+  if (!learn || learn.x < 0 || learn.x + learn.width > width) problems.push(`Learn at ${width}px ▸ off screen (${JSON.stringify(learn)})`)
   await narrow.click('#btn-menu')
   for (const item of await narrow.locator('#app-menu [role^="menuitem"]').all()) {
     const box = await item.boundingBox()

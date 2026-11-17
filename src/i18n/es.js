@@ -27,7 +27,6 @@ export default {
   'menu.import': '📂 Abrir un archivo de tu computadora…',
   'menu.exportPy': '🐍 Descargar Python',
   'menu.copyPy': '📋 Copiar Python',
-  'menu.examples': '🧭 Empezar con un ejemplo…',
   'menu.help': '❓ Ayuda y atajos',
   'menu.about': '💚 Acerca de {app}',
   'menu.language': 'Idioma',
@@ -387,9 +386,14 @@ export default {
   // Programas de inicio
   'starter.hello': '¡Hola!',
 
-  // Proyectos de ejemplo (src/examples)
-  'examples.title': 'Empezar con un ejemplo',
-  'examples.intro': 'Cada ejemplo es un programa corto que funciona y tiene una meta. Empiezan fáciles y se vuelven más difíciles. ¡Abre uno, ejecútalo y luego cámbialo!',
+  // Aprender: inicios rápidos, luego los demás ejemplos de una placa (src/examples)
+  'btn.learn': 'Aprender',
+  'btn.learnTitle': 'Inicios rápidos y ejemplos para abrir y ejecutar',
+  'learn.title': 'Aprender',
+  'learn.quickTitle': 'Inicio rápido',
+  'learn.quickIntro': '¿Solo quieres ver algo funcionar? Elige tu placa y abre un programa corto que funciona. ¡Ejecútalo y luego cámbialo!',
+  'learn.quickLabel': 'Inicios rápidos para {device}',
+  'learn.more': 'Más ejemplos para {device}',
   'examples.boards': 'Placa',
   'examples.listLabel': 'Ejemplos para {device}',
   'examples.close': 'Cerrar',

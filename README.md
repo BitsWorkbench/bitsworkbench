@@ -31,7 +31,7 @@ waiting for them.
 | 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Every program is a Python `.py` file, even one made of blocks, and it saves itself as you go. Click its name over the program for your files: open another, make files and folders, rename or delete them. Files are kept in this browser, or in Chrome and Edge in a folder on your computer. A file made of blocks opens again just as you left it. |
-| 🧭 **Starter projects** | Five or six short example programs for each board, easiest first, each with a goal. Open one from the ⋯ menu: it becomes a new file, and the one you had stays. |
+| 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. |
 
 ## No device? Simulate one
 
@@ -101,7 +101,7 @@ npm run preview  # serve dist/ locally
   workers and its service worker, and fails on any that goes anywhere but the
   site the app came from. About promises nothing leaves the browser; this
   keeps that true.
-- **`tests/examples.mjs`**: opens every starter project from the ⋯ menu, in
+- **`tests/examples.mjs`**: opens every starter project from Learn, in
   English and Spanish, checks it is a tidy block program for its board with a
   goal, turns its Python back into blocks without losing a line, and runs its
   Python in the simulator.

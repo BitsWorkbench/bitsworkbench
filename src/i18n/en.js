@@ -29,7 +29,6 @@ export default {
   'menu.import': '📂 Open a file from your computer…',
   'menu.exportPy': '🐍 Download Python',
   'menu.copyPy': '📋 Copy Python',
-  'menu.examples': '🧭 Start from an example…',
   'menu.help': '❓ Help & shortcuts',
   'menu.about': '💚 About {app}',
   'menu.language': 'Language',
@@ -388,9 +387,14 @@ export default {
   // Starter programs
   'starter.hello': 'Hi there!',
 
-  // Starter projects (src/examples)
-  'examples.title': 'Start from an example',
-  'examples.intro': 'Each example is a short, working program with a goal. They start easy and get harder. Open one, run it, then change it!',
+  // Learn: quick starts, then a board's other examples (src/examples)
+  'btn.learn': 'Learn',
+  'btn.learnTitle': 'Quick starts and examples to open and run',
+  'learn.title': 'Learn',
+  'learn.quickTitle': 'Quick start',
+  'learn.quickIntro': 'Just want to see something run? Pick your board and open a short, working program. Run it, then change it!',
+  'learn.quickLabel': 'Quick starts for {device}',
+  'learn.more': 'More examples for {device}',
   'examples.boards': 'Board',
   'examples.listLabel': 'Examples for {device}',
   'examples.close': 'Close',
