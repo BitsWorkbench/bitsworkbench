@@ -49,12 +49,15 @@ async function fresh(lang = 'en') {
   await page.waitForFunction(() => !!window.openCodeBot)
 }
 
-/** Open the picker on a board; returns the examples it lists. */
+/** Open Learn on a board, with its other examples unfolded; returns every example it lists. */
 async function openPicker(device) {
-  await page.click('#btn-menu')
-  await page.click('[data-action="examples"]')
+  await page.click('#btn-learn')
   await page.waitForFunction(() => document.getElementById('modal')?.open)
   await page.click(`#modal [data-ex-device="${device}"]`)
+  await page.evaluate(() => {
+    const more = document.querySelector('#modal .ex-more')
+    if (more) more.open = true
+  })
   return page.$$eval('#modal .ex-item', (items) =>
     items.map((b) => ({
       id: b.dataset.example,
@@ -82,6 +85,11 @@ for (const device of ['codebot', 'codex', 'codeair']) {
   check(
     list.every((e) => e.title && e.goal && e.goal.length < 120),
     `${device}: each has a title and a one-line goal`,
+  )
+  const quick = await page.$$eval('#modal .ex-item:not(.ex-more .ex-item)', (items) => items.map((b) => b.dataset.example))
+  check(
+    quick.length === 2 && quick.join() === list.slice(0, 2).map((e) => e.id).join(),
+    `${device}: Learn shows its two easiest as quick starts, the rest folded away (${quick.join(' ')})`,
   )
   await page.keyboard.press('Escape')
 

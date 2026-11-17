@@ -177,6 +177,9 @@ kbd {
 .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 .btn-emoji { font-size: 14px; line-height: 1; }
 
+/* Gold, the brand's accent, with dark ink: white on gold falls short of 4.5:1. */
+.btn-learn { background: var(--gold); color: var(--block-ink); box-shadow: 0 3px 0 var(--gold-dark); }
+.btn-learn:active:not(:disabled) { box-shadow: 0 0 0 var(--gold-dark); }
 .btn-connect { background: var(--sky-strong); box-shadow: 0 3px 0 var(--sky-strong-dark); }
 .btn-connect:active:not(:disabled) { box-shadow: 0 0 0 var(--sky-strong-dark); }
 .btn-connect[data-connected='true'] { background: var(--paper-2); color: var(--ink); box-shadow: 0 3px 0 var(--line-strong); }
@@ -781,6 +784,10 @@ kbd {
 .ex-text { display: flex; flex-direction: column; }
 .ex-title { font-weight: 700; }
 .ex-goal { font-size: 13px; color: var(--ink-soft); line-height: 1.4; }
+.learn-head { margin: 0 0 2px; font-size: 16px; color: var(--ink); }
+.ex-more { margin-top: 10px; }
+.ex-more > summary { cursor: pointer; font-weight: 700; padding: 4px 0; color: var(--ink-soft); }
+.ex-more > .ex-list { margin-top: 6px; }
 
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 880px) {

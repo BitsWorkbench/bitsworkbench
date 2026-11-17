@@ -33,6 +33,9 @@
         </div>
 
         <div class="topbar-actions">
+          <button id="btn-learn" class="btn btn-learn" type="button" data-i18n-attr="title=btn.learnTitle">
+            <span class="btn-emoji" aria-hidden="true">🧭</span><span class="btn-text" data-i18n="btn.learn"></span>
+          </button>
           <button id="btn-connect" class="btn btn-connect">
             <span class="btn-emoji" aria-hidden="true">🔌</span><span class="btn-text" data-i18n="btn.connect"></span>
           </button>
@@ -58,7 +61,6 @@
           <div class="menu-wrap">
             <button id="btn-menu" class="btn btn-ghost" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="title=btn.more;aria-label=btn.more">⋯</button>
             <div id="app-menu" class="app-menu" role="menu" hidden>
-              <button role="menuitem" data-action="examples" data-i18n="menu.examples"></button>
               <button role="menuitem" data-action="open" data-i18n="menu.import"></button>
               <hr />
               <button role="menuitem" data-action="export-py" data-i18n="menu.exportPy"></button>
