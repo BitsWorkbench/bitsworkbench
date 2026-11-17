@@ -1,0 +1,9 @@
+[
+  {
+    "id": "PWR",
+    "file": "PWR.json",
+    "title": "Python with Robots",
+    "brief": "Use the CodeBot to build real-world projects with code.",
+    "board": "codebot"
+  }
+]

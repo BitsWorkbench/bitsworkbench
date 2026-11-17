@@ -404,6 +404,8 @@ export default {
   'learn.opened': 'Opened “{title}”',
   'learn.badPack': '“{name}” is not a mission pack Codacious can open',
   'learn.gone': 'That mission pack is no longer in this browser',
+  'learn.unreachable': 'Could not load “{title}”. Check your connection and try again.',
+  'learn.builtinGoal': '{device} · {brief}',
   'learn.paneLabel': 'Mission pack',
   'learn.resizeLabel': 'Resize the mission pack',
   'learn.close': 'Close the mission pack',

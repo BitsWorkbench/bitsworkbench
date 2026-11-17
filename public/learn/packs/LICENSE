@@ -1,0 +1,18 @@
+Mission packs: curriculum text and pictures
+
+The mission packs in this folder (every .json file but index.json), their text, code and
+pictures, are copyright Firia Labs and are licensed under the Creative Commons
+Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0):
+https://creativecommons.org/licenses/by-nc/4.0/
+
+  PWR.json    Python with Robots (CodeBot): its first six missions
+
+Each pack also says so in its own "licence" field, which Codacious shows on the pack's page.
+
+Attribution: "Firia Labs (firialabs.com)".
+
+Firia Labs, CodeBot, CodeX, CodeAIR and CodeSpace are trademarks of Firia Labs, which this
+licence does not cover (TRADEMARKS.md at the top of the repository).
+
+The code of this project is MIT licensed (see LICENSE at the top of the repository); that
+licence does not cover these files, and this one does not cover the code.

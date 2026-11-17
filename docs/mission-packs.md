@@ -38,6 +38,7 @@ once a pack is in use.
 | `id`, `title`, `brief` | yes | Text. |
 | `overview`, `complete` | no | Markdown. |
 | `board` | yes | `codebot`, `codex` or `codeair`: the board an objective runs on unless it names its own. The student runs it in the simulator or on a board over USB. |
+| `licence` | no | Text: who owns the pack and on what terms it may be shared. Shown, small, under the pack's missions. |
 | `avatar` | no | The name of an image in `assets`. |
 | `assets` | no | Images the Markdown and avatars use, by name: `data:` URLs of PNG, JPEG, GIF or WebP. A pack is one file, so its pictures travel inside it. |
 | `missions` | yes | The missions, in order. |
@@ -199,5 +200,24 @@ can be shared freely. The second file continues the first:
 ```
 
 `id` is the pack's own, `continues` the id of the last mission in the first file, and
-`missions` the missions after it. It has no other fields. Opened with the first part, its
-missions follow the first part's, and progress carries across, since it is kept by id.
+`missions` the missions after it; `assets` (optional) holds the images its missions use that
+the first file does not have. It has no other fields. Opened with the first part, its missions
+follow the first part's, its images join the first part's, and progress carries across, since
+it is kept by id.
+
+## The packs that come with Codacious
+
+`public/learn/packs/` holds the packs Codacious offers in Learn, beside `index.json`, their list:
+
+```json
+[{ "id": "PWR", "file": "PWR.json", "title": "Python with Robots", "brief": "One line", "board": "codebot" }]
+```
+
+`id`, `title`, `brief` and `board` are the pack's own (a test checks they match). Opening one
+fetches it and keeps it in the browser, as a pack opened from a file is kept, so a newer
+version on the site replaces the one kept before, progress stays, and it opens offline once it
+has been opened online. The app does not download the packs themselves until one is opened.
+
+These are the first missions of Firia Labs' curriculum packs (their samplers). They are made
+in a private repository by porting the CodeSpace curriculum, and the rest of each pack is a
+second file a school is given.
