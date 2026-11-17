@@ -27,8 +27,24 @@ const NOTES = [
 
 const codex = () => need('codex', 'colors')
 
+/** CodeX's pictures (its gallery module, `pics` in `from codex import *`). */
+const PICS = ['HEART', 'HEART_SMALL', 'MUSIC', 'HAPPY', 'SAD', 'SURPRISED', 'ASLEEP', 'TARGET', 'TSHIRT', 'PLANE', 'HOUSE', 'TIARA', 'ARROW_N', 'ARROW_NE', 'ARROW_E', 'ARROW_SE', 'ARROW_S', 'ARROW_SW', 'ARROW_W', 'ARROW_NW', 'ALL_ARROWS']
+
 defineBlocks([
   // ------------------------------------------------------------- screen
+  {
+    // One of the pictures CodeX comes with (its gallery, imported as pics).
+    json: {
+      type: 'codex_pic',
+      args0: [{ type: 'field_dropdown', name: 'PIC', options: PICS.map((p) => [msg(`block.opt.pic.${p}`), p]) }],
+      output: null,
+      style: 'screen_blocks',
+    },
+    python: (block) => {
+      codex()
+      return [`pics.${block.getFieldValue('PIC')}`, Order.MEMBER]
+    },
+  },
   {
     json: {
       type: 'codex_show',
@@ -303,6 +319,21 @@ defineBlocks([
       codex()
       const label = block.getField('NOTE').getText()
       return `audio.pitch(${block.getFieldValue('NOTE')}, ${numField(block, 'SECS', 0.4)})  # ${label}\n`
+    },
+  },
+  {
+    // One of the sound files on CodeX (sounds/...), played to its end. The
+    // simulated CodeX has no sound files yet.
+    json: {
+      type: 'codex_mp3',
+      args0: [{ type: 'input_value', name: 'FILE', check: 'String' }],
+      previousStatement: null,
+      nextStatement: null,
+      style: 'sound_blocks',
+    },
+    python: (block, gen) => {
+      codex()
+      return `audio.mp3(${value(gen, block, 'FILE', "'sounds/welcome'")})\n`
     },
   },
   {

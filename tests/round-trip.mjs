@@ -48,7 +48,14 @@ await page.waitForFunction(() => !!window.openCodeBot)
  * Inputs a block needs filled to say what it is: `len(x)` of something
  * unknown reads as a text's length, so "length of list" gets a list.
  */
-const FILL = { lists_length: { VALUE: { block: { type: 'lists_create_with', extraState: { itemCount: 0 } } } } }
+// A value worked out as the program runs (here `n`), as these blocks are for:
+// with a fixed number, their Python is the dropdown block's, which it comes back as.
+const byValue = { NUM: { block: { type: 'ocb_python_value', fields: { CODE: 'n' } } } }
+const FILL = {
+  lists_length: { VALUE: { block: { type: 'lists_create_with', extraState: { itemCount: 0 } } } },
+  codebot_led_set: byValue,
+  codebot_ls_led_set: byValue,
+}
 
 // Helpers in the page: a block program's Python, and the same program back from it.
 await page.evaluate(() => {
@@ -197,6 +204,18 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   const r = await from('from botcore import *\nmotors.enable(True)\nmotors.run(LEFT, -40)\nmotors.run(RIGHT, -40)\n')
   const drive = r.shape[0].inputs.DO
   check(drive.type === 'codebot_drive' && drive.fields.DIR === 'backward' && drive.inputs.POWER.fields.NUM === 40, '-40 on both wheels is "drive backward 40"')
+}
+{
+  // The curriculum's lines (Python with Robots, CodeX's missions) are blocks.
+  const bot = await from('from botcore import *\nn_led = 0\nleds.user_num(n_led, True)\nleds.ls_num(n_led, False)\nleds.ls(0b01110)\nmotors.enable(False)\n')
+  const types = JSON.stringify(bot.shape)
+  check(['codebot_led_set', 'codebot_ls_led_set', 'codebot_ls_leds_pattern', 'codebot_motors_enable'].every((t) => types.includes(`"${t}"`)) && !types.includes('ocb_python'), 'LEDs by a variable, a line sensor pattern and motor power are blocks')
+  check(bot.back.includes('leds.ls(0b01110)'), 'and the pattern stays binary')
+  await board('codex')
+  const cx = await from('from codex import *\ndisplay.show(pics.HEART)\naudio.mp3("sounds/africa")\n')
+  const cxt = JSON.stringify(cx.shape)
+  check(cxt.includes('"codex_pic"') && cxt.includes('"codex_mp3"') && !cxt.includes('ocb_python'), 'a CodeX picture and a sound file are blocks')
+  await board('codebot')
 }
 {
   // `from time import sleep`: then `sleep(1)` is the wait block, as `time.sleep(1)` is,

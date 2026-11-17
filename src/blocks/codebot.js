@@ -123,6 +123,21 @@ defineBlocks([
       return 'motors.run(LEFT, 0)\nmotors.run(RIGHT, 0)\n'
     },
   },
+  {
+    // Power to the motors, on or off, where the program says: after a button
+    // press, or off at the end. The drive blocks switch them on by themselves.
+    json: {
+      type: 'codebot_motors_enable',
+      args0: [{ type: 'input_value', name: 'ON', check: 'Boolean' }],
+      previousStatement: null,
+      nextStatement: null,
+      style: 'move_blocks',
+    },
+    python: (block, gen) => {
+      bot()
+      return `motors.enable(${value(gen, block, 'ON', 'True')})\n`
+    },
+  },
 
   // ------------------------------------------------------------- lights
   {
@@ -200,6 +215,71 @@ defineBlocks([
     python: (block) => {
       bot()
       return `leds.ls(${block.getFieldValue('ON')})\n`
+    },
+  },
+  // The same LEDs, by values a program works out: a number and on or off from
+  // variables (`leds.user_num(n_led, True)`), as the curriculum writes them. The
+  // dropdown blocks above stay for fixed ones.
+  {
+    json: {
+      type: 'codebot_led_set',
+      args0: [
+        { type: 'input_value', name: 'NUM', check: 'Number' },
+        { type: 'input_value', name: 'ON', check: 'Boolean' },
+      ],
+      inputsInline: true,
+      previousStatement: null,
+      nextStatement: null,
+      style: 'lights_blocks',
+    },
+    python: (block, gen) => {
+      bot()
+      return `leds.user_num(${value(gen, block, 'NUM', '0')}, ${value(gen, block, 'ON', 'True')})\n`
+    },
+  },
+  {
+    json: {
+      type: 'codebot_ls_led_set',
+      args0: [
+        { type: 'input_value', name: 'NUM', check: 'Number' },
+        { type: 'input_value', name: 'ON', check: 'Boolean' },
+      ],
+      inputsInline: true,
+      previousStatement: null,
+      nextStatement: null,
+      style: 'lights_blocks',
+    },
+    python: (block, gen) => {
+      bot()
+      return `leds.ls_num(${value(gen, block, 'NUM', '0')}, ${value(gen, block, 'ON', 'True')})\n`
+    },
+  },
+  {
+    json: {
+      type: 'codebot_ls_leds_pattern',
+      args0: [{ type: 'field_input', name: 'BITS', text: '10101' }],
+      previousStatement: null,
+      nextStatement: null,
+      style: 'lights_blocks',
+    },
+    python: (block) => {
+      bot()
+      const bits = (block.getFieldValue('BITS') || '').replace(/[^01]/g, '').slice(0, 5).padStart(5, '0')
+      return `leds.ls(0b${bits})\n`
+    },
+  },
+  {
+    // What the line sensors saw, shown on their LEDs: leds.ls(vals).
+    json: {
+      type: 'codebot_ls_leds_show',
+      args0: [{ type: 'input_value', name: 'VALUE' }],
+      previousStatement: null,
+      nextStatement: null,
+      style: 'lights_blocks',
+    },
+    python: (block, gen) => {
+      bot()
+      return `leds.ls(${value(gen, block, 'VALUE', '0')})\n`
     },
   },
   {
