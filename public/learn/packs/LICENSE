@@ -6,6 +6,8 @@ Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0):
 https://creativecommons.org/licenses/by-nc/4.0/
 
   PWR.json    Python with Robots (CodeBot): its first six missions
+  LCX.json    Python with CodeX (CodeX): its first six missions
+  FLY.json    Fly with Python (CodeAIR): its first six missions
 
 Each pack also says so in its own "licence" field, which Codacious shows on the pack's page.
 
