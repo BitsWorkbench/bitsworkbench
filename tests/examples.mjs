@@ -58,7 +58,8 @@ async function openPicker(device) {
     const more = document.querySelector('#modal .ex-more')
     if (more) more.open = true
   })
-  return page.$$eval('#modal .ex-item', (items) =>
+  // The examples only: Learn lists mission packs below them, as cards too.
+  return page.$$eval('#modal .ex-item[data-example]', (items) =>
     items.map((b) => ({
       id: b.dataset.example,
       title: b.querySelector('.ex-title').textContent,
@@ -86,7 +87,7 @@ for (const device of ['codebot', 'codex', 'codeair']) {
     list.every((e) => e.title && e.goal && e.goal.length < 120),
     `${device}: each has a title and a one-line goal`,
   )
-  const quick = await page.$$eval('#modal .ex-item:not(.ex-more .ex-item)', (items) => items.map((b) => b.dataset.example))
+  const quick = await page.$$eval('#modal .ex-item[data-example]:not(.ex-more .ex-item)', (items) => items.map((b) => b.dataset.example))
   check(
     quick.length === 2 && quick.join() === list.slice(0, 2).map((e) => e.id).join(),
     `${device}: Learn shows its two easiest as quick starts, the rest folded away (${quick.join(' ')})`,

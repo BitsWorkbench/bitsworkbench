@@ -38,6 +38,7 @@ once a pack is in use.
 | `id`, `title`, `brief` | yes | Text. |
 | `overview`, `complete` | no | Markdown. |
 | `board` | yes | `codebot`, `codex` or `codeair`: the board an objective runs on unless it names its own. The student runs it in the simulator or on a board over USB. |
+| `licence` | no | Text: who owns the pack and on what terms it may be shared. Shown, small, under the pack's missions. |
 | `avatar` | no | The name of an image in `assets`. |
 | `assets` | no | Images the Markdown and avatars use, by name: `data:` URLs of PNG, JPEG, GIF or WebP. A pack is one file, so its pictures travel inside it. |
 | `missions` | yes | The missions, in order. |
