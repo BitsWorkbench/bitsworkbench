@@ -284,6 +284,14 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(r.back.includes("print('one\\ntwo')"), `a "\\n" in a string stays "\\n" (${JSON.stringify(r.back.split('\n').slice(-3).join('\n'))})`)
 }
 {
+  // An octal escape is the character it names; a \N{name} escape is not read, so the
+  // line keeps its own text rather than a wrong value.
+  const octal = await from('print("\\101\\0")\n')
+  check(octal.back.includes("print('A\\x00')") || octal.back.includes("print('A\\0')"), `"\\101" is "A" and "\\0" a NUL (${JSON.stringify(octal.back.split('\n').slice(-2).join('\n'))})`)
+  const named = await from('print("\\N{BULLET} one")\n')
+  check(named.back.includes('print("\\N{BULLET} one")'), `"\\N{BULLET}" stays as written (${JSON.stringify(named.back.split('\n').slice(-2).join('\n'))})`)
+}
+{
   // Python with no block: a whole statement, and a piece of one.
   const r = await from('try:\n    leds.user(0xFF)\nexcept OSError:\n    pass\nprint(f"{1 + 1} wheels")\n')
   const first = r.shape[0].inputs.DO

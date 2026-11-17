@@ -1140,14 +1140,17 @@ function sameLeaf(a, b) {
 
 /**
  * The value of a plain Python string literal, or null for one this does not
- * read (an f-string, bytes, a triple-quoted string).
+ * read (an f-string, bytes, a triple-quoted string, a `\N{name}` escape).
  */
 export function decode(literal) {
   const m = /^([rRuU]?)(['"])(.*)\2$/s.exec(literal)
   if (!m || literal.startsWith(m[2].repeat(3), m[1].length)) return null
   if (m[1].toLowerCase() === 'r') return m[3]
-  const simple = { n: '\n', t: '\t', r: '\r', '\\': '\\', "'": "'", '"': '"', a: '\x07', b: '\b', f: '\f', v: '\v', 0: '\0' }
-  return m[3].replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|.)/gs, (all, e) => {
+  // `\N{...}` names a character by its Unicode name, which needs a table this does not carry.
+  if (/(^|[^\\])(\\\\)*\\N\{/.test(m[3])) return null
+  const simple = { n: '\n', t: '\t', r: '\r', '\\': '\\', "'": "'", '"': '"', a: '\x07', b: '\b', f: '\f', v: '\v', '\n': '' }
+  return m[3].replace(/\\([0-7]{1,3}|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|.)/gs, (all, e) => {
+    if (/^[0-7]/.test(e)) return String.fromCodePoint(parseInt(e, 8))
     if (e.length > 1) return String.fromCodePoint(parseInt(e.slice(1), 16))
     return e in simple ? simple[e] : all
   })
