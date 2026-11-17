@@ -265,5 +265,7 @@ POSSIBILITY OF SUCH DAMAGE.
 | xterm.js, `@xterm/addon-fit` | MIT |
 | CodeMirror 6 (`@codemirror/*`), Lezer (`@lezer/*`), and their helpers `style-mod`, `w3c-keyname`, `crelt` | MIT |
 | Fredoka and Nunito fonts (`@fontsource-variable`) | SIL Open Font License 1.1 |
+| markdown-it, and its helpers `mdurl`, `uc.micro`, `linkify-it`, `punycode.js` | MIT |
+| `entities` (markdown-it's) | BSD-2-Clause |
 
 Each package's licence text is in its folder under `node_modules/` after `npm ci`.

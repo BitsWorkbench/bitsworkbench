@@ -4,6 +4,7 @@
  * pack split in two joins back into one.
  */
 import { readPack, readRest, joinRest, PackError, FORMAT } from '../src/learn/pack.js'
+import { renderMarkdown } from '../src/learn/markdown.js'
 
 let failures = 0
 const check = (name, condition, detail = '') => {
@@ -20,7 +21,7 @@ const objective = (id, more = {}) => ({
   type: 'objective',
   id,
   title: 'Lights On',
-  instructions: '--Concept--\nThe **LEDs**.\n--/Concept--\n--Blocks--Drag the block.--/Blocks----Python--Type the line.--/Python--\n<img src="leds.png">',
+  instructions: '--Concept--\nThe **LEDs**.\n--/Concept--\n--Blocks--Drag the block.--/Blocks----Python--Type the line.--/Python--\n![The LEDs](leds.png)',
   code: 'from botcore import *\n\nleds.user(0b11110000)\n',
   solution: 'from botcore import *\n\nleds.user(0b11111111)\n',
   trek: [{ md: 'All on.', python: 'leds.user(0b11111111)\npass  # TODO: and the next\n' }],
@@ -146,9 +147,31 @@ console.log('A pack in two files')
   check('a rest of another pack is refused', has(tryJoin(sampler, { ...rest, id: 'U' }), 'the rest is of pack U'))
   check('a rest after another mission is refused', has(tryJoin(sampler, { ...rest, continues: 'T_Z' }), 'this pack ends with T_A'))
   check('an id in both parts is refused', has(tryJoin(sampler, { ...rest, missions: [{ ...whole.missions[1], id: 'T_A' }] }), 'id T_A is also at missions[0]'))
-  const lost = { ...rest, missions: [{ ...whole.missions[1], flow: [objective('T_B_1', { instructions: '<img src="nope.png">' })] }] }
+  const lost = { ...rest, missions: [{ ...whole.missions[1], flow: [objective('T_B_1', { instructions: '![gone](nope.png)' })] }] }
   check('the rest\'s images are checked against the pack\'s', has(tryJoin(sampler, lost), 'no image nope.png'))
   check('a rest has only its own fields', has(problemsOf({ ...rest, title: 'More' }, readRest), 'title: not a field'))
+}
+
+console.log('A pack\'s Markdown, as HTML')
+{
+  const assets = { 'leds.png': PNG }
+  const html = (text, mode = 'blocks') => renderMarkdown(text, { mode, assets, label: (name, title) => (title ? `${name}:${title}` : name) })
+  check('Markdown renders', html('**bold** and `code`') === '<p><strong>bold</strong> and <code>code</code></p>\n')
+  const both = 'Now --Blocks--drag the block--/Blocks----Python--type the line--/Python-- please.'
+  check('blocks mode keeps the Blocks text, inline', html(both) === '<p>Now drag the block please.</p>\n', html(both))
+  check('Python mode keeps the Python text', html(both, 'python') === '<p>Now type the line please.</p>\n', html(both, 'python'))
+  const raw = html('<script>alert(1)</script> <img src=x onerror=alert(1)> <b>hi</b>')
+  check('HTML in a pack is shown as text, never run', !/<script|<img|<b>/.test(raw) && raw.includes('&lt;script&gt;'), raw)
+  const links = html('[web](https://firialabs.com) [bad](javascript:alert(1)) [data](data:text/html,hi)')
+  check('a web link opens in a new tab', links.includes('<a href="https://firialabs.com" target="_blank" rel="noopener noreferrer">web</a>'), links)
+  check('no javascript: or data: link', !/href="(javascript|data):/i.test(links), links)
+  check('an image is the pack\'s own', html('![The LEDs](leds.png)') === `<p><img src="${PNG}" alt="The LEDs"></p>\n`, html('![The LEDs](leds.png)'))
+  check('an image from anywhere else is left out', !html('![x](https://example.com/x.png) ![y](nope.png)').includes('<img'))
+  const panel = html('Before\n\n--Concept--\nThe **LEDs**.\n--/Concept--\n\nAfter')
+  check('a section is a labelled panel', /<p>Before<\/p>\n<div class="lsec lsec-concept"><p class="lsec-label">Concept<\/p><p>The <strong>LEDs<\/strong>.<\/p>\n<\/div><p>After<\/p>/.test(panel), panel)
+  check('a Peek section is folded', html('--Peek--hidden--/Peek--').startsWith('<details class="lsec lsec-peek"><summary>Peek</summary>'))
+  check('a new file names the file', html('--File title={blink.py}/--').includes('File:blink.py'))
+  check('sections inside sections', /lsec-concept.*lsec-caution.*inner/s.test(html('--Concept--a--Caution--inner--/Caution--b--/Concept--')))
 }
 
 if (failures) {
