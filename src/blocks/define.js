@@ -36,7 +36,21 @@ export function defineBlocks(defs) {
   Blockly.defineBlocksWithJsonArray(defs.map((d) => fillMessages(d.json)))
   for (const def of defs) {
     pythonGenerator.forBlock[def.json.type] = def.python
+    if (def.omit) OMIT.set(def.json.type, def.omit)
   }
+}
+
+/**
+ * Arguments a block's Python may leave out, as a definition's `omit`:
+ * { FIELD: value } for a field (left out, it is that value: the library's own
+ * default, so the program means the same as blocks), { INPUT: true } for a
+ * value input (left out, it keeps its default block). Python back to blocks
+ * (convert/to-blocks.js) then finds the block in a call without them, as
+ * students write it: `pixels.set(0, RED)` for `pixels.set(0, RED, brightness=10)`.
+ */
+const OMIT = new Map()
+export function omittable(type) {
+  return OMIT.get(type) || null
 }
 
 /** Value input as Python, falling back to `fallback` when nothing is plugged in. */
