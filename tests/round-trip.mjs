@@ -269,6 +269,15 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   await board('codebot')
 }
 {
+  // CodeX's and CodeAIR's modules bring the colours, as CodeSpace's programs assume:
+  // the blocks write no `from colors import *`, and a file that has it opens clean.
+  await board('codex')
+  const r = await from('from codex import *\nfrom colors import *\npixels.fill(RED)\n')
+  check(!r.back.includes('from colors import'), `CodeX's blocks write no from colors import * (${JSON.stringify(r.back.split('\n').slice(3, 6))})`)
+  check(!JSON.stringify(r.shape).includes('ocb_python'), 'and a file with it opens as blocks, not a grey line')
+  await board('codebot')
+}
+{
   // A line break in a string comes back as one: Blockly's own quoting wrote a
   // backslash and a line break, which Python reads as no break at all.
   const r = await from('print("one\\ntwo")\n')

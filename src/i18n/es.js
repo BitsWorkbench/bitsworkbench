@@ -24,6 +24,7 @@ export default {
   'btn.more': 'Más',
   'project.default': 'Mi proyecto',
   'project.pageTitle': '{name} · {app}',
+  'menu.examples': '📚 Ejemplos… (en Aprender)',
   'menu.import': '📂 Abrir un archivo de tu computadora…',
   'menu.exportPy': '🐍 Descargar Python',
   'menu.copyPy': '📋 Copiar Python',
@@ -557,6 +558,7 @@ export default {
   'simPanel.moreBoardsTitle': 'Más placas simuladas, en una pestaña nueva: sus radios escuchan a esta',
   'simPanel.moreBoards': '📡 Más placas',
   'simPanel.reset': 'Regresarlo al inicio',
+  'simPanel.resetShort': 'Volver al inicio',
   'sim.runningSlow': 'Va al {percent}% del tiempo real: esta computadora no alcanza, así que la simulación va más lenta en lugar de saltarse pasos.',
 
   // El panel de ajustes del simulador
@@ -692,8 +694,8 @@ export default {
   'block.ocb_color.tooltip': 'Un color que puedes usar en luces y dibujos.',
   'block.ocb_rgb.message0': '🎨 rojo %1 verde %2 azul %3',
   'block.ocb_rgb.tooltip': 'Mezcla tu propio color. Cada valor va de 0 a 255.',
-  'block.ocb_seconds_since_start.message0': '⏱ segundos desde el inicio',
-  'block.ocb_seconds_since_start.tooltip': 'Cuánto tiempo lleva ejecutándose tu programa.',
+  'block.ocb_seconds_since_start.message0': '⏱ segundos en el reloj',
+  'block.ocb_seconds_since_start.tooltip': 'El reloj de la placa, en segundos: cuenta desde que la placa se encendió o se reinició, y nunca retrocede. Para medir algo, guarda su lectura en una variable y luego réstala de una lectura nueva. (En Python, time.monotonic().)',
   'block.ocb_python.message0': '🐍 ejecutar Python %1',
   'block.ocb_python.tooltip': 'Python que no tiene un bloque propio. Escribe aquí cualquier Python, con tantas líneas como quieras.',
   'block.ocb_todo.message0': '📝 por hacer: %1',

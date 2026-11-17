@@ -105,7 +105,12 @@ export function pythonToBlocks(source, targetId, { imports = '' } = {}) {
   // write `import time` and `time.sleep(...)` themselves (see importedNames).
   const made = new Set(madeLines(ctx.state(defBlocks, start, foreverBlock), board))
   const greyCode = ctx.greyCode([...defBlocks, ...start, foreverBlock])
-  const kept = header.filter((s) => !made.has(ctx.text(s).replace(/\s+/g, ' ')) && !absorbed(ctx.text(s), made, greyCode))
+  // `from colors import *` goes too where the blocks import CodeX or CodeAIR, which bring the colours.
+  const coloursMade = made.has('from codex import *') || made.has('from codeair import *')
+  const kept = header.filter((s) => {
+    const line = ctx.text(s).replace(/\s+/g, ' ')
+    return !made.has(line) && !absorbed(ctx.text(s), made, greyCode) && !(coloursMade && line === 'from colors import *')
+  })
   start.unshift(...kept.map((s) => ctx.grey(s)))
   return {
     ok: true,

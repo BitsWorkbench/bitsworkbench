@@ -39,6 +39,8 @@ export class Engine {
     this.o = opts
     this.world = opts.world
     this.userFiles = {}            // saved to the board's drive (writeFile), on every VM
+    this._lines = []               // lines typed while a program runs, for its input() (typed)
+    this._typing = ''
     this.speed = opts.speed ?? 1
     this.usPerBranch = opts.usPerBranch ?? 5   // an ESP32-S2 at 240 MHz; to be measured
     this.hookPeriod = opts.hookPeriod ?? 1000
@@ -255,6 +257,12 @@ export class Engine {
       guarded[k] = (...a) => (live() ? f(...a) : 0)
     }
     mp.registerJsModule('_sim', guarded)
+    // The console, for a running program's input(): the lines typed at the
+    // terminal (typed()), taken one at a time.
+    mp.registerJsModule('_simin', {
+      ready: () => (live() && this._lines.length ? 1 : 0),
+      take: () => (live() ? (this._lines.shift() ?? '') : ''),
+    })
     if (this.o.lockstep) mp.realm = Object.fromEntries(REALM.map((k) => [k, globalThis[k]]))
     return mp
   }
@@ -273,6 +281,8 @@ export class Engine {
     this._stopAgain = false
     this.replVM = null
     this._replPending = 0
+    this._lines = []             // lines typed while it runs, for input()
+    this._typing = ''            // the line being typed
     this.mp = await this._newVM()
     this._enterRealm()
     this.mp.FS.writeFile('/main.py', source)
@@ -301,6 +311,29 @@ export class Engine {
     this.o.onFrame?.()
     this.o.onState?.('idle')
     return result
+  }
+
+  // Keys typed at the terminal while a program runs: echoed as a board echoes
+  // them, Backspace taking one back, and each line, at Enter, kept for the
+  // program's input() (RUN_MAIN). Ctrl-C is the worker's (a stop).
+  typed(text) {
+    if (!this.running) return
+    const enc = new TextEncoder()
+    for (const ch of text) {
+      if (ch === '\r' || ch === '\n') {
+        this._lines.push(this._typing)
+        this._typing = ''
+        this._out(enc.encode('\r\n'))
+      } else if (ch === '\x7f' || ch === '\b') {
+        if (!this._typing) continue
+        this._typing = [...this._typing].slice(0, -1).join('')
+        this._out(enc.encode('\b \b'))
+      } else if (ch >= ' ') {
+        this._typing += ch
+        this._out(enc.encode(ch))
+      }
+    }
+    this._flushOutput()
   }
 
   // --- the REPL, between programs ------------------------------------------------
@@ -391,12 +424,20 @@ export class Engine {
 const REALM = ['Module', 'proxy_js_ref', 'proxy_js_ref_next', 'proxy_js_ref_map', 'proxy_js_map',
   'proxy_js_existing', 'pyProxyFinalizationRegistry']
 
-// Run /main.py as __main__, as the device runs its program file.
+// Run /main.py as __main__, as the device runs its program file. Its input()
+// reads a line typed at the terminal: the prompt goes out, then it waits in
+// short sleeps (the world and the output go on meanwhile) until a line comes.
 const RUN_MAIN = `
 def __run():
+    import _simin, time
+    def input(prompt=''):
+        print(prompt, end='')
+        while not _simin.ready():
+            time.sleep(0.02)
+        return _simin.take()
     with open('/main.py') as f:
         src = f.read()
-    exec(compile(src, 'main.py', 'exec'), {'__name__': '__main__'})
+    exec(compile(src, 'main.py', 'exec'), {'__name__': '__main__', 'input': input})
 __run()
 `
 // The same, with main.py's lines reported (the trace is on for its frames only).

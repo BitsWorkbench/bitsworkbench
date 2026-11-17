@@ -164,6 +164,7 @@ self.onmessage = async (e) => {
       case 'stdin':
         if (engine.running) {
           if (m.text.includes('\x03')) engine.stop()
+          else engine.typed(m.text)   // a line for the program's input()
         } else {
           await engine.replInput(m.text)
         }

@@ -64,7 +64,7 @@ export class SimPanel {
         </span>
         <button type="button" class="icon-btn sim-full" data-for="codex" ${both('codex.fullTitle')}>⛶</button>
         <a class="sim-chip sim-boards" data-for="codex codeair" href="./boards.html" target="_blank" rel="noopener" title="${tHtml('simPanel.moreBoardsTitle')}">${tHtml('simPanel.moreBoards')}</a>
-        <button type="button" class="icon-btn sim-reset" data-for="codebot codeair" ${both('simPanel.reset')}>↺</button>
+        <button type="button" class="sim-chip sim-reset" data-for="codebot codeair" title="${tHtml('simPanel.reset')}"><span aria-hidden="true">↺</span> ${tHtml('simPanel.resetShort')}</button>
         <button type="button" class="icon-btn sim-gear" ${both('settings.open')}>⚙️</button>
       </div>`
     const q = (s) => host.querySelector(s)

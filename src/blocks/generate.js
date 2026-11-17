@@ -77,7 +77,9 @@ export function importLines(needs) {
   for (const [key, line] of Object.entries(DEVICE_IMPORT)) {
     if (needs.has(NEED_FOR_DEVICE[key])) lines.push(line)
   }
-  if (needs.has('colors')) lines.push('from colors import *')
+  // CodeX's and CodeAIR's own modules bring the colours with them (`from colors import *`
+  // inside), as CodeSpace's programs assume: the line is written only when neither is.
+  if (needs.has('colors') && !needs.has('codex') && !needs.has('codeair')) lines.push('from colors import *')
   if (needs.has('flight')) lines.push('from flight import *')
   if (needs.has('songplayer')) lines.push('from songplayer import song_player')
   if (needs.has('time')) lines.push('import time')

@@ -26,6 +26,7 @@ export default {
   'btn.more': 'More',
   'project.default': 'My project',
   'project.pageTitle': '{name} · {app}',
+  'menu.examples': '📚 Examples… (in Learn)',
   'menu.import': '📂 Open a file from your computer…',
   'menu.exportPy': '🐍 Download Python',
   'menu.copyPy': '📋 Copy Python',
@@ -558,6 +559,7 @@ export default {
   'simPanel.moreBoardsTitle': 'More simulated boards, in a new tab: their radios hear this one',
   'simPanel.moreBoards': '📡 More boards',
   'simPanel.reset': 'Put it back at the start',
+  'simPanel.resetShort': 'Back to start',
   'sim.runningSlow': 'Running at {percent}% of real time: this computer can’t keep up, so the simulation slows down rather than skip steps.',
 
   // The simulator's settings panel
@@ -693,8 +695,8 @@ export default {
   'block.ocb_color.tooltip': 'A colour you can plug into lights and drawings.',
   'block.ocb_rgb.message0': '🎨 red %1 green %2 blue %3',
   'block.ocb_rgb.tooltip': 'Mix your own colour. Each value goes from 0 to 255.',
-  'block.ocb_seconds_since_start.message0': '⏱ seconds since start',
-  'block.ocb_seconds_since_start.tooltip': 'How long your program has been running.',
+  'block.ocb_seconds_since_start.message0': '⏱ seconds on the clock',
+  'block.ocb_seconds_since_start.tooltip': 'The board\'s clock, in seconds: it counts up from when the board was switched on or reset, and never goes back. To time something, keep its reading in a variable, then later subtract it from a new reading. (In Python, time.monotonic().)',
   'block.ocb_python.message0': '🐍 run Python %1',
   'block.ocb_python.tooltip': 'Python with no block of its own. Type any Python here, as many lines as you like.',
   'block.ocb_todo.message0': '📝 to do: %1',
