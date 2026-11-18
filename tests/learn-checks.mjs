@@ -37,6 +37,17 @@ check('a body names statements in order, others between', has('while True:\n    
 check('but not out of order', !has('while True:\n    sleep(1)\n    leds.user(255)', 'while True:\n    leds.user(255)\n    sleep(1)\n'))
 check('a function by its name and parameters', has('def note(freq, duration): ...', 'def note(freq, duration):\n    audio.pitch(freq, duration)\n'))
 check('x += 1', has('count += 1', 'count += 1\n') && !has('count += 1', 'count = count + 1\n'))
+// The spellings blocks write: a wait block is `import time` and `time.sleep(...)`, a
+// "change by" block is `+=`.
+check('x = x + 1 is met by x += 1', has('delay = delay + 0.2', 'delay += 0.2\n') && has('n = n * 2', 'n *= 2\n'))
+check('but not by another update', !has('delay = delay + 0.2', 'delay -= 0.2\n') && !has('delay = delay + 0.2', 'delay += 0.5\n') && !has('delay = delay + 0.2', 'other += 0.2\n'))
+check('sleep(1) is met by time.sleep(1) when time is imported', has('sleep(1)', 'import time\ntime.sleep(1)\n') && has('sleep(...)', 'import time\nwhile True:\n    time.sleep(0.5)\n'))
+check('with the same arguments', !has('sleep(1)', 'import time\ntime.sleep(2)\n'))
+check('not through a module that is not imported, or another name', !has('sleep(1)', 'time.sleep(1)\n') && !has('sleep(1)', 'import time\ntime.slept(1)\n') && !has('sleep(1)', 'import time\nclock.sleep(1)\n'))
+check('a member call still needs a member pattern', !has('time.sleep(1)', 'from time import sleep\nsleep(1)\n') && has('time.sleep(1)', 'import time\ntime.sleep(1)\n'))
+check('in order and in a scope too', met({ order: ['leds.user(255)', 'sleep(1)'] }, seen('import time\nleds.user(255)\ntime.sleep(1)\n')) && has('sleep(...)', 'import time\nwhile True:\n    time.sleep(1)\n', { in: 'while True: ...' }))
+check('from time import sleep is met by import time', has('from time import sleep', 'import time\n') && has('from time import sleep', 'import math, time\n'))
+check('but not by another module', !has('from time import sleep', 'import math\n') && !has('import time', 'from time import sleep\n'))
 check('comments are not code', !has('leds.user(255)', '# leds.user(255)\nx = 1\n'))
 check('a program that does not parse meets no code check', !has('x = 1', 'x = 1\nif\n'))
 
