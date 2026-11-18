@@ -64,6 +64,16 @@ export function body(gen, block, name = 'DO') {
   return code || gen.INDENT + 'pass\n'
 }
 
+/**
+ * `, keyword=value` for a number field, or nothing when the field holds the
+ * value the block's Python may leave out (its `omit`): `pixels.fill(YELLOW)`
+ * comes back from blocks as it was written, not with the library's default spelt out.
+ */
+export function keywordArg(block, field, keyword, fallback = 0) {
+  const v = numField(block, field, fallback)
+  return v === OMIT.get(block.type)?.[field] ? '' : `, ${keyword}=${v}`
+}
+
 /** A number typed straight into a field, safe for use in generated code. */
 export function numField(block, name, fallback = 0) {
   const raw = Number(block.getFieldValue(name))

@@ -8,9 +8,15 @@
 
 const CAPTION_MAX = 70
 
-/** A chunk's caption: numbered, its Markdown as plain text, one short line. */
-export function caption(md, n) {
+/**
+ * A chunk's caption: numbered, its Markdown as plain text, one short line. `mode`
+ * ('blocks' or 'python') is the palette's: the other mode's `--Blocks--` or
+ * `--Python--` text is left out, as the mission pane leaves it out.
+ */
+export function caption(md, n, mode) {
+  const other = mode === 'blocks' ? 'Python' : 'Blocks'
   const plain = md
+    .replace(new RegExp(`--${other}--[\\s\\S]*?--/${other}--`, 'g'), ' ') // the other mode's text
     .replace(/--\/?[A-Za-z]+[^\n]*?\/?--/g, ' ') // sections
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links: their words
@@ -31,7 +37,7 @@ export function trekSnippets(trek) {
     const lines = chunk.python.replace(/\s+$/, '').split('\n')
     const imports = lines.filter((l) => /^(from|import)\s/.test(l))
     const code = lines.filter((l) => !/^(from|import)\s/.test(l)).join('\n').replace(/^\n+/, '')
-    const name = caption(chunk.md, i + 1)
+    const name = caption(chunk.md, i + 1, 'python')
     // `trek` marks it as the CodeTrek's, for the `trek-used` goal event.
     return code ? { code, line: true, name, imports, setup: [], trek: true } : { code: imports.join('\n'), line: true, name, imports: [], setup: [], trek: true }
   })

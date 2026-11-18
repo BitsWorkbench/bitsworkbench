@@ -1,6 +1,6 @@
 /** CodeX handheld: screen, lights, sound, buttons, sensors. */
 import { Order } from 'blockly/python'
-import { msg, defineBlocks, value, numField } from './define.js'
+import { msg, defineBlocks, value, numField, keywordArg } from './define.js'
 import { need } from './context.js'
 
 const BUTTONS = [
@@ -247,7 +247,7 @@ defineBlocks([
     },
     python: (block, gen) => {
       codex()
-      return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
+      return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}${keywordArg(block, 'BRIGHT', 'brightness', 40)})\n`
     },
     // Left out, the library's brightness is 10 (codex.py DEFAULT_BRIGHTNESS).
     omit: { BRIGHT: 10 },
@@ -266,7 +266,7 @@ defineBlocks([
     },
     python: (block, gen) => {
       codex()
-      return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
+      return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}${keywordArg(block, 'BRIGHT', 'brightness', 40)})\n`
     },
     omit: { BRIGHT: 10 },
   },

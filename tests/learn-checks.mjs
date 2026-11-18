@@ -4,7 +4,8 @@
  * not matter; `...` is anything), counts and scopes, order, the checks of
  * what happened, and the regular-expression shapes a pack may not use.
  */
-import { met } from '../src/learn/checks.js'
+import { met, same } from '../src/learn/checks.js'
+import { tree } from '../src/convert/tree.js'
 import { riskyRegex, RegexTester } from '../src/learn/regex.js'
 import { caption, trekSnippets } from '../src/learn/trek.js'
 
@@ -54,6 +55,12 @@ check('not through a module that is not imported, or another name', !has('sleep(
 check('a member call still needs a member pattern', !has('time.sleep(1)', 'from time import sleep\nsleep(1)\n') && has('time.sleep(1)', 'import time\ntime.sleep(1)\n'))
 check('in order and in a scope too', met({ order: ['leds.user(255)', 'sleep(1)'] }, seen('import time\nleds.user(255)\ntime.sleep(1)\n')) && has('sleep(...)', 'import time\nwhile True:\n    time.sleep(1)\n', { in: 'while True: ...' }))
 check('from time import sleep is met by import time', has('from time import sleep', 'import time\n') && has('from time import sleep', 'import math, time\n'))
+{
+  // After a check of a program that imports time, same() on its own knows no imports.
+  has('sleep(1)', 'import time\ntime.sleep(1)\n')
+  const call = (s) => tree(s).root.children[0].children[0]
+  check("same() on its own does not read the last program's imports", !same(call('sleep(1)\n'), call('time.sleep(1)\n')))
+}
 check('but not by another module', !has('from time import sleep', 'import math\n') && !has('import time', 'from time import sleep\n'))
 check('comments are not code', !has('leds.user(255)', '# leds.user(255)\nx = 1\n'))
 check('a program that does not parse meets no code check', !has('x = 1', 'x = 1\nif\n'))
@@ -92,6 +99,9 @@ console.log('CodeTrek chunks for the Python palette')
   check('its imports go to the top when dropped', second.imports.join() === 'from time import sleep' && second.code === 'sleep(1)\npass  # TODO: turn them off')
   check('a chunk that is only an import is that import', third.code === 'from botcore import *' && !third.imports.length)
   check('caption() numbers from 1', caption('x', 1) === '1. x')
+  const both = 'Add the wait. --Blocks--Drag the ⏳ wait block in.--/Blocks----Python--Type `sleep(1)`.--/Python--'
+  check("a caption keeps only its palette's mode", caption(both, 1, 'blocks') === '1. Add the wait. Drag the ⏳ wait block in.' && caption(both, 1, 'python') === '1. Add the wait. Type sleep(1).', `${caption(both, 1, 'blocks')} / ${caption(both, 1, 'python')}`)
+  check('and the Python palette shows the Python text', trekSnippets([{ md: both, python: 'sleep(1)\n' }])[0].name === '1. Add the wait. Type sleep(1).')
 }
 
 console.log('The time-box starts once its worker has loaded')
