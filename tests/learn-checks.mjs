@@ -74,6 +74,9 @@ console.log('CodeTrek chunks for the Python palette')
   check('its imports go to the top when dropped', second.imports.join() === 'from time import sleep' && second.code === 'sleep(1)\npass  # TODO: turn them off')
   check('a chunk that is only an import is that import', third.code === 'from botcore import *' && !third.imports.length)
   check('caption() numbers from 1', caption('x', 1) === '1. x')
+  const both = 'Add the wait. --Blocks--Drag the ⏳ wait block in.--/Blocks----Python--Type `sleep(1)`.--/Python--'
+  check("a caption keeps only its palette's mode", caption(both, 1, 'blocks') === '1. Add the wait. Drag the ⏳ wait block in.' && caption(both, 1, 'python') === '1. Add the wait. Type sleep(1).', `${caption(both, 1, 'blocks')} / ${caption(both, 1, 'python')}`)
+  check('and the Python palette shows the Python text', trekSnippets([{ md: both, python: 'sleep(1)\n' }])[0].name === '1. Add the wait. Type sleep(1).')
 }
 
 console.log('The time-box starts once its worker has loaded')

@@ -70,7 +70,7 @@ function flyoutOf(trek, targetId) {
   // (An import in brackets may run over several lines.)
   const imports = trek.flatMap((chunk) => chunk.python.match(/^(from|import)\s[^\n(]*(\([^)]*\))?.*$/gm) || []).join('\n')
   return trek.flatMap((chunk, i) => {
-    const label = { kind: 'label', text: caption(chunk.md, i + 1) }
+    const label = { kind: 'label', text: caption(chunk.md, i + 1, 'blocks') }
     const stacks = stacksOf(chunk.python, targetId, imports)
     if (!stacks.length) return [label, { kind: 'label', text: t('trek.noBlocks') }]
     return [label, ...stacks.map((s) => ({ kind: 'block', ...s, data: JSON.stringify({ trek: i }) }))]

@@ -408,7 +408,10 @@ class Context {
     const blocks = []
     let i = 0
     while (i < stmts.length) {
-      const hit = this.statementAt(stmts, i)
+      let hit = this.statementAt(stmts, i)
+      // A block nothing can follow (`break`, `continue`) with statements after it, as in a
+      // CodeTrek chunk cut from inside a loop, stays Python: a block cannot hold them.
+      if (hit?.block && ENDS_STACK.has(hit.block.type) && i + hit.count < stmts.length) hit = null
       if (hit) {
         if (hit.block) blocks.push(hit.block)
         i += hit.count
@@ -964,6 +967,9 @@ function uses(node, name) {
 }
 
 const copy = (block) => JSON.parse(JSON.stringify(block))
+
+/** Blocks with no connection below them: nothing can be linked after one. */
+const ENDS_STACK = new Set(['controls_flow_statements'])
 
 function link(blocks) {
   for (let k = blocks.length - 2; k >= 0; k--) blocks[k].next = { block: blocks[k + 1] }

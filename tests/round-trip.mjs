@@ -261,7 +261,9 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(set0.next.next.next.type === 'codex_pixels_fill' && set0.next.next.next.fields.BRIGHT === 10, 'pixels.fill(WHITE) too')
   const print = set0.next.next.next.next
   check(print.type === 'codex_print', `display.print("Hi") is the print block, in its default white (${print.type})`)
-  check(r.back.includes("pixels.set(0, RED, brightness=10)") && r.back.includes("display.print('Hi', WHITE)"), 'and they write what they mean in full')
+  // The library's default brightness stays left out, as the student wrote it; another is written.
+  check(/^pixels\.set\(0, RED\)$/m.test(r.back) && /^pixels\.fill\(WHITE\)$/m.test(r.back), `a brightness left out stays left out (${JSON.stringify(r.back.split('\n').filter((l) => l.startsWith('pixels')))})`)
+  check(r.back.includes('pixels.set(1, GREEN, brightness=70)') && r.back.includes("display.print('Hi', WHITE)"), 'and any other is written in full')
   const odd = await from('from codex import *\npixels.set(0, RED, glow=3)\n')
   check(!JSON.stringify(odd.shape).includes('codex_pixel_set'), 'an argument the block does not know stays Python')
   const wrong = await from('from codex import *\npixels.fill(brightness=20, RED)\npixels.set(0, RED, brightness=5, brightness=50)\n')
@@ -290,6 +292,22 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
   check(octal.back.includes("print('A\\x00')") || octal.back.includes("print('A\\0')"), `"\\101" is "A" and "\\0" a NUL (${JSON.stringify(octal.back.split('\n').slice(-2).join('\n'))})`)
   const named = await from('print("\\N{BULLET} one")\n')
   check(named.back.includes('print("\\N{BULLET} one")'), `"\\N{BULLET}" stays as written (${JSON.stringify(named.back.split('\n').slice(-2).join('\n'))})`)
+}
+{
+  // A break with code after it (a CodeTrek chunk cut from inside a loop): no block can follow
+  // the break block, so that break stays Python; a break that ends its loop is the block.
+  let r = null
+  try {
+    r = await from('x = 1\nbreak\n\npixels.off()\n')
+  } catch (err) {
+    check(false, `a break with code after it converts (${err.message})`)
+  }
+  if (r) {
+    check(r.back.includes('break') && r.back.includes('pixels.off()'), `a break with code after it converts, and comes back (${JSON.stringify(r.back.split('\n').slice(-4).join('\n'))})`)
+    check(!JSON.stringify(r.shape).includes('controls_flow_statements'), 'that break is a Python block')
+  }
+  const ends = await from('while True:\n    if x:\n        break\n')
+  check(JSON.stringify(ends.shape).includes('controls_flow_statements'), 'a break that ends its loop is the break block')
 }
 {
   // Python with no block: a whole statement, and a piece of one.

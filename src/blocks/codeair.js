@@ -1,6 +1,6 @@
 /** CodeAIR drone: flying, lights, sound, buttons, battery. */
 import { Order } from 'blockly/python'
-import { msg, defineBlocks, value, numField, body } from './define.js'
+import { msg, defineBlocks, value, numField, body, keywordArg } from './define.js'
 import { need } from './context.js'
 
 const MOVES = [
@@ -150,7 +150,7 @@ defineBlocks([
     },
     python: (block, gen) => {
       air()
-      return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
+      return `pixels.set(${block.getFieldValue('NUM')}, ${value(gen, block, 'COLOR', 'WHITE')}${keywordArg(block, 'BRIGHT', 'brightness', 40)})\n`
     },
     // Left out, the library's brightness is 10 (codeair.py DEFAULT_BRIGHTNESS).
     omit: { BRIGHT: 10 },
@@ -169,7 +169,7 @@ defineBlocks([
     },
     python: (block, gen) => {
       air()
-      return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}, brightness=${numField(block, 'BRIGHT', 40)})\n`
+      return `pixels.fill(${value(gen, block, 'COLOR', 'WHITE')}${keywordArg(block, 'BRIGHT', 'brightness', 40)})\n`
     },
     omit: { BRIGHT: 10 },
   },
