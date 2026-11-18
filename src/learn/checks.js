@@ -72,8 +72,14 @@ function inOrder(list, program) {
   return true
 }
 
+/** The modules the program being matched imports whole (`import time`): see `calledThrough`. */
+let wholeModules = new Set()
+
 /** Every node in the program matching `pattern` (inside a node matching `within`, if given), in order. */
 export function matches(root, pattern, within = null) {
+  wholeModules = new Set(
+    root.children.filter((s) => s.name === 'ImportStatement' && s.children[0]?.name === 'import').flatMap((s) => s.children.filter((c) => c.name === 'VariableName').map((c) => c.text)),
+  )
   const out = []
   const walk = (node, inside) => {
     if ((!within || inside) && same(pattern, node)) out.push(node)
@@ -90,9 +96,22 @@ const isEllipsis = (n) => n.name === 'Ellipsis' || (n.name === 'ExpressionStatem
 // Statements whose clauses a pattern may stop short of: `if a: ...` matches an `if` with an `else`.
 const CLAUSED = new Set(['IfStatement', 'TryStatement', 'ForStatement', 'WhileStatement'])
 
-/** Does program node `n` match pattern node `p`? */
+/**
+ * Does program node `n` match pattern node `p`? Besides the same code, a few
+ * spellings of it (docs/mission-packs.md, "Checks"): a module's function called
+ * through the module (`time.sleep(1)` for `sleep(1)`, when the program has
+ * `import time`), and `import time` for `from time import sleep`, since blocks
+ * write the first; and `x += 1` for `x = x + 1`, which blocks write too (but
+ * not the other way round: a pattern `x += 1` asks for that spelling).
+ */
 export function same(p, n) {
   if (isEllipsis(p)) return true
+  if (p.name === 'AssignStatement' && n.name === 'UpdateStatement') return same(asUpdate(p) ?? p, n)
+  if (p.name === 'ImportStatement' && importsWhole(p, n)) return true
+  if (p.name === 'CallExpression' && n.name === 'CallExpression') {
+    const callee = calledThrough(p.children[0], n.children[0])
+    if (callee !== null) return callee && argsSame(parts(p.children[1]), parts(n.children[1]))
+  }
   if (p.name !== n.name) return false
   if (p.text !== undefined && !p.children.length) return leafSame(p, n)
   if (p.name === 'ArgList') return argsSame(parts(p), parts(n))
@@ -101,6 +120,35 @@ export function same(p, n) {
   const np = parts(n)
   if (CLAUSED.has(p.name) ? pp.length > np.length : pp.length !== np.length) return false
   return pp.every((c, i) => same(c, np[i]))
+}
+
+/**
+ * A pattern calling a bare name (`sleep`) against a program calling a member
+ * (`time.sleep`): true when the member is that name on a module the program
+ * imports whole, false when it is not; null when this is not that case.
+ */
+function calledThrough(p, n) {
+  if (p.name !== 'VariableName' || n.name !== 'MemberExpression') return null
+  const [object, property] = parts(n)
+  return object?.name === 'VariableName' && wholeModules.has(object.text) && property?.text === p.text
+}
+
+/** `from time import ...` in the pattern, `import time` (among others) in the program. */
+function importsWhole(p, n) {
+  if (p.children[0]?.name !== 'from' || n.children[0]?.name !== 'import') return false
+  const module = p.children[1]?.text
+  return n.children.some((c) => c.name === 'VariableName' && c.text === module)
+}
+
+/** `x = x + e` as the update statement `x += e` it means, or null when it is not that shape. */
+function asUpdate(assign) {
+  const [target, op, value, ...more] = assign.children
+  if (more.length || op?.name !== 'AssignOp' || value?.name !== 'BinaryExpression') return null
+  const [left, arith, right, ...rest] = value.children
+  if (rest.length || !['ArithOp', 'BitOp'].includes(arith?.name) || !target || !same(target, left)) return null
+  // `+` is the operator's own text; `*` is a child of it.
+  const symbol = arith.text ?? arith.children[0]?.text
+  return { name: 'UpdateStatement', children: [target, { name: 'UpdateOp', text: `${symbol}=`, children: [] }, right] }
 }
 
 function leafSame(p, n) {

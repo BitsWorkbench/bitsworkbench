@@ -171,6 +171,11 @@ make Python. A **pattern** is one Python statement or expression:
   them or not.
 - `if a: ...` matches an `if` with `elif` and `else` branches too.
 - An expression matches wherever it is in the program; a statement matches any statement.
+- The spellings blocks write match the ones a person types: `sleep(1)` matches
+  `time.sleep(1)` in a program that has `import time` (a wait block writes that),
+  `from time import sleep` matches `import time`, and `x = x + 1` matches `x += 1` (a
+  "change by" block). Not the other way round: a pattern `time.sleep(1)` or `x += 1` asks
+  for that spelling.
 
 | Check | Met when |
 |---|---|
