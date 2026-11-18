@@ -192,9 +192,17 @@ console.log(`sim-ui: ran ${ran} CodeBot blocks on the simulator`)
 
 // The starter project, with the Run button.
 await page.evaluate(() => window.openCodeBot.device.sim.setSpeed(1))
-await page.evaluate(() => { window.__sim.out = '' })
+await page.evaluate(() => {
+  window.__sim.out = ''
+  // This run's own start and end: the status line may still say how the last program ended.
+  window.__run = { started: false, ended: false }
+  window.openCodeBot.device.addEventListener('state', (e) => {
+    if (e.detail.state === 'running') window.__run.started = true
+    else if (window.__run.started) window.__run.ended = true
+  })
+})
 await page.click('#btn-run')
-await page.waitForFunction(() => /Program finished|stopped with an error/.test(document.getElementById('status-msg').textContent), null, { timeout: 20000 })
+await page.waitForFunction(() => window.__run.ended && /Program finished|stopped with an error/.test(document.getElementById('status-msg').textContent), null, { timeout: 20000 })
 const status = await page.locator('#status-msg').textContent()
 if (!/Program finished/.test(status)) problems.push(`starter project: ${status}`)
 else console.log('sim-ui: the starter project ran to the end')
@@ -889,11 +897,35 @@ with recorder:
     // Held for at least holdMs; with `whileHeld`, held until `until` is true of what it
     // returns (or 10 s pass), so a slow machine (the deploy's runner) gets there in its
     // own time rather than being read at a fixed moment. Returns the last reading.
+    // Where a key is on the page once it has stopped moving there: the camera eases after a
+    // change of view, and Chase follows a board in flight, so a point read once can be stale
+    // by the time the mouse presses it.
+    const steadyPoint = async (n) => {
+      let last = null
+      for (const t0 = Date.now(); Date.now() - t0 < 10000;) {
+        const at = await page.evaluate((k) => window.openCodeBot.device.sim.view.keyPoint(k), n)
+        if (!at) return null
+        if (last && Math.hypot(at.x - last.x, at.y - last.y) < 1) return at
+        last = at
+        await page.waitForTimeout(100)
+      }
+      return last
+    }
+    // A press lands on the key, or it is let go and aimed again: the keys are 4 mm, and a board
+    // in flight drifts between reading where its key is and the mouse going down there. The
+    // view's own record of the keys held down says whether it landed.
+    const isDown = (k) => page.evaluate((key) => window.openCodeBot.device.sim.view.down.has(key), k)
     const click = async (n, holdMs = 150, whileHeld = null, until = () => true) => {
-      const at = await page.evaluate((k) => window.openCodeBot.device.sim.view.keyPoint(k), n)
-      if (!at) { problems.push(`CodeAIR: no ${n} button on the model`); return null }
-      await page.mouse.move(at.x, at.y)
-      await page.mouse.down()
+      let landed = false
+      for (const t0 = Date.now(); !landed && Date.now() - t0 < 10000;) {
+        const at = await steadyPoint(n)
+        if (!at) { problems.push(`CodeAIR: no ${n} button on the model`); return null }
+        await page.mouse.move(at.x, at.y)
+        await page.mouse.down()
+        landed = await isDown(n)
+        if (!landed) await page.mouse.up()
+      }
+      if (!landed) { problems.push(`CodeAIR: a click never landed on the ${n} key`); return null }
       await page.waitForTimeout(holdMs)
       let held = whileHeld && await page.evaluate(whileHeld)
       for (const t0 = Date.now(); whileHeld && !until(held) && Date.now() - t0 < 10000;) {
@@ -903,6 +935,16 @@ with recorder:
       await page.mouse.up()
       return held
     }
+    // Which keys the model's clicks pressed, for a failure to say whether a click missed.
+    await page.evaluate(() => {
+      const view = window.openCodeBot.device.sim.view
+      window.__presses = []
+      if (!view.__pressWatched) {
+        const press = view._press.bind(view)
+        view._press = (n, down) => { window.__presses.push([n, down, window.openCodeBot.device.state]); press(n, down) }
+        view.__pressWatched = true
+      }
+    })
     await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.run(`from codeair import *
 print('top')
 leds.set_mask(255, 100)
@@ -912,12 +954,15 @@ print('pressed 0')
 while True:
     pass
 `) })
-    await page.waitForFunction(() => window.__sim.out.includes('top'), null, { timeout: 15000 }).catch(() => {})
-    await page.waitForTimeout(500)
+    await page.waitForFunction(() => window.__sim.out.includes('top') && window.openCodeBot.device.state === 'running', null, { timeout: 30000 })
+      .catch(() => problems.push('CodeAIR: the button program never started'))
+    // From high above (Universal), where all three keys can be seen: from the side (Rotate)
+    // the model hides BTN-0 and BTN-1, and a click on a hidden key presses nothing (keys.js).
+    await page.evaluate(() => window.openCodeBot.device.sim.setCamera('universal'))
     // held until the program has seen it, however long a slow machine takes
     await click(0, 150, () => window.__sim.out.includes('pressed 0'), (seen) => seen)
     await page.waitForFunction(() => window.__sim.out.includes('pressed 0'), null, { timeout: 15000 })
-      .catch(() => problems.push('CodeAIR: a click on the model did not press BTN-0'))
+      .catch(async () => problems.push(`CodeAIR: a click on the model did not press BTN-0 (${JSON.stringify(await page.evaluate(() => ({ presses: window.__presses, out: window.__sim.out, state: window.openCodeBot.device.state })))})`))
     const held = await click('reset', 600, () => {
       const s = window.openCodeBot.device.sim.lastFrame.devices[0]
       return { reset: s.reset, leds: s.leds.slice(0, 8).every((v) => v === 0), state: window.openCodeBot.device.state }
@@ -935,9 +980,7 @@ with recorder:
 `))
     await page.waitForFunction(() => (window.openCodeBot.device.sim.lastFrame?.devices[0].z ?? 0) > 0.45, null, { timeout: 15000 })
       .catch(() => problems.push('CodeAIR: it never got to 0.45 m before the reset'))
-    // from above (Chase), where the board's top, and its reset, can be seen
-    await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
-    await page.waitForTimeout(800)
+    // still from above, where the board's top, and its reset, can be seen
     const fell = await click('reset', 900, () => {
       const s = window.openCodeBot.device.sim.lastFrame.devices[0]
       return { z: s.z, reset: s.reset, state: window.openCodeBot.device.state }
