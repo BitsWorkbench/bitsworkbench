@@ -114,7 +114,11 @@ const CLAUSED = new Set(['IfStatement', 'TryStatement', 'ForStatement', 'WhileSt
  */
 export function same(p, n) {
   if (isEllipsis(p)) return true
-  if (p.name === 'AssignStatement' && n.name === 'UpdateStatement') return same(asUpdate(p) ?? p, n)
+  if (p.name === 'AssignStatement' && n.name === 'UpdateStatement') {
+    // Only `x = x + e` means an update; any other assignment is not one.
+    const update = asUpdate(p)
+    return update !== null && same(update, n)
+  }
   if (p.name === 'ImportStatement' && importsWhole(p, n)) return true
   if (p.name === 'CallExpression' && n.name === 'CallExpression') {
     const callee = calledThrough(p.children[0], n.children[0])

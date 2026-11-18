@@ -41,6 +41,13 @@ check('x += 1', has('count += 1', 'count += 1\n') && !has('count += 1', 'count =
 // The spellings blocks write: a wait block is `import time` and `time.sleep(...)`, a
 // "change by" block is `+=`.
 check('x = x + 1 is met by x += 1', has('delay = delay + 0.2', 'delay += 0.2\n') && has('n = n * 2', 'n *= 2\n'))
+check('any other assignment is not met by an update, and checking it ends', (() => {
+  try {
+    return !has('delay = 5', 'delay += 1\n') && !has('delay = other + 1', 'delay += 1\n') && has('delay = 5', 'delay += 1\ndelay = 5\n')
+  } catch {
+    return false
+  }
+})())
 check('but not by another update', !has('delay = delay + 0.2', 'delay -= 0.2\n') && !has('delay = delay + 0.2', 'delay += 0.5\n') && !has('delay = delay + 0.2', 'other += 0.2\n'))
 check('sleep(1) is met by time.sleep(1) when time is imported', has('sleep(1)', 'import time\ntime.sleep(1)\n') && has('sleep(...)', 'import time\nwhile True:\n    time.sleep(0.5)\n'))
 check('with the same arguments', !has('sleep(1)', 'import time\ntime.sleep(2)\n'))
