@@ -72,7 +72,11 @@ function inOrder(list, program) {
   return true
 }
 
-/** The modules the program being matched imports whole (`import time`): see `calledThrough`. */
+/**
+ * The modules the program being matched imports whole (`import time`), while
+ * `matches()` runs; empty otherwise, so `same()` called on its own never reads
+ * another program's imports. See `calledThrough`.
+ */
 let wholeModules = new Set()
 
 /** Every node in the program matching `pattern` (inside a node matching `within`, if given), in order. */
@@ -80,14 +84,18 @@ export function matches(root, pattern, within = null) {
   wholeModules = new Set(
     root.children.filter((s) => s.name === 'ImportStatement' && s.children[0]?.name === 'import').flatMap((s) => s.children.filter((c) => c.name === 'VariableName').map((c) => c.text)),
   )
-  const out = []
-  const walk = (node, inside) => {
-    if ((!within || inside) && same(pattern, node)) out.push(node)
-    const nowInside = inside || (within && same(within, node))
-    for (const c of node.children) walk(c, nowInside)
+  try {
+    const out = []
+    const walk = (node, inside) => {
+      if ((!within || inside) && same(pattern, node)) out.push(node)
+      const nowInside = inside || (within && same(within, node))
+      for (const c of node.children) walk(c, nowInside)
+    }
+    walk(root, false)
+    return out
+  } finally {
+    wholeModules = new Set()
   }
-  walk(root, false)
-  return out
 }
 
 const PUNCTUATION = new Set(['(', ')', ',', ':', '.', '[', ']', '{', '}'])
