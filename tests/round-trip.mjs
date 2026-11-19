@@ -8,6 +8,7 @@
  */
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
+import { BRAND } from '../src/brand.js'
 
 const BASE = process.env.OCB_URL || 'http://localhost:4173/'
 
@@ -497,13 +498,15 @@ const types = (shape) => JSON.stringify(shape).match(/"type":"\w+"/g).map((s) =>
 }
 {
   // The program's frame: header left out, a last `while True:` is forever.
-  const r = await from('# Made with Codacious 💚 Blocks in, Python out.\n# Device: CodeBot CB3\n\nfrom botcore import *\nimport time\n\nleds.user(0xFF)\nwhile True:\n    time.sleep(1)\n')
+  const r = await from(`# Made with ${BRAND.name} 💚 Blocks in, Python out.\n` + '# Device: CodeBot CB3\n\nfrom botcore import *\nimport time\n\nleds.user(0xFF)\nwhile True:\n    time.sleep(1)\n')
   check(JSON.stringify(types(r.shape)) === JSON.stringify(['ocb_on_start', 'codebot_leds_all', 'ocb_forever', 'ocb_wait', 'math_number']), 'header left out; on start, then forever')
   // A file saved under a past name starts with that name's banner: still the blocks' own.
-  for (const past of ['# Made with LabBlocks 💚 — blocks in, Python out.', '# Made with OpenCodeBot 💚 — blocks in, Python out.']) {
+  for (const past of ['# Made with LabBlocks 💚 — blocks in, Python out.', '# Made with OpenCodeBot 💚 — blocks in, Python out.', '# Made with Anyname 💚 Blocks in, Python out.']) {
     const old = await from(`${past}\n# Device: CodeBot CB3\n\nfrom botcore import *\n\nleds.user(0xFF)\n`)
     check(JSON.stringify(types(old.shape)) === JSON.stringify(['ocb_on_start', 'codebot_leds_all']), `a past banner is left out too (${past.match(/with (\w+)/)[1]})`)
   }
+  const own = await from('# Made with love 💚 for my class\n\nfrom botcore import *\n\nleds.user(0xFF)\n')
+  check(own.back.includes('# Made with love 💚 for my class'), "a student's own comment that starts the same way stays")
   const kept = await from('import math\nprint(math.pi)\n')
   check(kept.shape[0].inputs.DO.fields?.CODE === 'import math', 'an import the blocks do not make stays, as a Python block')
 }

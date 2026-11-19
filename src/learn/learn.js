@@ -142,7 +142,7 @@ export class Learn {
   }
 
   /**
-   * The packs that come with Codacious, from learn/packs/index.json:
+   * The packs that come with the app, from learn/packs/index.json:
    * [{ id, file, title, brief, board }], or [] when it cannot be read.
    */
   async builtins() {
@@ -156,7 +156,7 @@ export class Learn {
   }
 
   /**
-   * Open a pack that comes with Codacious: kept afresh from the site (an
+   * Open a pack that comes with the app: kept afresh from the site (an
    * update replaces the copy kept before; progress and a second file opened
    * for it stay), then opened where the student left it. Offline, the copy
    * kept before opens.

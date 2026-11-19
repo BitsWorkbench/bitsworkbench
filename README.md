@@ -1,15 +1,15 @@
-# Codacious
+# OpenCodeBot
 
 **Firia Labs' open-source editor and simulator for CodeBot, CodeX and CodeAIR: blocks and Python.**
 
-(Formerly LabBlocks, and before that OpenCodeBot.)
+(For a while called LabBlocks.)
 
-Codacious lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
+OpenCodeBot lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No board yet? Press Simulate and the
 program runs on a simulated one. No install, no accounts, no setup: just a
 web page, and a USB cable when there is a board.
 
-**▶ [Open Codacious](https://firialabs.github.io/opencodebot/)**: nothing to
+**▶ [Open OpenCodeBot](https://firialabs.github.io/opencodebot/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
 Everything it makes is real CircuitPython, and the Python is one click away,
@@ -60,7 +60,7 @@ not one a browser can open.
 
 ## Browser support
 
-Codacious talks to hardware through the
+OpenCodeBot talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).

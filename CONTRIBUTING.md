@@ -1,4 +1,4 @@
-# Contributing to Codacious
+# Contributing to OpenCodeBot
 
 The whole point of this project is that a teacher can ask for a block and
 somebody can add it that afternoon. Small contributions are very welcome.
