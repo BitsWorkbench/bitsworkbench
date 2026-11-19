@@ -290,10 +290,9 @@ export default {
       <li>The divider between the blocks and the side panel moves with the arrow keys.</li>
     </ul>`,
   'about.bodyHtml': `
-    <p>{app} is a free, open-source block editor for the Firia Labs
-    <strong>CodeBot</strong>, <strong>CodeX</strong> and <strong>CodeAIR</strong>.
-    It is a gentle on-ramp: when your students are ready for full Python, the
-    CodeSpace platform is waiting for them.</p>
+    <p>{app} is Firia Labs' free, open-source editor and simulator for the
+    <strong>CodeBot</strong>, <strong>CodeX</strong> and <strong>CodeAIR</strong>:
+    blocks, and the real Python they make, one click apart.</p>
     <p>Your programs run as real CircuitPython on the device, using the same
     libraries documented at
     <a href="https://docs.firialabs.com/" target="_blank" rel="noreferrer">docs.firialabs.com</a>.</p>
@@ -311,6 +310,7 @@ export default {
     them to. The app sends nothing about you or your work anywhere.</p>
     <p>Opening the page loads the app from the site that hosts it, as any web
     page does. After that, it works offline.</p>`,
+  'about.versionHtml': `<p class="about-version">Version <span lang="zxx">{version}</span>, build <span lang="zxx">{build}</span>. Please give both when you report a problem.</p>`,
 
   // Python errors, as a student reads them
   'pyerr.NameError': 'Something has no name yet',
@@ -514,6 +514,8 @@ export default {
   'sim.flightComingTitle': 'Flight simulation is coming',
   'sim.flightComingDetail': 'A simulated CodeAIR is on its way. For now, fly your program on a real CodeAIR, or try CodeBot or CodeX in the simulator.',
   'sim.cannotTitle': "{device} can't be simulated yet",
+  'sim.browserTitle': "This browser can't run the simulator",
+  'sim.browserDetail': 'The simulator needs Chrome or Edge, version 137 or later, on a computer or Chromebook. In this browser you can still build programs and see their Python.',
   'sim.thatDevice': 'That device',
   'sim.starting': 'Starting the simulator…',
   'sim.stoppedTitle': 'The simulator stopped',

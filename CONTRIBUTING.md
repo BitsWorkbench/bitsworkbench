@@ -18,9 +18,9 @@ restating the code.
 ## Adding a block
 
 Everything about a block lives in one place: its shape and the Python it makes,
-side by side. Open the file for the board — `src/blocks/codex.js`,
+side by side. Open the file for the board (`src/blocks/codex.js`,
 `codebot.js`, `codeair.js`, `radio.js`, or `basics.js` for blocks every board
-shares — and add an entry:
+shares) and add an entry:
 
 ```js
 {
@@ -68,13 +68,13 @@ any of this.
 ### Things worth knowing
 
 - **Statement generators** return a string ending in `\n`. **Value generators**
-  return `[code, Order.SOMETHING]` — `Order.FUNCTION_CALL` for a call,
+  return `[code, Order.SOMETHING]`: `Order.FUNCTION_CALL` for a call,
   `Order.MEMBER` for an index, `Order.ATOMIC` for a literal.
 - **Declare what you need** with `need(...)` rather than emitting an `import`
   line yourself. `src/blocks/generate.js` assembles the header in the order the
   firmware wants (on CodeX, `import radio` genuinely has to come first).
 - **Check the real API** at [docs.firialabs.com](https://docs.firialabs.com/)
-  before you write the Python. The boards differ in small ways — CodeX has
+  before you write the Python. The boards differ in small ways: CodeX has
   `power.get_battery_voltage()` while CodeAIR has `power.battery_voltage()`.
 - **Write the label like a sentence** a child would read aloud. "drive forward
   at 60% power", not "set motor velocity".
@@ -94,8 +94,24 @@ any of this.
 ## Reporting a bug
 
 Please say which board, which browser, and what the **Talk to device** tab
-showed when it went wrong — that terminal output is usually the whole story.
+showed when it went wrong: that terminal output is usually the whole story.
+Report it as a [GitHub issue](https://github.com/firialabs/opencodebot/issues). A
+security problem goes privately instead: see [SECURITY.md](SECURITY.md).
+
+## What a pull request needs
+
+- `npm test` passes (CI runs it on every pull request, against a site built with
+  CodeAIR flight).
+- A line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) when a teacher or
+  student would notice the change, in their words.
+- Strings in `src/i18n/` (see the README, "Strings and languages"), never in the
+  code; the product's name only from `src/brand.js`.
+- By contributing you agree your contribution is licensed under the project's
+  terms (README, "Licence"): MIT for code, CC BY-NC 4.0 for artwork and models.
 
 ## Code of conduct
 
 Be kind. This project exists to make people feel capable, and that starts here.
+Be patient with beginners, assume good intent, and keep criticism about the code.
+Anyone who makes the project unwelcoming may be asked to leave it. To raise a
+concern privately, write to the address in [SECURITY.md](SECURITY.md).
