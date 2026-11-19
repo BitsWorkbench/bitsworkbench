@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -85,6 +86,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
     // The app, and the boards page (several simulated boards at once).
     rollupOptions: { input: { main: 'index.html', boards: 'boards.html' } },
+  },
+  // The multiline text field (@blockly/field-multilineinput) requires Blockly's
+  // Dart, JavaScript, Lua and PHP generators, about 115 KB of the first visit,
+  // only to give them its block when asked; the app asks for Python alone.
+  resolve: {
+    alias: [{ find: /^blockly\/(dart|javascript|lua|php)$/, replacement: fileURLToPath(new URL('./src/blocks/no-generator.js', import.meta.url)) }],
   },
   // The simulator's worker is a module (MicroPython's loader uses top-level await).
   worker: { format: 'es', plugins: () => [flight(), codexSoundsModule()] },
