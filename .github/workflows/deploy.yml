@@ -1,5 +1,6 @@
 # Publishes the built site to GitHub Pages at
-# https://firialabs.github.io/opencodebot/
+# https://firialabs.github.io/opencodebot/, and, once it is set up, the same
+# tested bundle to Firebase Hosting (the `firebase` job at the end).
 #
 # Two one-time prerequisites:
 #
@@ -87,6 +88,13 @@ jobs:
           echo "::warning title=Flaky test::The test suite failed once on the deploy runner and is being run again. See the log above for the check that failed."
           npm test
 
+      # The tested bundle, for the Firebase job below to publish as it is.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+          retention-days: 7
+
       # Reads the Pages config; it cannot create it (see the note at the top).
       - uses: actions/configure-pages@v5
 
@@ -96,3 +104,34 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The same tested bundle on Firebase Hosting, the site's own address
+  # (firebase.json: its headers). Off until the project is set up: it runs
+  # only once the repository has the variable FIREBASE_PROJECT_ID and the
+  # secret FIREBASE_SERVICE_ACCOUNT (README, "Hosting on Firebase"). When
+  # Firebase becomes the only home, the Pages steps above go and this job
+  # takes their place.
+  firebase:
+    needs: deploy
+    if: vars.FIREBASE_PROJECT_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    environment:
+      name: firebase
+      url: ${{ steps.publish.outputs.details_url }}
+    steps:
+      - uses: actions/checkout@v4      # firebase.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - id: publish
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          channelId: live

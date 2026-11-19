@@ -150,6 +150,33 @@ Web Serial needs a secure context, so `https://` (or `http://localhost`) is
 required; a site served over plain `http://` will load but will not connect to
 a device.
 
+### Hosting on Firebase
+
+The site's own address is served by Firebase Hosting, as CodeSpace is.
+`firebase.json` sets its headers: the pages, the service worker and the mission
+packs are checked afresh on every visit, the files named by their content are
+kept a year, and no page tells another site where a student came from
+(`tests/hosting.mjs` checks every built file against them).
+
+`.github/workflows/deploy.yml` publishes the same tested bundle it gives Pages,
+and each pull request from a branch of this repository gets a preview address,
+posted on the pull request and kept a week. Both stay off until the repository
+has what they need, set once by an owner:
+
+1. **A Firebase project** with Hosting on (console.firebase.google.com). Nothing
+   else in it: no Analytics, no other Firebase product (the privacy promise).
+2. **A service account** that may deploy to it: in the Google Cloud console,
+   IAM, a service account with the *Firebase Hosting Admin* role (or run
+   `firebase init hosting:github`, which makes one). Its JSON key goes in the
+   repository's secret `FIREBASE_SERVICE_ACCOUNT`.
+3. **The project's id** in the repository's variable `FIREBASE_PROJECT_ID`
+   (Settings, Secrets and variables, Actions, Variables). This turns the jobs on.
+4. **The address**: in Firebase, Hosting, Add custom domain, then the DNS records
+   it asks for at the domain's registrar. The certificate follows by itself.
+
+Then the next merge to `main` publishes. To publish by hand from a built
+checkout: `npx firebase-tools deploy --only hosting --project <id>`.
+
 ## How it works
 
 ```
