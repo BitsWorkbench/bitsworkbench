@@ -30,7 +30,7 @@
     "test:pseudo": "node tests/pseudo.mjs",
     "test:sim": "node tests/sim.mjs && node tests/sim-ui.mjs && node tests/sim-browser.mjs",
     "perf": "node tests/perf.mjs",
-    "sim:assets": "node sim/tools/build-env.mjs gym && node sim/tools/build-env.mjs classroom && node sim/tools/build-env.mjs cafeteria && node sim/tools/build-env.mjs auditorium && node sim/tools/build-models.mjs",
+    "sim:assets": "node sim/tools/build-env.mjs gym && node sim/tools/build-env.mjs classroom && node sim/tools/build-env.mjs cafeteria && node sim/tools/build-env.mjs auditorium && node sim/tools/build-models.mjs && node sim/tools/codex-sounds.mjs",
     "sim:runtime": "sim/runtime/build.sh",
     "sim:flight": "node sim/tools/flight-library.mjs"
   },

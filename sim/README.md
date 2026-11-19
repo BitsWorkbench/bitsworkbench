@@ -116,14 +116,15 @@ length (`driveFiles()`); the simulated `audiomp3` plays it for that long, so a
 program waits as on a CodeX. A name the CodeX does not have is an OSError, as on
 the board.
 
-A recording in `public/sim-assets/codex/sounds/<name>.mp3` is heard: the build
-reads its length from its MP3 frames (`sim/tools/codex-sounds.mjs`, the
-`virtual:codex-sounds` module), the world reports it in the CodeX's `clips`, and
+A recording in `sim/assets/codex/sounds/<name>.mp3` is heard. `npm run
+sim:assets` copies it into the site (`public/sim-assets/codex/sounds/`); the
+build reads its length from its MP3 frames (`sim/tools/codex-sounds.mjs`, the
+`virtual:codex-sounds` module); the world reports it in the CodeX's `clips`; and
 `src/sim/sound.js` fetches, decodes and plays it on the speaker bus, at the
 voice's level and the board's volume, stopping it when the program does. The
-service worker precaches them with the rest. A name with no recording here plays
-as a second of silence. Put a recording there only when Firia Labs may publish
-it under this repository's terms.
+service worker precaches them with the rest. A name with no recording plays as
+a second of silence. Put a recording there only when Firia Labs may publish it
+under `sim/assets/LICENSE` (CC BY-NC 4.0), and name it in that file.
 
 ## Testing
 

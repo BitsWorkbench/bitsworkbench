@@ -2,13 +2,20 @@
 // a CodeX ships with have a recording here, and how long each plays.
 //
 // The recordings, where Firia Labs may publish them, are in
-// public/sim-assets/codex/sounds/<name>.mp3 (served at sim-assets/, played on
-// the simulator's speaker bus by src/sim/sound.js). A name with no file here
+// sim/assets/codex/sounds/<name>.mp3 (under sim/assets/LICENSE). Run as a
+// script (npm run sim:assets runs it), this copies them to
+// public/sim-assets/codex/sounds/, where the site serves them and
+// src/sim/sound.js plays them on the speaker bus. A name with no recording
 // plays as a second of silence: the program still waits and goes on.
+//
+//   node sim/tools/codex-sounds.mjs
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-export const SOUNDS_DIR = 'public/sim-assets/codex/sounds'
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+export const SOUNDS_DIR = path.join(ROOT, 'sim/assets/codex/sounds')
+const SERVED = path.join(ROOT, 'public/sim-assets/codex/sounds')
 
 /** { name: { seconds, audio: true } } for each recording in `dir`. */
 export function recordedSounds(dir = SOUNDS_DIR) {
@@ -63,4 +70,13 @@ export function mp3Seconds(buf) {
     i += length
   }
   return seconds
+}
+
+// As a script: the recordings into the site, in place of any copied before.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  fs.rmSync(SERVED, { recursive: true, force: true })
+  const table = recordedSounds()
+  if (Object.keys(table).length) fs.mkdirSync(SERVED, { recursive: true })
+  for (const name of Object.keys(table)) fs.copyFileSync(path.join(SOUNDS_DIR, `${name}.mp3`), path.join(SERVED, `${name}.mp3`))
+  console.log(`codex sounds: ${Object.keys(table).length} recording(s) in public/sim-assets/codex/sounds/`)
 }
