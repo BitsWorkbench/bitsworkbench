@@ -48,8 +48,10 @@ export SOURCE_DATE_EPOCH
 
 # Two builds from the one patched tree, differing only in how the VM suspends
 # (variant/mpconfigvariant.mk, SUSPEND): mp/ for JSPI browsers, mp-asyncify/
-# for the rest (src/sim/support.js chooses). Each gets a stamp of what it was
-# built from; tests/sim-vm.mjs checks the two stamps match.
+# for the rest (src/sim/support.js chooses). The Asyncify files carry the word
+# in their names, which the bundle's file names keep, so the service worker can
+# leave them out of the precache (vite.config.js). Each build gets a stamp of
+# what it was built from; tests/sim.mjs checks the two stamps match.
 STAMP="micropython $MP_COMMIT
 port.patch $(sha256sum "$HERE/port.patch" | cut -c1-16)
 py.patch $(sha256sum "$HERE/py.patch" | cut -c1-16)
@@ -57,14 +59,14 @@ variant $(cat "$HERE"/variant/* | sha256sum | cut -c1-16)
 emscripten $(emcc --version | head -1 | sed 's/.* \([0-9][0-9.]*\) .*/\1/')"
 for SUSPEND in jspi asyncify; do
   BUILD=build-sim-$SUSPEND
-  DEST=$OUT
-  [ "$SUSPEND" = jspi ] || DEST=$OUT-$SUSPEND
+  DEST=$OUT NAME=micropython
+  [ "$SUSPEND" = jspi ] || { DEST=$OUT-$SUSPEND; NAME=micropython-$SUSPEND; }
   rm -rf "ports/webassembly/$BUILD"   # the frozen manifest is not tracked as a dependency
   make -s -C ports/webassembly VARIANT=sim SUSPEND=$SUSPEND BUILD=$BUILD -j8
   make -s -C ports/webassembly VARIANT=sim SUSPEND=$SUSPEND BUILD=$BUILD min
   mkdir -p "$DEST"
-  cp "ports/webassembly/$BUILD/micropython.min.mjs" "$DEST/micropython.mjs"
-  cp "ports/webassembly/$BUILD/micropython.wasm" "$DEST/micropython.wasm"
+  cp "ports/webassembly/$BUILD/micropython.min.mjs" "$DEST/$NAME.mjs"
+  cp "ports/webassembly/$BUILD/micropython.wasm" "$DEST/$NAME.wasm"
   printf '%s\nsuspend %s\n' "$STAMP" "$SUSPEND" > "$DEST/BUILT_FROM.txt"
   ls -l "$DEST"
 done

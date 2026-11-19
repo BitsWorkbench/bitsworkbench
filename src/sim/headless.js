@@ -22,14 +22,16 @@ const ROOT = path.resolve(HERE, '../..')
 // Which MicroPython build: JSPI (runtime/mp/), or the Asyncify fallback
 // (runtime/mp-asyncify/) with OCB_SIM_VM=asyncify, so the suites can run the
 // build that browsers without JSPI get (src/sim/support.js).
-export const VM_DIR = process.env.OCB_SIM_VM === 'asyncify' ? 'mp-asyncify' : 'mp'
-const WASM = path.join(HERE, 'runtime', VM_DIR, 'micropython.wasm')
+const ASYNCIFY = process.env.OCB_SIM_VM === 'asyncify'
+export const VM_DIR = ASYNCIFY ? 'mp-asyncify' : 'mp'
+const VM_NAME = ASYNCIFY ? 'micropython-asyncify' : 'micropython'
+const WASM = path.join(HERE, 'runtime', VM_DIR, `${VM_NAME}.wasm`)
 
 // The loader of the chosen build; `copy` gives a fresh copy of its module.
 let copies = 0
 export async function vmLoader(copy = false) {
   const q = copy ? `?vm=${++copies}` : ''
-  const mod = await import(new URL(`./runtime/${VM_DIR}/micropython.mjs${q}`, import.meta.url).href)
+  const mod = await import(new URL(`./runtime/${VM_DIR}/${VM_NAME}.mjs${q}`, import.meta.url).href)
   return (opts) => mod.loadMicroPython({ ...opts, url: WASM })
 }
 
