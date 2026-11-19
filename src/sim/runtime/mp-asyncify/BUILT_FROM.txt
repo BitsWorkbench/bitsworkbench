@@ -1,0 +1,6 @@
+micropython 412a7e6b651ac2d7c9168aa07cfebed77528724a
+port.patch 72a6c65883f899bf
+py.patch b86187ca2d559cab
+variant 534957d7dd9b1bbd
+emscripten 7.0.0
+suspend asyncify

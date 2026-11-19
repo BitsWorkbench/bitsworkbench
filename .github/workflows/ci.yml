@@ -52,6 +52,11 @@ jobs:
 
       - run: npm test
 
+      # The simulator again on the Asyncify build of MicroPython, the one
+      # browsers without JSPI (Safari, Firefox) run (sim/DESIGN.md, section 1).
+      - name: Simulator on the Asyncify build
+        run: OCB_SIM_VM=asyncify node tests/sim.mjs
+
       # The tested bundle, for a preview on Firebase (the `preview` job below).
       - if: vars.FIREBASE_PROJECT_ID != ''
         uses: actions/upload-artifact@v4

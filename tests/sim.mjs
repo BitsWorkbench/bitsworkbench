@@ -3,6 +3,7 @@
 // Uses the gym when its built assets are present (they are not published
 // yet), and an empty room otherwise.
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
@@ -22,7 +23,7 @@ import { Engine } from '../src/sim/runtime/engine.js'
 import { World } from '../src/sim/world/world.js'
 import { Environment } from '../src/sim/world/environment.js'
 import { createDevice } from '../src/sim/devices.js'
-import { pythonFiles, haveFlight } from '../src/sim/headless.js'
+import { pythonFiles, haveFlight, vmLoader, VM_DIR } from '../src/sim/headless.js'
 
 const haveGym = fs.existsSync(new URL('../public/sim-assets/env/gym/world.json', import.meta.url))
 let failed = 0
@@ -33,7 +34,26 @@ async function test(name, fn) {
 // for a build with CodeAIR flight (sim/tools/flight-library.mjs).
 const flightTest = haveFlight() ? test : async (name) => console.log('  skip ', name, '(no CodeAIR flight library: SIM_FLIGHT=1 npm run sim:flight)')
 
-console.log('simulator')
+console.log(`simulator (MicroPython build: ${VM_DIR}; OCB_SIM_VM=asyncify runs the fallback)`)
+
+// The JSPI and Asyncify builds (sim/runtime/build.sh) come from one source:
+// the same MicroPython commit, patches, variant and Emscripten.
+await test('the JSPI and Asyncify builds were built from the same source', async () => {
+  const stamp = (dir) => fs.readFileSync(new URL(`../src/sim/runtime/${dir}/BUILT_FROM.txt`, import.meta.url), 'utf8')
+  const [jspi, asyncify] = [stamp('mp'), stamp('mp-asyncify')]
+  assert.match(jspi, /suspend jspi\n$/)
+  assert.match(asyncify, /suspend asyncify\n$/)
+  assert.equal(jspi.replace(/suspend .*\n$/, ''), asyncify.replace(/suspend .*\n$/, ''))
+  // The stamp is of the sources in this checkout: rebuild after changing them.
+  const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(new URL(`../sim/runtime/${f}`, import.meta.url))).digest('hex').slice(0, 16)
+  assert.match(jspi, new RegExp(`port.patch ${sha('port.patch')}\n`), 'port.patch changed since the build: npm run sim:runtime')
+  assert.match(jspi, new RegExp(`py.patch ${sha('py.patch')}\n`), 'py.patch changed since the build: npm run sim:runtime')
+  const variantDir = new URL('../sim/runtime/variant/', import.meta.url)
+  const variant = crypto.createHash('sha256')
+    .update(Buffer.concat(fs.readdirSync(variantDir).sort().map((f) => fs.readFileSync(new URL(f, variantDir)))))
+    .digest('hex').slice(0, 16)
+  assert.match(jspi, new RegExp(`variant ${variant}\n`), 'the variant changed since the build: npm run sim:runtime')
+})
 
 await test('sleep advances simulated time exactly', async () => {
   const r = await runHeadless({ source: 'import time\nt = time.monotonic()\ntime.sleep(2.5)\nprint(round(time.monotonic() - t, 3))' })
@@ -223,7 +243,7 @@ await test('pause holds simulated time; step and resume continue', async () => {
   const env = Environment.empty()
   const world = new World(env)
   const bot = world.add(createDevice('codebot', env, world.rng.fork(), env.spawns[0]))
-  const { loadMicroPython } = await import('../src/sim/runtime/mp/micropython.mjs')
+  const loadMicroPython = await vmLoader()
   const engine = new Engine({ loadMicroPython, world, bridge: bot.bridge, files: pythonFiles(), speed: 1 })
   const done = engine.run('import time\nwhile True:\n    time.sleep(0.01)')
   await delay(100)
@@ -248,7 +268,7 @@ await test('step by line: each step stops at the next line of main.py, through i
   const env = Environment.empty()
   const world = new World(env)
   const bot = world.add(createDevice('codebot', env, world.rng.fork(), env.spawns[0]))
-  const { loadMicroPython } = await import('../src/sim/runtime/mp/micropython.mjs')
+  const loadMicroPython = await vmLoader()
   const paused = []
   const engine = new Engine({
     loadMicroPython, world, bridge: bot.bridge, files: pythonFiles(), speed: 1, trace: true,
@@ -311,7 +331,7 @@ await test('the REPL runs commands on the simulated board', async () => {
   const env = Environment.empty()
   const world = new World(env)
   const bot = world.add(createDevice('codebot', env, world.rng.fork(), env.spawns[0]))
-  const { loadMicroPython } = await import('../src/sim/runtime/mp/micropython.mjs')
+  const loadMicroPython = await vmLoader()
   let out = ''
   const engine = new Engine({ loadMicroPython, world, bridge: bot.bridge, files: pythonFiles(), speed: Infinity, onOutput: (b) => (out += new TextDecoder().decode(b)) })
   await engine.replInput('from botcore import *\r')
