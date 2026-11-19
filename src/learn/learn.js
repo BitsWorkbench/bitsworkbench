@@ -11,6 +11,7 @@ import { Tutorial } from './tutorial.js'
 import { GoalWatcher } from './goals.js'
 import { RegexTester } from './regex.js'
 import { offersBlocks } from './offer.js'
+import { BRAND } from '../brand.js'
 
 const OPEN = 'opencodebot.learn.v1' // { id, width }
 const MIN_WIDTH = 260
@@ -158,7 +159,7 @@ export class Learn {
       pack = await this.library.add(await file.text())
     } catch (err) {
       const problems = err instanceof PackError ? err.problems : [err.message]
-      console.warn(`${file.name}: not a pack Codacious can open\n${problems.join('\n')}`)
+      console.warn(`${file.name}: not a pack ${BRAND.name} can open\n${problems.join('\n')}`)
       toast({ kind: 'error', title: t('learn.badPack', { name: file.name }), detail: problems.slice(0, 3).join('\n') })
       return
     }

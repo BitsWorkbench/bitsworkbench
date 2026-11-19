@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { readPack, readRest, joinRest, PackError, FORMAT } from '../src/learn/pack.js'
 import { renderMarkdown } from '../src/learn/markdown.js'
+import { BRAND } from '../src/brand.js'
 import { offersBlocks, greyShare, codeLines, MOST_GREY } from '../src/learn/offer.js'
 
 let failures = 0
@@ -192,6 +193,8 @@ console.log('A pack\'s Markdown, as HTML')
   const both = 'Now --Blocks--drag the block--/Blocks----Python--type the line--/Python-- please.'
   check('blocks mode keeps the Blocks text, inline', html(both) === '<p>Now drag the block please.</p>\n', html(both))
   check('Python mode keeps the Python text', html(both, 'python') === '<p>Now type the line please.</p>\n', html(both, 'python'))
+  const named = html('{app} saves your work --Caution--in {app}--/Caution--')
+  check('{app} is the product\'s name, in sections too', !named.includes('{app}') && named.split(BRAND.name).length === 3, named)
   const raw = html('<script>alert(1)</script> <img src=x onerror=alert(1)> <b>hi</b>')
   check('HTML in a pack is shown as text, never run', !/<script|<img|<b>/.test(raw) && raw.includes('&lt;script&gt;'), raw)
   const links = html('[web](https://firialabs.com) [bad](javascript:alert(1)) [data](data:text/html,hi)')

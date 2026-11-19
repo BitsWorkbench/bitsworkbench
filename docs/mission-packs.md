@@ -152,6 +152,8 @@ Instructions, goals, hints and the rest are Markdown. On top of plain Markdown:
   `ConsoleData` (read what the program prints) and `CheckTheTrek` (the CodeTrek has the code).
   `--File title={blink.py}/--` asks the student to make a new file of that name.
 - **Images**: `![what it shows](name.png)` with a name from `assets`.
+- **The app's name**: write `{app}`, never the name itself ("{app} saves your work as you
+  go"). It shows as the name in `src/brand.js`, so a pack reads right when the name changes.
 - **No HTML.** HTML in a pack shows as the text it is, and links go only to `http` and
   `https` addresses, opening in a new tab.
 

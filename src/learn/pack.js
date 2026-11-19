@@ -5,6 +5,7 @@
  */
 import { tree } from '../convert/tree.js'
 import { riskyRegex } from './regex.js'
+import { BRAND } from '../brand.js'
 
 export const FORMAT = 1
 export const BOARDS = ['codebot', 'codex', 'codeair']
@@ -142,7 +143,7 @@ class Checker {
 
   format(v, at) {
     if (!Number.isInteger(v) || v < 1) this.problem(at, 'should be a format number')
-    else if (v > FORMAT) this.problem(at, `format ${v} needs a newer Codacious (this one reads ${FORMAT})`)
+    else if (v > FORMAT) this.problem(at, `format ${v} needs a newer ${BRAND.name} (this one reads ${FORMAT})`)
   }
 
   text(v, at) {
