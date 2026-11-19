@@ -91,6 +91,7 @@ jobs:
     env:
       SIM_FLIGHT: 1
       HOME: /root        # Firefox, as root in the container, wants a home of its own
+      OCB_URL: http://127.0.0.1:4173/
     steps:
       # The image has no git, which the build's CodeAIR flight library is fetched with.
       - name: Install git
@@ -107,6 +108,15 @@ jobs:
       - run: npm ci
 
       - run: npm run build
+
+      # One server for the browser tests, on 127.0.0.1: in the container,
+      # "localhost" is both 127.0.0.1 and ::1, and a server the tests start on
+      # it themselves answers on one while they ask on the other.
+      - name: Serve the build
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:4173/ && exit 0; sleep 0.5; done
+          cat /tmp/preview.log; exit 1
 
       # The simulator suites with the Asyncify build: headless, then in the app,
       # where the browser suite takes JSPI away from the page, which then
