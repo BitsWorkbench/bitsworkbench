@@ -74,6 +74,30 @@ async function open({ project = null, editor = 'normal' } = {}) {
   return { context, page, urls, errors, release }
 }
 
+// 0. A snippet put in the text box goes where the editor would put it.
+{
+  const { snippetInLines } = await import('../src/editor/lazy-editor.js')
+  const put = (text, at, snippet) => {
+    const r = snippetInLines(text, at, at, snippet)
+    return { text: r.lines.join('\n'), line: r.line, col: r.col }
+  }
+  const fwd = { line: true, code: 'forward()' }
+  let r = put('while True:\n', 'while True:\n'.length, fwd)
+  check(r.text === 'while True:\n    forward()', `on the blank line after a colon, into the body (${JSON.stringify(r.text)})`)
+  r = put('x = 1  # todo:\n', 15, fwd)
+  check(r.text === 'x = 1  # todo:\nforward()', 'a colon in a comment does not open a block')
+  r = put('if a:\n    b()\nc()', 'if a:\n    b()'.length, fwd)
+  check(r.text === 'if a:\n    b()\n    forward()\nc()', 'after a line in a body, as deep as it')
+  r = put('x = ', 4, { line: false, code: 'ls.read(0)' })
+  check(r.text === 'x = ls.read(0)' && r.line === 0 && r.col === 14, 'a value goes inside the line, the cursor after it')
+  const withImport = { line: true, code: 'radio.on()', imports: ['import radio', 'import time'] }
+  r = put('# hello\nfrom botcore import *\n\nleds.user(1)', 0, { ...withImport, code: 'x()' })
+  check(r.text.split('\n')[0] === '# hello' && r.text.includes('import radio\nfrom botcore import *\nimport time'), `radio's import before the others, the rest after them, the comment kept first (${JSON.stringify(r.text)})`)
+  check(r.text.split('\n')[r.line] === 'x()' && r.col === 3, 'with the cursor above the imports, it ends after the snippet')
+  r = put('from botcore import *\nleds.user(1)', 'from botcore import *\nleds.user(1)'.length, withImport)
+  check(r.text.split('\n')[r.line] === 'radio.on()', 'with the cursor below the imports, it ends after the snippet')
+}
+
 const ed = (page, expr) => page.evaluate(`(() => { const e = window.openCodeBot.pythonEditor; return ${expr} })()`)
 const pythonText = (page) => page.evaluate(() => window.openCodeBot.workspace.pythonText)
 const editorIn = (page) => page.waitForSelector('#python-editor .cm-editor', { timeout: 15000 })

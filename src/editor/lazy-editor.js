@@ -191,43 +191,82 @@ export class LazyPythonEditor {
     if (this.editor) return this.editor.insert(snippet)
     this.load() // shows the box, if it is not there yet
     const box = this.box
-    let text = box.value
-    let at = box.selectionStart
-    let end = box.selectionEnd
-    if (snippet.line) {
-      // On the cursor's line when it is blank; else on a new line after it,
-      // as deep, or one deeper when that line opens a block.
-      const start = text.lastIndexOf('\n', at - 1) + 1
-      const stop = text.indexOf('\n', at) === -1 ? text.length : text.indexOf('\n', at)
-      const line = text.slice(start, stop)
-      const indent = ' '.repeat(line.length - line.trimStart().length + (/:\s*(#.*)?$/.test(line) ? 4 : 0))
-      const code = snippet.code.split('\n').map((l) => (l ? indent + l : l)).join('\n')
-      if (line.trim()) {
-        text = `${text.slice(0, stop)}\n${code}${text.slice(stop)}`
-        at = end = stop + 1 + code.length
-      } else {
-        text = text.slice(0, start) + code + text.slice(stop)
-        at = end = start + code.length
-      }
-    } else {
-      text = text.slice(0, at) + snippet.code + text.slice(end)
-      at = end = at + snippet.code.length
-    }
-    // What it needs at the top: radio's import first of all, the others after the last import.
-    const lines = text.split('\n')
-    const has = new Set(lines.map((l) => l.trim()))
-    const needs = [...(snippet.imports || []), ...(snippet.setup || [])].filter((l) => !has.has(l))
-    const top = needs.filter((l) => l === 'import radio')
-    const rest = needs.filter((l) => l !== 'import radio')
-    let last = -1
-    lines.forEach((l, i) => { if (/^(import|from)\s/.test(l)) last = i })
-    lines.splice(last + 1, 0, ...rest)
-    lines.unshift(...top)
-    const added = [...top, ...rest].reduce((n, l) => n + l.length + 1, 0)
-    text = lines.join('\n')
-    box.value = text
-    box.setSelectionRange(at + added, end + added)
+    const { lines, line, col } = snippetInLines(box.value, box.selectionStart, box.selectionEnd, snippet)
+    box.value = lines.join('\n')
+    const at = lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0) + col
+    box.setSelectionRange(at, at)
     box.dispatchEvent(new Event('input'))
     box.focus()
   }
+}
+
+const indentOf = (l) => l.length - l.trimStart().length
+const blank = (l) => !l.trim()
+// A line that opens a block: ends in a colon, a comment after it aside.
+const opensBlock = (l) => /:$/.test(l.replace(/\s#[^'"]*$/, '').trimEnd())
+
+/**
+ * The program's lines with a snippet put in, as the editor puts it
+ * (snippet-drop.js insertSnippet, in plain text): a value replaces the
+ * selection; a line goes on the cursor's line when it is blank, else on a
+ * new line after it, as deep as the code around allows (into the body when
+ * the line before opens a block); what it needs at the top goes after the
+ * imports, radio's first of all. Returns the lines and where the cursor
+ * goes, after the snippet.
+ */
+export function snippetInLines(text, from, to, snippet) {
+  let lines
+  let line
+  let col
+  if (!snippet.line) {
+    const out = text.slice(0, from) + snippet.code + text.slice(to)
+    const upTo = text.slice(0, from) + snippet.code
+    lines = out.split('\n')
+    line = upTo.split('\n').length - 1
+    col = upTo.length - upTo.lastIndexOf('\n') - 1
+  } else {
+    lines = text.split('\n')
+    const n = text.slice(0, from).split('\n').length - 1
+    const fill = blank(lines[n])
+    const at = fill ? n : n + 1
+    let prev = -1
+    for (let i = at - 1; i >= 0; i--) if (!blank(lines[i])) { prev = i; break }
+    let next = -1
+    for (let i = fill ? at + 1 : at; i < lines.length; i++) if (!blank(lines[i])) { next = i; break }
+    let indent = 0
+    if (prev >= 0 && opensBlock(lines[prev])) indent = indentOf(lines[prev]) + 4
+    else if (prev >= 0) {
+      const max = indentOf(lines[prev])
+      const min = next < 0 ? 0 : Math.min(indentOf(lines[next]), max)
+      indent = Math.min(max, Math.max(min, indentOf(lines[n])))
+    }
+    const code = snippet.code.split('\n').map((l) => (l ? ' '.repeat(indent) + l : l))
+    lines.splice(at, fill ? 1 : 0, ...code)
+    line = at + code.length - 1
+    col = code[code.length - 1].length
+  }
+  // What it needs at the top.
+  const has = new Set(lines.map((l) => l.trim()))
+  const needs = [...(snippet.imports || []), ...(snippet.setup || [])].filter((l) => !has.has(l))
+  const put = (i, add) => {
+    lines.splice(i, 0, ...add)
+    if (i <= line) line += add.length
+  }
+  const firstImport = lines.findIndex((l) => /^(import|from)\s/.test(l))
+  const radio = needs.filter((l) => l === 'import radio')
+  if (radio.length) put(firstImport >= 0 ? firstImport : topOfCode(lines), radio)
+  const rest = needs.filter((l) => l !== 'import radio')
+  if (rest.length) {
+    let last = -1
+    lines.forEach((l, i) => { if (/^(import|from)\s/.test(l)) last = i })
+    put(last >= 0 ? last + 1 : topOfCode(lines), rest)
+  }
+  return { lines, line, col }
+}
+
+/** The first line of code, after any opening comments and blank lines. */
+function topOfCode(lines) {
+  let i = 0
+  while (i < lines.length && (blank(lines[i]) || lines[i].startsWith('#'))) i++
+  return i
 }
