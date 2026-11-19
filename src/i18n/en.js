@@ -290,6 +290,7 @@ export default {
       <li><kbd>Delete</kbd> removes a block, <kbd>D</kbd> duplicates it, <kbd>Shift</kbd>+<kbd>F10</kbd> opens its menu.</li>
       <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes, <kbd>Ctrl</kbd>+<kbd>Y</kbd> redoes.</li>
       <li>The divider between the blocks and the side panel moves with the arrow keys.</li>
+      <li>In a mission, <kbd>Esc</kbd> puts the mission away; the 🧭 button at the right edge brings it back.</li>
     </ul>`,
   'about.bodyHtml': `
     <p>{app} is Firia Labs' free, open-source editor and simulator for the
@@ -420,7 +421,12 @@ export default {
   'learn.unreachable': 'Could not load “{title}”. Check your connection and try again.',
   'learn.builtinGoal': '{device} · {brief}',
   'learn.paneLabel': 'Mission pack',
-  'learn.resizeLabel': 'Resize the mission pack',
+  'learn.railLabel': 'Mission',
+  'learn.showMission': 'Show the mission',
+  'learn.hideMission': 'Hide the mission',
+  'learn.railStep': 'Step {step} of {count}: {title}',
+  'learn.railIntro': 'Mission {n}: the start',
+  'learn.railDone': '(done)',
   'learn.close': 'Close the mission pack',
   'learn.missions': 'Missions',
   'learn.missionN': 'Mission {n}',

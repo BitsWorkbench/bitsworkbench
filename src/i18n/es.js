@@ -287,6 +287,7 @@ export default {
       <li><kbd>Supr</kbd> borra un bloque, <kbd>D</kbd> lo duplica, <kbd>Shift</kbd>+<kbd>F10</kbd> abre su menú.</li>
       <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace, <kbd>Ctrl</kbd>+<kbd>Y</kbd> rehace.</li>
       <li>La división entre los bloques y el panel lateral se mueve con las flechas.</li>
+      <li>En una misión, <kbd>Esc</kbd> guarda la misión; el botón 🧭 del borde derecho la vuelve a mostrar.</li>
     </ul>`,
   'about.bodyHtml': `
     <p>{app} es el editor y simulador gratuito y de código abierto de Firia Labs para
@@ -418,7 +419,12 @@ export default {
   'learn.unreachable': 'No se pudo cargar «{title}». Revisa tu conexión e inténtalo de nuevo.',
   'learn.builtinGoal': '{device} · {brief}',
   'learn.paneLabel': 'Paquete de misiones',
-  'learn.resizeLabel': 'Cambiar el tamaño del paquete de misiones',
+  'learn.railLabel': 'Misión',
+  'learn.showMission': 'Mostrar la misión',
+  'learn.hideMission': 'Ocultar la misión',
+  'learn.railStep': 'Paso {step} de {count}: {title}',
+  'learn.railIntro': 'Misión {n}: el comienzo',
+  'learn.railDone': '(hecho)',
   'learn.close': 'Cerrar el paquete de misiones',
   'learn.missions': 'Misiones',
   'learn.missionN': 'Misión {n}',

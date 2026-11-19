@@ -236,14 +236,18 @@ kbd {
 
 /* -------------------------------------------------------------- workarea */
 .workarea {
+  --rail-w: 56px;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 6px minmax(260px, var(--side-w, 420px));
   min-height: 0;
   background: var(--paper);
+  /* The mission drawer lies over the side; isolated, it stays under the top bar's menus. */
+  position: relative;
+  isolation: isolate;
 }
-/* A mission pack's tutorial, a column of its own at the right. */
+/* A mission pack open: its rail is a narrow column at the right. */
 .workarea[data-learn='open'] {
-  grid-template-columns: minmax(280px, 1fr) 6px minmax(220px, var(--side-w, 420px)) 6px var(--learn-w, 380px);
+  grid-template-columns: minmax(280px, 1fr) 6px minmax(220px, var(--side-w, 420px)) var(--rail-w);
 }
 
 .blocks-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -394,12 +398,54 @@ kbd {
 .splitter:hover { background: var(--green-soft); }
 .splitter:hover::after { background: var(--green); }
 
-/* --------------------------------------------------------- tutorial pane */
+/* ------------------------------------------------ mission drawer and rail */
+/* The drawer lies exactly over the simulator and the terminal (at least 360px
+   wide), so the program and the Blocks/Python switch above it stay in view;
+   it slides away into the rail. */
 .learn-pane {
+  position: absolute; top: 0; bottom: 0; z-index: 400; /* over Blockly (70s) and the dividers */
+  right: var(--rail-w); left: calc(100% - var(--rail-w) - max(var(--side-w, 420px), 360px));
   display: flex; flex-direction: column; min-width: 0; min-height: 0;
-  background: var(--surface); border-left: 1px solid var(--line);
+  background: var(--surface); border-left: 1px solid var(--line-strong);
+  box-shadow: -10px 0 28px rgba(40, 40, 40, 0.2);
+  transition: transform 0.22s ease, visibility 0s;
 }
-.learn-pane[hidden], .learn-splitter[hidden] { display: none; }
+.workarea[data-drawer='closed'] .learn-pane {
+  transform: translateX(calc(100% + 40px));
+  visibility: hidden;
+  transition: transform 0.22s ease, visibility 0s linear 0.22s;
+}
+.learn-pane[hidden], .learn-rail[hidden] { display: none; }
+.learn-rail {
+  grid-column: 4; grid-row: 1 / -1;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 0;
+  padding: 8px 0; background: var(--paper-2); border-left: 1px solid var(--line-strong);
+  overflow-y: auto; z-index: 410;
+}
+.learn-rail button { font: inherit; cursor: pointer; flex: none; }
+.rail-toggle {
+  width: 44px; height: 44px; border: 0; border-radius: var(--r-sm);
+  background: var(--gold); box-shadow: 0 3px 0 var(--gold-dark); font-size: 21px;
+}
+.rail-toggle[aria-expanded='true'] { background: var(--gold-dark); box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.15); }
+.rail-mission {
+  width: 48px; margin-top: 2px; padding: 2px; border: 0; border-radius: var(--r-xs); background: none;
+  font-size: 12px !important; font-weight: 800; line-height: 1.15; color: var(--ink-soft); text-align: center;
+}
+.rail-mission[aria-current='step'] { color: var(--green-deep); background: var(--green-soft); }
+.rail-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rail-step {
+  width: 40px; height: 36px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface);
+  font-weight: 800; font-size: 14px; color: var(--ink);
+}
+.rail-step:hover, .rail-mission:hover { border-color: var(--green); }
+.rail-step[data-done='true'] { background: var(--green-strong); border-color: var(--green-strong); color: #fff; }
+.rail-step[aria-current='step'] { border-color: var(--green-deep); box-shadow: 0 0 0 3px var(--green-soft); }
+.rail-spacer { flex: 1 1 auto; }
+.rail-chevron {
+  width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface);
+  font-size: 20px; font-weight: 900; color: var(--ink-soft);
+}
 .btn-plain {
   font: inherit; font-weight: 700; color: var(--ink-soft); cursor: pointer;
   background: none; border: 0; padding: 4px 6px; border-radius: var(--r-xs);
@@ -903,9 +949,14 @@ kbd {
   .splitter { cursor: row-resize; }
   .splitter::after { width: 36px; height: 4px; }
   .side-pane { border-left: 0; border-top: 1px solid var(--line); }
-  .workarea[data-learn='open'] { grid-template-columns: 1fr; }
-  .learn-splitter { display: none; }
-  .learn-pane { border-left: 0; border-top: 1px solid var(--line); }
+  /* The rail stays at the right edge, beside the blocks and the side stacked above each
+     other; half the width would be too narrow to read, so the drawer covers all of it. */
+  .workarea[data-learn='open'] { grid-template-columns: 1fr var(--rail-w); }
+  .workarea[data-learn='open'] > .blocks-pane,
+  .workarea[data-learn='open'] > .splitter,
+  .workarea[data-learn='open'] > .side-pane { grid-column: 1; }
+  .learn-rail { grid-column: 2; }
+  .learn-pane { left: 0; }
 }
 
 /* --------------------------------------------------------------- blockly */

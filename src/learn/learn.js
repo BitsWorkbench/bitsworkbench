@@ -1,7 +1,9 @@
 /**
  * Learn's mission packs in the app: opening a pack (from a file, or one kept
- * from before), the tutorial pane at the right of the work area and its
- * divider, and which pack was open, so a reload comes back to it.
+ * from before); while one is open, the mission rail at the right edge and the
+ * tutorial in a drawer that slides out from it over the simulator and the
+ * terminal; and which pack was open and whether its drawer was, so a reload
+ * comes back to them.
  */
 import { t } from '../i18n/index.js'
 import { toast } from '../ui/notify.js'
@@ -12,24 +14,23 @@ import { GoalWatcher } from './goals.js'
 import { RegexTester } from './regex.js'
 import { offersBlocks } from './offer.js'
 import { BRAND } from '../brand.js'
+import { Rail } from './rail.js'
 
-const OPEN = 'opencodebot.learn.v1' // { id, width }
-const MIN_WIDTH = 260
-const MIN_REST = 560 // the editor and the side pane's own minimums, and the dividers
+const OPEN = 'opencodebot.learn.v1' // { id, drawer: false when the student closed it }
 
 export class Learn {
   /**
-   * `pane`, `splitter`, `workarea`: the elements; `onResize()` after the pane
-   * opens, closes or changes width, for the editor and the side to fit again;
+   * `pane`, `rail`, `workarea`: the elements; `onResize()` after the rail
+   * comes or goes, for the editor and the side to fit again;
    * `device`, the app's device, and `program()`, the student's program as
    * Python, for the goals; `onTrek(trek)` with the CodeTrek of the objective
    * on show (null when none is), for the palettes; `blocksFromPython(python,
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
    */
-  constructor({ pane, splitter, workarea, onResize, device, program, onTrek, blocksFromPython, toPython }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython }) {
     this.pane = pane
-    this.splitter = splitter
+    this.railEl = rail
     this.workarea = workarea
     this.onResize = onResize
     this.onTrek = onTrek
@@ -47,9 +48,54 @@ export class Learn {
       this._watch()
     })
     this.tutorial.addEventListener('close', () => this.close())
+    this.tutorial.addEventListener('shown', () => this._drawRail())
+    this.rail = new Rail(rail, { controls: pane.id })
+    this.rail.addEventListener('toggle', () => (this.drawerOpen ? this.collapse() : this.expand()))
+    this.rail.addEventListener('go', (e) => {
+      this.expand()
+      this.tutorial.go(e.detail)
+    })
+    // Escape puts the drawer away, and the student is back at the rail's button.
+    pane.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      this.collapse()
+    })
     this.watcher = new GoalWatcher({ device, program, tester: new RegexTester() })
     this.watcher.addEventListener('goals', (e) => this._goalsMet(e.detail))
-    this._bindSplitter()
+  }
+
+  /** Whether the drawer is out (a pack is open and the student has not put it away). */
+  get drawerOpen() {
+    return this.isOpen && this.workarea.dataset.drawer === 'open'
+  }
+
+  /** Slide the drawer out, and take the student into it. */
+  expand() {
+    if (!this.isOpen) return
+    this._setDrawer(true)
+    this.pane.querySelector('.learn-body')?.focus({ preventScroll: true })
+  }
+
+  /** Put the drawer away (Run does, so the simulator and the terminal are in view). */
+  collapse() {
+    if (!this.drawerOpen) return
+    const inside = this.pane.contains(document.activeElement)
+    this._setDrawer(false)
+    if (inside) this.rail.toggleButton?.focus()
+  }
+
+  _setDrawer(open) {
+    this.workarea.dataset.drawer = open ? 'open' : 'closed'
+    // Out of sight is out of reach: no Tab stop or screen reader in a closed drawer.
+    this.pane.inert = !open
+    this._save({ drawer: open })
+    this._drawRail()
+  }
+
+  _drawRail() {
+    if (!this.isOpen || !this.tutorial.pack) return
+    this.rail.render({ pack: this.tutorial.pack, place: this.tutorial.place, finished: this.tutorial.finished, open: this.drawerOpen })
   }
 
   /** The student's program changed. */
@@ -130,14 +176,14 @@ export class Learn {
     await this.open(entry.id)
   }
 
-  /** Reopen the pack that was open before the page loaded, if any. */
+  /** Reopen the pack that was open before the page loaded, if any, its drawer out or away as it was. */
   async restore() {
     const saved = this._saved()
-    if (saved.id) await this.open(saved.id, { quiet: true })
+    if (saved.id) await this.open(saved.id, { quiet: true, drawer: saved.drawer !== false })
   }
 
-  /** Open a kept pack where the student left it. */
-  async open(id, { quiet = false } = {}) {
+  /** Open a kept pack where the student left it, with the drawer out unless `drawer` is false. */
+  async open(id, { quiet = false, drawer = true } = {}) {
     const pack = await this.library.get(id).catch(() => null)
     if (!pack) {
       if (!quiet) toast({ kind: 'error', title: t('learn.gone') })
@@ -148,6 +194,7 @@ export class Learn {
     this.tutorial.show(pack, await this.library.place(id))
     this._save({ id })
     this._setOpen(true)
+    this._setDrawer(drawer)
     this._watch()
   }
 
@@ -183,53 +230,17 @@ export class Learn {
     return !this.pane.hidden
   }
 
-  /** The pane's width and its divider's, in pixels, while it is open beside the side pane. */
+  /** The rail's width, in pixels, while a pack is open: the drawer lies over the side and takes none. */
   get width() {
-    if (this.pane.hidden || this._stacked()) return 0
-    return this.pane.getBoundingClientRect().width + this.splitter.getBoundingClientRect().width
+    return this.isOpen ? this.railEl.getBoundingClientRect().width : 0
   }
 
   _setOpen(open) {
     this.pane.hidden = !open
-    this.splitter.hidden = !open
+    this.railEl.hidden = !open
     this.workarea.dataset.learn = open ? 'open' : 'closed'
-    if (open) this._setWidth(this._saved().width ?? 380)
+    if (!open) delete this.workarea.dataset.drawer
     this.onResize()
-  }
-
-  _stacked() {
-    return window.matchMedia('(max-width: 880px)').matches
-  }
-
-  _setWidth(px) {
-    const room = this.workarea.getBoundingClientRect().width - MIN_REST
-    const width = Math.round(Math.max(MIN_WIDTH, Math.min(px, room)))
-    this.workarea.style.setProperty('--learn-w', `${width}px`)
-    this.splitter.setAttribute('aria-valuenow', String(width))
-    return width
-  }
-
-  _bindSplitter() {
-    const s = this.splitter
-    let dragging = false
-    const set = (px) => {
-      this._save({ width: this._setWidth(px) })
-      this.onResize()
-    }
-    s.addEventListener('pointerdown', (e) => {
-      dragging = true
-      s.setPointerCapture(e.pointerId)
-    })
-    s.addEventListener('pointermove', (e) => {
-      if (dragging) set(this.workarea.getBoundingClientRect().right - e.clientX)
-    })
-    s.addEventListener('pointerup', () => (dragging = false))
-    s.addEventListener('keydown', (e) => {
-      const grow = { ArrowLeft: 40, ArrowRight: -40 }[e.key]
-      if (!grow) return
-      e.preventDefault()
-      set(this.pane.getBoundingClientRect().width + (e.shiftKey ? grow * 3 : grow))
-    })
   }
 
   _saved() {
