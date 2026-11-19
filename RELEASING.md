@@ -38,6 +38,17 @@ About shows the version and the commit the site was built from.
 
    Tags are never moved or deleted; a mistake is fixed by the next release.
 
+## Once, before the first public release
+
+Settings only an owner of the repository can change, done before the first tag:
+
+- **Settings → Code security → Private vulnerability reporting: on.**
+  SECURITY.md sends reports there.
+- **About** (the repository's description, website and topics) filled in, with
+  the site's address as the website.
+- The site served from its own address (see the README, "Running it yourself"),
+  with the old address sending people on to it.
+
 ## What is public, and what is not
 
 Everything in this repository is public: code (MIT), the simulator's artwork
