@@ -19,6 +19,11 @@ https://creativecommons.org/licenses/by-nc/4.0/
 
 Attribution: "Firia Labs (firialabs.com)".
 
+CodeX's sound files: codex/sounds/*.mp3, the 35 files a CodeX ships with in
+its sounds/ folder (spoken words and short music clips, made by Firia Labs;
+from Firia Labs' labs-demos repository, codex/stock_sounds/). The
+simulated CodeX plays them.
+
 Music: the rooms' music tracks, when a room brings one (none yet), are under
 the same licence. The haunted house rooms' music is by Kid Fears (Atlanta),
 commissioned by Firia Labs; credit it as "Music by Kid Fears (Atlanta),

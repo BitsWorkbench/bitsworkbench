@@ -32,6 +32,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
   the CodeX screen, buttons, tilt and sound, CodeAIR flight and its rotor whine,
   radio between simulated boards. Run, Stop, Pause and Step, `input()`, and
   clicking a board's buttons.
+- A simulated CodeX plays its built-in sound files (`audio.mp3("sounds/welcome")`
+  and the rest of its sounds/ folder), and the program waits while one plays.
 - One board at a time: picking another never loses the program.
 
 ### Learn
