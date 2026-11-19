@@ -1,7 +1,9 @@
 // Spanish (español). Keys missing here fall back to English (en.js).
 // Machine-drafted: needs a review by a native speaker who teaches.
+import { BRAND } from '../brand.js'
+
 export default {
-  'app.name': 'Codacious',
+  'app.name': BRAND.name,
   'app.description': 'Programación con bloques fácil para CodeBot, CodeX y CodeAIR de Firia Labs.',
   'app.tagline': 'Suéñalo, constrúyelo',
   'app.beta': 'Beta',
@@ -78,7 +80,7 @@ export default {
   'run.copyFailedTitle': 'No se pudo copiar {file} a la placa',
   'run.copyFailedDetail': 'Tu programa no se ejecutó. Vuelve a pulsar Ejecutar en un momento.',
   'run.folderUnreadTitle': 'Tus otros archivos no se copiaron a la placa',
-  'run.folderUnreadDetail': 'Codacious no pudo leer la carpeta de tu programa. Tu programa se ejecuta, pero no puede importar los archivos de al lado.',
+  'run.folderUnreadDetail': '{app} no pudo leer la carpeta de tu programa. Tu programa se ejecuta, pero no puede importar los archivos de al lado.',
   'run.wrongTitle': 'Esos bloques son para otro dispositivo',
   'run.wrongDetail': 'Tu proyecto usa bloques de {names}, pero tienes conectado un {device}.',
   'error.atLine': '(línea {line} de Python)',
@@ -297,7 +299,7 @@ export default {
   'about.betaHtml': `
     <p><strong>Beta:</strong> esta es una primera versión pública, así que algunas
     cosas pueden cambiar o aún no funcionar. Si algo falla,
-    <a href="https://github.com/firialabs/opencodebot/issues" target="_blank" rel="noreferrer">informa
+    <a href="{issues}" target="_blank" rel="noreferrer">informa
     del problema en GitHub</a> y cuéntanos qué estabas haciendo.</p>`,
   'about.privacyHtml': `
     <h3>Tu privacidad</h3>
@@ -409,7 +411,7 @@ export default {
   'learn.packsIntro': 'Un paquete de misiones es un curso: misiones de pasos cortos, cada uno con metas que alcanzar. Abre uno y te espera aquí la próxima vez.',
   'learn.openFile': '📂 Abrir un archivo de paquete…',
   'learn.opened': 'Se abrió «{title}»',
-  'learn.badPack': '«{name}» no es un paquete de misiones que Codacious pueda abrir',
+  'learn.badPack': '«{name}» no es un paquete de misiones que {app} pueda abrir',
   'learn.gone': 'Ese paquete de misiones ya no está en este navegador',
   'learn.unreachable': 'No se pudo cargar «{title}». Revisa tu conexión e inténtalo de nuevo.',
   'learn.builtinGoal': '{device} · {brief}',

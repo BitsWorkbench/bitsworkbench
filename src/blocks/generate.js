@@ -9,6 +9,7 @@ import { pythonGenerator } from 'blockly/python'
 import { resetNeeds, allNeeds } from './context.js'
 import { getTarget } from '../device/targets.js'
 import { notesPython } from './comments.js'
+import { BRAND } from '../brand.js'
 
 /**
  * A text as a Python string literal. Blockly's own writes a line break as a
@@ -42,7 +43,7 @@ export function boardOfPython(text) {
   return null
 }
 
-export const BANNER = '# Made with Codacious 💚 Blocks in, Python out.'
+export const BANNER = `# Made with ${BRAND.name} 💚 Blocks in, Python out.`
 
 export function generatePython(workspace, targetId) {
   resetNeeds()
