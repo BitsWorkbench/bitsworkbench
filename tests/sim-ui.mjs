@@ -85,6 +85,10 @@ function lensesSeated() {
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
 // One context, so a second page is another tab of the same browser.
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+// OCB_SIM_VM=asyncify: the page finds no JSPI, as in Safari and Firefox, and so
+// runs everything below on the Asyncify build (src/sim/support.js).
+const FALLBACK = process.env.OCB_SIM_VM === 'asyncify'
+if (FALLBACK) await context.addInitScript(() => { delete WebAssembly.Suspending; delete WebAssembly.promising })
 const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console error: ${m.text()}`) })
@@ -1118,6 +1122,26 @@ while True:
   if ((await boards.evaluate(() => window.boards.length)) !== 1) problems.push('no flight: the boards page started a CodeAIR board')
   await boards.close()
   console.log('sim-ui: no CodeAIR flight in this build: CodeAIR is not offered, and the app says flight is coming')
+}
+
+// After all those programs: they ran on the build the page chose, and the
+// service worker kept the fallback's loader and wasm for the next visit, or in
+// a browser with JSPI never saw either. (Checked at the end: the CodeAIR
+// clicks above are sensitive to the timing of anything added before them.)
+{
+  const want = FALLBACK ? 'asyncify' : 'jspi'
+  const vm = await page.evaluate(() => window.openCodeBot.device.sim.vm)
+  if (vm !== want) problems.push(`MicroPython: expected the ${want} build, running ${vm}`)
+  else console.log(`sim-ui: ran on the ${want} build of MicroPython`)
+}
+{
+  const cached = await page.evaluate(async () => {
+    if (!(await caches.has('sim-asyncify'))) return []
+    return (await (await caches.open('sim-asyncify')).keys()).map((r) => r.url.split('/').pop())
+  })
+  const kinds = cached.map((u) => u.split('.').pop()).sort().join(',')
+  if (FALLBACK ? kinds !== 'js,wasm' : cached.length) problems.push(`the sim-asyncify cache holds ${cached.join(', ') || 'nothing'}`)
+  else console.log(`sim-ui: the service worker ${FALLBACK ? 'kept the Asyncify build once fetched' : 'never saw the Asyncify build'}`)
 }
 await browser.close()
 server?.kill()

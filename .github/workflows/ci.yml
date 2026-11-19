@@ -54,8 +54,12 @@ jobs:
 
       # The simulator again on the Asyncify build of MicroPython, the one
       # browsers without JSPI (Safari, Firefox) run (sim/DESIGN.md, section 1).
+      # The browser suite takes JSPI away from the page, which then chooses the
+      # Asyncify build itself.
       - name: Simulator on the Asyncify build
-        run: OCB_SIM_VM=asyncify node tests/sim.mjs
+        run: |
+          OCB_SIM_VM=asyncify node tests/sim.mjs
+          OCB_SIM_VM=asyncify node tests/sim-ui.mjs
 
       # The tested bundle, for a preview on Firebase (the `preview` job below).
       - if: vars.FIREBASE_PROJECT_ID != ''

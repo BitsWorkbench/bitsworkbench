@@ -64,10 +64,13 @@ Codacious talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).
-The simulator needs WebAssembly's JavaScript Promise Integration (JSPI), which
-Chrome and Edge have from version 137. Safari and Firefox can still build blocks
-and show the Python; they cannot connect to a device, and until they have JSPI,
-pressing Simulate says so rather than starting (`src/sim/support.js`).
+The simulator runs in current Chrome, Edge, Safari (so on an iPad) and Firefox.
+Where the browser has WebAssembly's JavaScript Promise Integration (JSPI; Chrome
+and Edge 137 and later) it runs on that; elsewhere it fetches a larger build of
+the same MicroPython the first time Simulate is pressed (`src/sim/support.js`,
+`sim/DESIGN.md` section 1). Safari and Firefox cannot connect to a device. A
+browser with WebAssembly turned off (Safari's Lockdown Mode) can still build
+blocks and show the Python, and pressing Simulate says why it cannot start.
 
 ## Running it yourself
 

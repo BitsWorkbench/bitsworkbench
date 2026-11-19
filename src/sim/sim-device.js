@@ -7,7 +7,7 @@ import { t, language } from '../i18n/index.js'
 import { getTarget } from '../device/targets.js'
 import { KINDS, ROOMS, MUSIC } from './kinds.js'
 import { FLIGHT } from 'virtual:sim-flight'
-import { browserCanSimulate } from './support.js'
+import { browserCanSimulate, simulatorVm } from './support.js'
 import { Describer } from './describe.js'
 import { Speaker } from './sound.js'
 import { reloadIfStale } from '../ui/new-build.js'
@@ -80,7 +80,7 @@ export class SimDevice extends EventTarget {
     const kind = KINDS[targetId]
     const room = kind.view === '3d' ? (this.room ?? kind.env) : kind.env
     const ready = new Promise((resolve) => (this._ready = resolve))
-    this.worker.postMessage({ t: 'init', kind: targetId, env: room, assetsBase, course: this.course })
+    this.worker.postMessage({ t: 'init', kind: targetId, env: room, assetsBase, course: this.course, vm: simulatorVm() })
     this.speaker = new Speaker()
     this._roomMusic(room)
 
@@ -259,7 +259,8 @@ export class SimDevice extends EventTarget {
 
   _onMessage(m) {
     switch (m.t) {
-      case 'ready': this._course = m.course; this._ready?.(m.snapshot); break
+      // vm: which MicroPython build runs ('jspi' or 'asyncify'), for support.
+      case 'ready': this._course = m.course; this.vm = m.vm; this._ready?.(m.snapshot); break
       case 'course': this.view?.setCourse?.(m.course); break
       case 'frame': {
         this.view?.push(m.snapshot)

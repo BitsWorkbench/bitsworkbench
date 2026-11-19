@@ -104,11 +104,19 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,gif,cur,mp3,woff,woff2,webmanifest,wasm,glb,json,webp}'],
         // Mission packs are fetched when opened, and kept by Learn itself
         // (IndexedDB); only their list comes with the app.
-        globIgnores: ['**/sim-assets/env/!(gym)/**', '**/learn/packs/!(index).json'],
+        // The simulator's Asyncify MicroPython is only for browsers without
+        // JSPI (src/sim/support.js): fetched the first time one starts the
+        // simulator, and kept from then on, so a browser with JSPI never
+        // downloads or stores it.
+        globIgnores: ['**/sim-assets/env/!(gym)/**', '**/learn/packs/!(index).json', '**/*asyncify*'],
         runtimeCaching: [{
           urlPattern: /\/sim-assets\/env\//,
           handler: 'CacheFirst',
           options: { cacheName: 'sim-rooms', expiration: { maxEntries: 32 } },
+        }, {
+          urlPattern: /\/assets\/micropython-asyncify-[^/]*\.(js|wasm)$/,
+          handler: 'CacheFirst',
+          options: { cacheName: 'sim-asyncify', expiration: { maxEntries: 4 } },
         }],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         // boards.html?boards=codex,codeair (or ?lang=es) is still boards.html,

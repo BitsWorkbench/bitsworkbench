@@ -77,6 +77,18 @@ build is 5.7 times slower than its `browser` JSPI build, but ours differs from b
 suspension costs about half as much again. `tests/sim.mjs` runs on either build
 (`OCB_SIM_VM=asyncify`), and CI runs it on both.
 
+Which build runs is decided by testing for the feature, never by the browser's name
+(`src/sim/support.js`): `WebAssembly.Suspending` and `WebAssembly.promising` mean JSPI;
+otherwise, WebAssembly with bulk memory and reference types means Asyncify; otherwise
+Simulate says this browser cannot run the simulator. The page tells the worker in `init`.
+The worker bundles the JSPI loader as before and `import()`s the Asyncify one only when told
+to, so a JSPI browser's download is unchanged. The Asyncify files carry the word in their
+names; the service worker leaves them out of its precache and keeps them, once fetched, in
+the `sim-asyncify` cache, so an iPad that has opened the simulator once runs it offline.
+`tests/sim-ui.mjs` with `OCB_SIM_VM=asyncify` takes JSPI away from the page, which then
+chooses the Asyncify build itself; it checks which build ran and what the service worker
+cached.
+
 ### Running without blocking the page
 
 Every alternative was weighed:

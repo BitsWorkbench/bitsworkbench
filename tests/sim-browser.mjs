@@ -1,8 +1,9 @@
 /**
- * A browser that cannot run the simulator (no WebAssembly JSPI, as in Firefox
- * and Safari today) is told so: Simulate says why and starts nothing, and the
- * boards page offers no board, keeping the boards saved here for a browser
- * that can. Chromium has JSPI, so this takes it away before the page loads.
+ * A browser that cannot run the simulator (no WebAssembly at all, as with
+ * Safari's Lockdown Mode; a browser without only JSPI runs the Asyncify build,
+ * src/sim/support.js) is told so: Simulate says why and starts nothing, and
+ * the boards page offers no board, keeping the boards saved here for a
+ * browser that can. This takes WebAssembly away before the page loads.
  * Run after `npm run build`.
  */
 import { spawn } from 'node:child_process'
@@ -32,14 +33,9 @@ const check = (ok, label) => {
 
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 } })
-// No JSPI: what Firefox and Safari have today.
+// No WebAssembly: what Safari has in Lockdown Mode.
 await context.addInitScript(() => {
-  for (const name of ['Suspending', 'promising']) {
-    try {
-      delete WebAssembly[name]
-    } catch { /* not configurable */ }
-    if (WebAssembly[name]) Object.defineProperty(WebAssembly, name, { value: undefined })
-  }
+  delete globalThis.WebAssembly
 })
 const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
@@ -56,12 +52,12 @@ await page.evaluate(() => {
 })
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
-check(await page.evaluate(() => typeof WebAssembly.Suspending !== 'function'), 'the page has no JSPI')
+check(await page.evaluate(() => typeof globalThis.WebAssembly === 'undefined'), 'the page has no WebAssembly')
 await page.click('#btn-sim')
 const toast = page.locator('.toast', { hasText: "This browser can't run the simulator" })
 await toast.waitFor({ timeout: 5000 }).catch(() => {})
 check(await toast.isVisible(), 'Simulate says this browser cannot run the simulator')
-check((await toast.isVisible()) && (await toast.innerText()).includes('Chrome or Edge'), 'and which browsers can')
+check((await toast.isVisible()) && (await toast.innerText()).includes('Chrome, Edge, Safari and Firefox'), 'and which browsers can')
 await page.waitForTimeout(500)
 check(!(await page.evaluate(() => window.openCodeBot.device.simulating)), 'and starts no simulator')
 check(!workers.some((u) => u.includes('worker')), `no simulator worker was started (${workers.join(', ') || 'none'})`)
