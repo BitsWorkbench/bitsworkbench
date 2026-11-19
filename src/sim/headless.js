@@ -19,18 +19,32 @@ import { recordedSounds } from '../../sim/tools/codex-sounds.mjs'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
 
+// Which MicroPython build: JSPI (runtime/mp/), or the Asyncify fallback
+// (runtime/mp-asyncify/) with OCB_SIM_VM=asyncify, so the suites can run the
+// build that browsers without JSPI get (src/sim/support.js).
+const ASYNCIFY = process.env.OCB_SIM_VM === 'asyncify'
+export const VM_DIR = ASYNCIFY ? 'mp-asyncify' : 'mp'
+const VM_NAME = ASYNCIFY ? 'micropython-asyncify' : 'micropython'
+const WASM = path.join(HERE, 'runtime', VM_DIR, `${VM_NAME}.wasm`)
+
+// The loader of the chosen build; `copy` gives a fresh copy of its module.
+let copies = 0
+export async function vmLoader(copy = false) {
+  const q = copy ? `?vm=${++copies}` : ''
+  const mod = await import(new URL(`./runtime/${VM_DIR}/${VM_NAME}.mjs${q}`, import.meta.url).href)
+  return (opts) => mod.loadMicroPython({ ...opts, url: WASM })
+}
+
 let loader = null
 async function loadMicroPython(opts) {
-  loader ??= (await import('./runtime/mp/micropython.mjs')).loadMicroPython
-  return loader({ ...opts, url: path.join(HERE, 'runtime/mp/micropython.wasm') })
+  loader ??= await vmLoader()
+  return loader(opts)
 }
 
 // For a group: each VM from its own copy of the loader module, whose
 // module-level state is then its own (see Engine's lockstep option).
-let copies = 0
 async function loadMicroPythonCopy(opts) {
-  const mod = await import(new URL(`./runtime/mp/micropython.mjs?vm=${++copies}`, import.meta.url).href)
-  return mod.loadMicroPython({ ...opts, url: path.join(HERE, 'runtime/mp/micropython.wasm') })
+  return (await vmLoader(true))(opts)
 }
 
 export async function loadEnvironment(id) {

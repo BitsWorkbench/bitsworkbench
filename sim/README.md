@@ -11,7 +11,8 @@ teacher uses it, in [TEACHERS.md](TEACHERS.md).
 |---|---|
 | `src/sim/runtime/engine.js` | MicroPython on simulated time: charging, pacing, pause, step, stop, the REPL |
 | `src/sim/runtime/worker.js` | the Web Worker: world and engine together; the page's commands in, frames out |
-| `src/sim/runtime/mp/` | the built MicroPython (committed; rebuilt by `npm run sim:runtime`) |
+| `src/sim/runtime/mp/` | the built MicroPython, JSPI (committed; rebuilt by `npm run sim:runtime`) |
+| `src/sim/runtime/mp-asyncify/` | the same MicroPython built with Asyncify, for browsers without JSPI (committed; same command) |
 | `src/sim/world/` | the world, with no DOM and no renderer: clock, rooms (`environment.js`: boxes, cylinders, raised floors), floor, line courses (`courses.js`), the CodeBot, CodeX and CodeAIR models, CodeX's screen and graphics (`screen.js`, `gfx.js`, its font), CodeAIR's flight controller (`crazyflie.js`), knocks for their sound (`hits.js`), maths and randomness |
 | `src/sim/python/common/` | the CircuitPython layer over MicroPython: `board`, `digitalio`, `analogio`, `pwmio`, `busio`, `microcontroller`, `time`, and Adafruit's `neopixel` |
 | `src/sim/python/radio/` | the radio module CodeX and CodeAIR share; under it `world/radio.js` (a board's radio), `world/infrared.js` (its infrared, under `python/common/pulseio.py`), `runtime/broadcast-air.js` (between workers and tabs) and `runtime/lockstep.js` (headless groups) |
@@ -78,7 +79,9 @@ node sim/tools/render-icons.mjs   # redraw the device icons (public/icons/dev-*.
 ```
 
 The MicroPython build only matters when `sim/runtime/` changes: its output is
-committed, so building the site needs no Emscripten. Node 24 or later (JSPI).
+committed, so building the site needs no Emscripten. It builds both the JSPI and the
+Asyncify MicroPython in one run. Node 24 or later (JSPI); `OCB_SIM_VM=asyncify node
+tests/sim.mjs` runs the simulator tests on the Asyncify build.
 
 ### CodeAIR flight
 

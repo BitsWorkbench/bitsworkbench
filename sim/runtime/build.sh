@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Builds the simulator's MicroPython (WebAssembly, JSPI) into src/sim/runtime/mp/.
+# Builds the simulator's MicroPython (WebAssembly) twice from one source: the
+# JSPI build into src/sim/runtime/mp/ and the Asyncify build, for browsers
+# without JSPI, into src/sim/runtime/mp-asyncify/ (sim/DESIGN.md, section 1).
 #
 # The output is committed, so building the app needs no Emscripten. Run this
 # only when the variant (sim/runtime/variant/), the port or py patch or the pinned
@@ -37,13 +39,34 @@ git apply "$HERE/py.patch"
 rm -rf ports/webassembly/variants/sim
 cp -r "$HERE/variant" ports/webassembly/variants/sim
 
-rm -rf ports/webassembly/build-sim   # the frozen manifest is not tracked as a dependency
 make -s -C mpy-cross -j8
 make -s -C ports/webassembly submodules
-make -s -C ports/webassembly VARIANT=sim -j8
-make -s -C ports/webassembly VARIANT=sim min
+# The version banner's date is the MicroPython commit's, not today's, so a
+# rebuild of unchanged sources gives the same bytes.
+SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+export SOURCE_DATE_EPOCH
 
-mkdir -p "$OUT"
-cp ports/webassembly/build-sim/micropython.min.mjs "$OUT/micropython.mjs"
-cp ports/webassembly/build-sim/micropython.wasm "$OUT/micropython.wasm"
-ls -l "$OUT"
+# Two builds from the one patched tree, differing only in how the VM suspends
+# (variant/mpconfigvariant.mk, SUSPEND): mp/ for JSPI browsers, mp-asyncify/
+# for the rest (src/sim/support.js chooses). The Asyncify files carry the word
+# in their names, which the bundle's file names keep, so the service worker can
+# leave them out of the precache (vite.config.js). Each build gets a stamp of
+# what it was built from; tests/sim.mjs checks the two stamps match.
+STAMP="micropython $MP_COMMIT
+port.patch $(sha256sum "$HERE/port.patch" | cut -c1-16)
+py.patch $(sha256sum "$HERE/py.patch" | cut -c1-16)
+variant $(cat "$HERE"/variant/* | sha256sum | cut -c1-16)
+emscripten $(emcc --version | head -1 | sed 's/.* \([0-9][0-9.]*\) .*/\1/')"
+for SUSPEND in jspi asyncify; do
+  BUILD=build-sim-$SUSPEND
+  DEST=$OUT NAME=micropython
+  [ "$SUSPEND" = jspi ] || { DEST=$OUT-$SUSPEND; NAME=micropython-$SUSPEND; }
+  rm -rf "ports/webassembly/$BUILD"   # the frozen manifest is not tracked as a dependency
+  make -s -C ports/webassembly VARIANT=sim SUSPEND=$SUSPEND BUILD=$BUILD -j8
+  make -s -C ports/webassembly VARIANT=sim SUSPEND=$SUSPEND BUILD=$BUILD min
+  mkdir -p "$DEST"
+  cp "ports/webassembly/$BUILD/micropython.min.mjs" "$DEST/$NAME.mjs"
+  cp "ports/webassembly/$BUILD/micropython.wasm" "$DEST/$NAME.wasm"
+  printf '%s\nsuspend %s\n' "$STAMP" "$SUSPEND" > "$DEST/BUILT_FROM.txt"
+  ls -l "$DEST"
+done

@@ -54,11 +54,28 @@ Pyodide is CPython, 30 times bigger, 80 times slower to start, and not the diale
 devices run. Brython (the old simulator) gave poor error lines and was slow. MicroPython
 matches the device, is small, and is as fast as CPython here.
 
-Of MicroPython's own builds, the JSPI one (upstream's `browser` variant) is 5.7 times faster
-than the Asyncify one (`pyscript`). JSPI ships in Chrome and Edge 137 and later (May 2025),
-which covers supported Chromebooks. Firefox and Safari are shipping it during 2026; until
-they have it, those browsers get the same design on an Asyncify build (slower, still
-correct).
+JSPI ships in Chrome and Edge 137 and later (May 2025), which covers supported Chromebooks.
+Browsers without it (Safari, so every iPad, and Firefox) get the same design on an Asyncify
+build of the same VM: `sim/runtime/build.sh` builds both from one patched MicroPython tree,
+differing only in `SUSPEND` (`variant/mpconfigvariant.mk`), into `src/sim/runtime/mp/`
+(JSPI) and `src/sim/runtime/mp-asyncify/`. Asyncify cannot unwind through wasm exception
+handling, so its build takes longjmp through Emscripten's JS trampolines; everything else,
+including the port's rule that only the outermost async call may suspend, is shared. Each
+build writes `BUILT_FROM.txt`, and `tests/sim.mjs` checks the two match the sources.
+
+Measured (Node 24, Linux, the `sim` variant both ways):
+
+| | JSPI build | Asyncify build |
+|---|---|---|
+| wasm (gzip) | 393 KB (163 KB) | 1,187 KB (513 KB) |
+| A CPU-bound program, through the engine | 6.1 s | 4.9 s |
+| 5,000 `time.sleep(0.001)`, each a suspension | 148 ms | 215 ms |
+
+Asyncify instruments most of the interpreter (it calls through function pointers), which
+triples the wasm. In V8 its interpreted Python is no slower (upstream's `pyscript` Asyncify
+build is 5.7 times slower than its `browser` JSPI build, but ours differs from both); each
+suspension costs about half as much again. `tests/sim.mjs` runs on either build
+(`OCB_SIM_VM=asyncify`), and CI runs it on both.
 
 ### Running without blocking the page
 
@@ -449,8 +466,8 @@ once it has been chosen.
 
 ## 9. Risks
 
-- **JSPI outside Chromium.** Firefox and Safari fall back to the Asyncify build, about 5.7
-  times slower but correct. Checked again before release.
+- **JSPI outside Chromium.** Firefox and Safari fall back to the Asyncify build (section 1):
+  three times the download, and its speed and memory on an iPad not yet measured on one.
 - **Calibration.** CodeBot drives and reads lines as the physical CB3 should, from its
   hardware, not as CodeSpace's older simulated CodeBot does; a lesson tuned on that one may
   need its powers or times adjusted. Its assumptions ("Calibration" lists them), the

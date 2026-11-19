@@ -1,3 +1,15 @@
+diff --git a/ports/webassembly/api.js b/ports/webassembly/api.js
+index 8c23be5..8737177 100644
+--- a/ports/webassembly/api.js
++++ b/ports/webassembly/api.js
+@@ -178,6 +178,7 @@ export async function loadMicroPython(options) {
+                 "number",
+                 ["pointer", "number", "pointer"],
+                 [buf, len, value],
++                { async: true },
+             );
+             Module._free(buf);
+             const ret = proxy_convert_mp_to_js_obj_jsside_with_free(value);
 diff --git a/ports/webassembly/mpconfigport.h b/ports/webassembly/mpconfigport.h
 index 63be05f..dcee9d5 100644
 --- a/ports/webassembly/mpconfigport.h
@@ -68,3 +80,15 @@ index 3935068..7d6ca46 100644
  extern int mp_interrupt_char;
  
  int mp_hal_get_interrupt_char(void) {
+diff --git a/ports/webassembly/objpyproxy.js b/ports/webassembly/objpyproxy.js
+index c90db65..4eb5605 100644
+--- a/ports/webassembly/objpyproxy.js
++++ b/ports/webassembly/objpyproxy.js
+@@ -246,6 +246,7 @@ class PyProxyThenable {
+                 "null",
+                 ["number", "pointer"],
+                 [this._ref, values],
++                { async: true },
+             );
+             return proxy_convert_mp_to_js_obj_jsside_with_free(values);
+         } catch (error) {

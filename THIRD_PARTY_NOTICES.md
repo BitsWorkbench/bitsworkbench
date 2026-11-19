@@ -11,8 +11,9 @@ CodeAIR flight.
 
 ### MicroPython, as WebAssembly
 
-- **Files:** `src/sim/runtime/mp/micropython.wasm` and `micropython.mjs`, the
-  simulator's Python.
+- **Files:** `src/sim/runtime/mp/micropython.wasm` and `micropython.mjs`, and
+  `src/sim/runtime/mp-asyncify/micropython-asyncify.wasm` and `.mjs`, the simulator's
+  Python (two builds of one source).
 - **Built from:** MicroPython's webassembly port at commit `412a7e6`, with this
   repository's patches (`sim/runtime/port.patch`, `py.patch`) applied by
   `sim/runtime/build.sh`.
@@ -46,7 +47,8 @@ THE SOFTWARE.
 
 ### Emscripten's runtime and C library, in the MicroPython build
 
-- **Files:** in `src/sim/runtime/mp/micropython.mjs` and `micropython.wasm`.
+- **Files:** in the loaders and wasm in `src/sim/runtime/mp/` and
+  `src/sim/runtime/mp-asyncify/`.
 - **Built with:** Emscripten 7.0.0.
 - **Licence:** Emscripten is under the MIT licence and the University of Illinois/NCSA
   Open Source License; its licence file, as Emscripten ships it:
