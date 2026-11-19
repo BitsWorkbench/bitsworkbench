@@ -18,6 +18,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
 - A real Python editor (CodeMirror): colours, auto-indent, undo, find and replace,
   with the blocks' palette beside it as Python to drag in or click.
 - My blocks: save a grey Python block to your own palette category.
+- For small screens, the » / « button at the palette's foot shrinks both palettes
+  to their colours and emoji, and back.
 - Files: programs are `.py` files that save themselves, kept in the browser or, in
   Chrome and Edge, in a folder on the computer. Make, rename and delete files and
   folders; Run also puts a program's other `.py` files on the board, so it can

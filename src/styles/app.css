@@ -278,6 +278,25 @@ kbd {
 .editor-main { position: relative; flex: 1 1 auto; min-width: 0; }
 .blockly-root { position: absolute; inset: 0; }
 
+/* The palettes' size switch, in the room their foot leaves. Small, each
+   category shows its colour and its emoji (every name starts with one): a
+   wide word space pushes the rest of the name past the clip, whatever the
+   emoji's width, and screen readers still have it. */
+.palette-size {
+  position: absolute; left: 10px; bottom: 12px; z-index: 76; /* over Blockly's toolbox (70) */
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid var(--line-strong); background: var(--surface);
+  font: 900 20px/1 var(--font-display); color: var(--ink-soft); cursor: pointer;
+}
+.palette-size:hover { border-color: var(--green); color: var(--green-deep); }
+.editor-main[data-palette='small'] .blocklyToolboxCategory { padding-right: 8px !important; }
+.editor-main[data-palette='small'] .blocklyToolboxCategoryLabel,
+.editor-main[data-palette='small'] .py-cat {
+  width: 1.6em; padding-left: 8px; box-sizing: content-box;
+  overflow: hidden; white-space: nowrap; text-overflow: clip; word-spacing: 20em;
+}
+.editor-main[data-palette='small'] .py-cat { padding-right: 8px; }
+
 /* The editor bar, over the blocks or the Python: the program's file (which
    opens the file browser) on the left, the blocks/Python switch on the right. */
 .editor-bar {
