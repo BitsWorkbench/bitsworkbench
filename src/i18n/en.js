@@ -516,6 +516,8 @@ export default {
   'sim.cannotTitle': "{device} can't be simulated yet",
   'sim.browserTitle': "This browser can't run the simulator",
   'sim.browserDetail': "The simulator needs WebAssembly, which this browser lacks or has turned off (Safari's Lockdown Mode turns it off). It runs in current Chrome, Edge, Safari and Firefox. In this browser you can still build programs and see their Python.",
+  'sim.noViewTitle': "This browser can't draw the simulator",
+  'sim.noViewDetail': 'The simulator draws its boards with WebGL, which this browser has turned off or cannot use on this computer. Turning on hardware acceleration in the browser settings often brings it back. You can still build programs and see their Python.',
   'sim.thatDevice': 'That device',
   'sim.starting': 'Starting the simulator…',
   'sim.stoppedTitle': 'The simulator stopped',

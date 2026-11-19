@@ -61,6 +61,24 @@ jobs:
           OCB_SIM_VM=asyncify node tests/sim.mjs
           OCB_SIM_VM=asyncify node tests/sim-ui.mjs
 
+      # Safari's engine and Firefox, which have no JSPI, for real (retrying the
+      # system libraries, as for Chromium above).
+      - name: Install WebKit and Firefox
+        run: |
+          npx playwright install webkit firefox
+          for attempt in 1 2 3; do
+            npx playwright install-deps webkit firefox && exit 0
+            echo "install-deps failed (attempt $attempt), retrying"
+            sleep $((attempt * 10))
+          done
+          exit 1
+
+      - name: Simulator in WebKit and Firefox, and on an iPad's screen
+        run: |
+          xvfb-run -a node tests/sim-engines.mjs
+          OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+          OCB_ENGINES=chromium OCB_SIM_VM=asyncify OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+
       # The tested bundle, for a preview on Firebase (the `preview` job below).
       - if: vars.FIREBASE_PROJECT_ID != ''
         uses: actions/upload-artifact@v4

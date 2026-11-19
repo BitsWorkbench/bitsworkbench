@@ -86,20 +86,15 @@ export class SimDevice extends EventTarget {
 
     // A click on the board names a part: the `pick` event, { detail: name }.
     const onPick = (name) => this.dispatchEvent(new CustomEvent('pick', { detail: name }))
-    if (this.viewHost) {
-      if (kind.view === 'codex') {
-        // CodeX stands in the showroom; the view presses its keys
-        const [{ SimView }, { CODEX_KEYS }] = await Promise.all([import('./view/view.js'), import('./view/codex-figure.js')])
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
-        await this.view.loadRoom(kind.room).catch((err) => console.warn('room', err))
-      } else {
-        // a robot in a room: a click on its buttons presses them; the arrow
-        // keys stay the camera's
-        const { SimView } = await import('./view/view.js')
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
-        this.view.setCamera(this.cameraMode)
-        await this.view.loadRoom(room).catch((err) => console.warn('room', err))
-      }
+    try {
+      await this._openView(kind, room, assetsBase, onPick)
+    } catch (err) {
+      // No WebGL (turned off, or a machine without a GPU that allows it): the
+      // view cannot be drawn, so say so rather than starting forever.
+      console.error(err)
+      await this.disconnect()
+      this._notice('warn', t('sim.noViewTitle'), t('sim.noViewDetail'))
+      return false
     }
     if (this.view) {
       const keys = kind.view === 'codex'
@@ -118,6 +113,24 @@ export class SimDevice extends EventTarget {
     this._emitText(`\x1b[32m${hello}\x1b[0m\r\n`)
     this._setState(State.READY, t('sim.ready'))
     return true
+  }
+
+  async _openView(kind, room, assetsBase, onPick) {
+    if (this.viewHost) {
+      if (kind.view === 'codex') {
+        // CodeX stands in the showroom; the view presses its keys
+        const [{ SimView }, { CODEX_KEYS }] = await Promise.all([import('./view/view.js'), import('./view/codex-figure.js')])
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
+        await this.view.loadRoom(kind.room).catch((err) => console.warn('room', err))
+      } else {
+        // a robot in a room: a click on its buttons presses them; the arrow
+        // keys stay the camera's
+        const { SimView } = await import('./view/view.js')
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
+        this.view.setCamera(this.cameraMode)
+        await this.view.loadRoom(room).catch((err) => console.warn('room', err))
+      }
+    }
   }
 
   async disconnect() {

@@ -218,6 +218,49 @@ simulator works offline after that, in the gymnasium. The other rooms
 To check on a real Chromebook: the frame rate and resolution the view
 settles at, and the first visit on a school network.
 
+## Safari, iPad and Firefox
+
+Without JSPI the simulator runs the Asyncify build of MicroPython (`sim/DESIGN.md`,
+section 1). `tests/sim-engines.mjs` runs it in Playwright's WebKit (Safari's engine, and
+every iPad browser's) and Firefox: the build chosen, sleep, `input()`, a button wait, Stop
+in a sleep and in `input()`, CodeX's `audio.mp3` waiting out its recording, CodeAIR taking
+off and Stop landing it, the sound running after Simulate, WebGL; with `OCB_DEVICE` an
+iPad's screen and touch (a tap on the toolbox; a finger dragged on the 3D view, with
+`OCB_ENGINES=chromium`). CI runs it.
+
+```bash
+xvfb-run -a node tests/sim-engines.mjs                                  # WebKit and Firefox
+OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+```
+
+Measured on a development laptop (2026-11-19; software GL; Chromium's JSPI for comparison):
+
+| | Chromium, JSPI | Chromium, Asyncify | WebKit 26 | Firefox 142 |
+|---|---|---|---|---|
+| Extra download, first Simulate (gzip) | none | 544 KB | 544 KB | 544 KB |
+| First program, Run to output | 40 ms | 137 ms | 101 ms | 87 ms |
+| CPU-bound program through the simulator, flat out | 1.0 s | 1.6 s | 3.3 s | 6.9 s |
+| The same, MicroPython alone | | 1.1 s | 1.6 s | 5.6 s |
+| Busy program, motors on, simulated seconds per wall second | 1.00 | 1.00 | 0.44 to 0.72 | 0.97 |
+
+WebKit keeps up with a busy program alone (1.01) and with a sleeping one with the motors on
+(1.01); a busy program with the motors on falls behind, so the world's physics in WebKit's
+JavaScript is the cost there, not the Asyncify build alone. The program and the world stay
+in step; on a slow device they run slower than real time together.
+
+What only a real iPad shows (for whoever tests one; Safari on iPadOS 17 or later):
+- Simulate, then Run CodeBot's starter project: it drives, at the pace of the clock.
+- A busy program with the motors on (`while True:` with no sleep): does the robot move at
+  its usual speed, or in slow motion? Try an older iPad if there is one.
+- Sound: CodeBot's motors and a CodeX `audio.mp3` heard after Simulate is tapped; and with
+  the ringer switch or silent mode on (Safari then silences web audio).
+- Touch: a finger turns the 3D view and two fingers zoom; blocks drag from the toolbox to
+  the workspace and snap.
+- Three boards on the boards page at once for a few minutes, then back to the app: no
+  reload, no "a problem repeatedly occurred" (Safari's memory limit).
+- Switch to another app and back while a program runs: it goes on (or is paused) cleanly.
+- Offline: after the simulator has run once, turn on Airplane Mode, reload, Simulate.
+
 ## Adding a device
 
 1. Its model in `src/sim/world/` (a class with `step(dt)` and `snapshot()`).
