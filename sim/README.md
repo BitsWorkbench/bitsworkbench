@@ -250,8 +250,24 @@ in step; on a slow device they run slower than real time together.
 
 What only a real iPad shows (for whoever tests one; Safari on iPadOS 17 or later):
 - Simulate, then Run CodeBot's starter project: it drives, at the pace of the clock.
-- A busy program with the motors on (`while True:` with no sleep): does the robot move at
-  its usual speed, or in slow motion? Try an older iPad if there is one.
+- Real-time pace with the motors on (WebKit on a laptop measured 0.44 to 0.72 of real time):
+  run this on CodeBot and time it with a stopwatch from Run to `done`. 30 s is real time;
+  60 s is half. Note the iPad's model, and try an older iPad if there is one.
+
+  ```python
+  from botcore import *
+  import time
+  motors.enable(True)
+  motors.run(LEFT, 40)
+  motors.run(RIGHT, 60)
+  t = time.monotonic()
+  n = 0
+  while time.monotonic() - t < 30:
+      n += 1
+  motors.run(LEFT, 0)
+  motors.run(RIGHT, 0)
+  print('done')
+  ```
 - Sound: CodeBot's motors and a CodeX `audio.mp3` heard after Simulate is tapped; and with
   the ringer switch or silent mode on (Safari then silences web audio).
 - Touch: a finger turns the 3D view and two fingers zoom; blocks drag from the toolbox to
