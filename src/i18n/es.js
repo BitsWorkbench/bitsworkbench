@@ -514,6 +514,8 @@ export default {
   'sim.cannotTitle': '{device} todavía no se puede simular',
   'sim.browserTitle': 'Este navegador no puede ejecutar el simulador',
   'sim.browserDetail': 'El simulador necesita WebAssembly, que este navegador no tiene o tiene desactivado (el modo de aislamiento de Safari lo desactiva). Funciona en las versiones actuales de Chrome, Edge, Safari y Firefox. En este navegador aún puedes crear programas y ver su Python.',
+  'sim.noViewTitle': 'Este navegador no puede dibujar el simulador',
+  'sim.noViewDetail': 'El simulador dibuja las placas con WebGL, que este navegador tiene desactivado o no puede usar en esta computadora. Activar la aceleración por hardware en la configuración del navegador suele recuperarlo. Aún puedes crear programas y ver su Python.',
   'sim.thatDevice': 'Ese dispositivo',
   'sim.starting': 'Iniciando el simulador…',
   'sim.stoppedTitle': 'El simulador se detuvo',

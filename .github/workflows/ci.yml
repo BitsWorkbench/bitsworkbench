@@ -52,15 +52,6 @@ jobs:
 
       - run: npm test
 
-      # The simulator again on the Asyncify build of MicroPython, the one
-      # browsers without JSPI (Safari, Firefox) run (sim/DESIGN.md, section 1).
-      # The browser suite takes JSPI away from the page, which then chooses the
-      # Asyncify build itself.
-      - name: Simulator on the Asyncify build
-        run: |
-          OCB_SIM_VM=asyncify node tests/sim.mjs
-          OCB_SIM_VM=asyncify node tests/sim-ui.mjs
-
       # The tested bundle, for a preview on Firebase (the `preview` job below).
       - if: vars.FIREBASE_PROJECT_ID != ''
         uses: actions/upload-artifact@v4
@@ -81,6 +72,73 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-screenshots
+          path: tests/screenshots/
+          if-no-files-found: ignore
+
+  # The simulator as browsers without JSPI run it (Safari, so every iPad, and
+  # Firefox): the Asyncify build of MicroPython (sim/DESIGN.md, section 1). Its
+  # own job, beside build-and-test, so neither waits on the other.
+  without-jspi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Playwright's own image for the version package-lock.json pins (keep the
+    # two in step): Chromium, WebKit and Firefox with their system libraries
+    # and xvfb, so nothing comes from the Ubuntu mirror, whose slow days took
+    # WebKit's libraries past six minutes.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --ipc=host
+    env:
+      SIM_FLIGHT: 1
+      HOME: /root        # Firefox, as root in the container, wants a home of its own
+      OCB_URL: http://127.0.0.1:4173/
+    steps:
+      # The image has no git, which the build's CodeAIR flight library is fetched with.
+      - name: Install git
+        timeout-minutes: 3
+        run: apt-get update -q && apt-get install -y -q --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # One server for the browser tests, on 127.0.0.1: in the container,
+      # "localhost" is both 127.0.0.1 and ::1, and a server the tests start on
+      # it themselves answers on one while they ask on the other.
+      - name: Serve the build
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:4173/ && exit 0; sleep 0.5; done
+          cat /tmp/preview.log; exit 1
+
+      # The simulator suites with the Asyncify build: headless, then in the app,
+      # where the browser suite takes JSPI away from the page, which then
+      # chooses the Asyncify build itself.
+      - name: Simulator on the Asyncify build
+        run: |
+          OCB_SIM_VM=asyncify node tests/sim.mjs
+          OCB_SIM_VM=asyncify node tests/sim-ui.mjs
+
+      # Safari's engine and Firefox, which have no JSPI, for real; then WebKit
+      # and Chromium's fallback on an iPad's screen.
+      - name: Simulator in WebKit and Firefox, and on an iPad's screen
+        run: |
+          xvfb-run -a node tests/sim-engines.mjs
+          OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+          OCB_ENGINES=chromium OCB_SIM_VM=asyncify OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+
+      - name: Keep the test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-without-jspi
           path: tests/screenshots/
           if-no-files-found: ignore
 

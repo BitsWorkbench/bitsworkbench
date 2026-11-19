@@ -71,6 +71,30 @@ check(!(await page.locator('#bd-add').isVisible()), 'and offers none to add')
 check((await page.locator('[data-i18n="boards.intro"]').innerText()).includes("can't run the simulator"), 'it says why')
 check(await page.evaluate(() => localStorage.getItem('opencodebot-boards')?.includes('print(1)')), 'the boards saved here are kept')
 
+// WebAssembly, but no WebGL (turned off, or no GPU it may use): Simulate says
+// the simulator cannot be drawn, rather than starting forever.
+console.log('No WebGL')
+{
+  const noGL = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+  await noGL.addInitScript(() => {
+    const get = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+      return /webgl/.test(type) ? null : get.call(this, type, ...rest)
+    }
+    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.device.v1', 'codebot')
+  })
+  const p = await noGL.newPage()
+  await p.goto(`${BASE}?device=loopback&lang=en`, { waitUntil: 'networkidle' })
+  await p.waitForFunction(() => !!window.openCodeBot)
+  await p.click('#btn-sim')
+  const said = p.locator('.toast', { hasText: "This browser can't draw the simulator" })
+  await said.waitFor({ timeout: 10000 }).catch(() => {})
+  check(await said.isVisible(), 'Simulate says this browser cannot draw the simulator')
+  check(await p.evaluate(() => window.openCodeBot.device.state !== 'connecting' && !window.openCodeBot.device.simulating), 'and is not left starting')
+  await noGL.close()
+}
+
 await browser.close()
 server?.kill()
 
