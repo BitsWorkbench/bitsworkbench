@@ -65,7 +65,8 @@ for (const name of ENGINES) {
     const parts = partsOf(pack.board)
     const context = await browser.newContext(DEVICE ?? { viewport: { width: 1366, height: 900 } })
     const page = await context.newPage()
-    page.on('pageerror', (e) => problems.push(`${pack.id}: page error: ${e.message}`))
+    // WebKit reports a ResizeObserver that settles over two frames as an error; it is not one (as in tests/sim-engines.mjs).
+    page.on('pageerror', (e) => { if (!/^ResizeObserver loop/.test(e.message)) problems.push(`${pack.id}: page error: ${e.message}`) })
     await page.addInitScript((board) => {
       if (sessionStorage.getItem('lpu')) return
       sessionStorage.setItem('lpu', '1')
