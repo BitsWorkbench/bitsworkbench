@@ -6,6 +6,10 @@ dev-dist/
 tests/screenshots/
 .vite/
 
+# Firebase's command line: its deploy cache and logs
+.firebase/
+firebase-debug.log
+
 # Simulator: the MicroPython checkout and other build trees
 sim/build/
 public/sim-assets/
