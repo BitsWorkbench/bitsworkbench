@@ -189,16 +189,23 @@ the page remembers its boards and programs in this browser.
 
 `npm run perf` (after a build) checks the budget for a low-end school
 Chromebook, roughly: the page's CPU throttled 4x and software GL, which is
-slower than any real GPU. CI runs it as a report. On a development laptop (2026-11-11):
+slower than any real GPU. CI runs it as a report. On a cloud machine (2026-11-19):
 
 | | Budget | CodeBot | CodeAIR |
 |---|---|---|---|
-| First visit, gzip | 600 KB | 398 KB | 398 KB |
-| First visit, to load | 3 s | 0.9 s | 0.9 s |
-| Simulator start, gzip | 1,400 KB | 1,238 KB | 1,311 KB |
-| Simulator start, to ready | 5 s | 1.8 s | 1.7 s |
-| Frames a second in the gym, moving | 20 | 25 | 24 |
-| Simulated time per wall second | 0.95 | 0.97 | 1.00 |
+| First visit, gzip | 600 KB | 720 KB | 720 KB |
+| First visit, to load | 3 s | 1.2 s | 1.2 s |
+| Simulator start, gzip | 1,400 KB | 1,292 KB | 1,397 KB |
+| Simulator start, to ready | 5 s | 1.7 s | 1.8 s |
+| Frames a second in the gym, moving | 20 | 44 | 31 |
+| Simulated time per wall second | 0.95 | 1.00 | 1.00 |
+
+The first visit is over its budget: Blockly, CodeMirror, markdown-it and the
+terminal all load before the page is drawn (the app's script is 484 KB gzip, the
+terminal's 127 KB). CodeMirror is needed only once a program is shown as Python,
+and markdown-it only once a mission pack is opened, so loading each when first
+needed is the next step. Blockly's Dart, JavaScript, Lua and PHP generators no
+longer load at all (`src/blocks/no-generator.js`).
 
 What keeps it there:
 - The device models are built for it (`sim/tools/build-models.mjs`): plain
