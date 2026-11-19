@@ -1,20 +1,21 @@
 # Codacious
 
-**A light, friendly, block-based coding playground for Firia Labs hardware.**
+**Firia Labs' open-source editor and simulator for CodeBot, CodeX and CodeAIR: blocks and Python.**
 
 (Formerly LabBlocks, and before that OpenCodeBot.)
 
 Codacious lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
-some blocks together, and press Run. No install, no accounts, no setup: just a
-web page and a USB cable.
+some blocks together, and press Run. No board yet? Press Simulate and the
+program runs on a simulated one. No install, no accounts, no setup: just a
+web page, and a USB cable when there is a board.
 
 **▶ [Open Codacious](https://firialabs.github.io/opencodebot/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
-It is a gentle on-ramp, not a replacement: everything it makes is real
-CircuitPython, and the Python is one click away, in place of the blocks. When
-a class is ready for the real thing, [CodeSpace](https://firialabs.com) is
-waiting for them.
+Everything it makes is real CircuitPython, and the Python is one click away,
+in place of the blocks, for the class that is ready to type. Learn has short
+examples for each board and the first missions of Firia Labs' courses, free.
+Schools already teaching with [CodeSpace](https://firialabs.com) keep it.
 
 > Built with ❤️ for the many brilliant teachers who would like to try computer
 > science but do not (yet) want to look at a text editor.
@@ -28,7 +29,7 @@ waiting for them.
 | 🔌 **Plug and play** | Detects which board you plugged in and shows only the blocks it can actually run. |
 | 🧩 **Friendly blocks** | Chunky, colourful, emoji-labelled blocks for screens, lights, motors, flight, sound, sensors and radio. |
 | 🐍 **Real Python** | Every block maps to the documented [Firia Labs API](https://docs.firialabs.com/). The 🧩 Blocks / 🐍 Python switch over the program shows it either way, and the Python is always yours to edit in a real editor (colours, auto-indent, undo, find and replace), with the blocks' palette beside it as Python to drag in. Switch back and your Python becomes blocks again; any Python with no block of its own stays as it is, in a grey Python block, and a grey mark beside the line says so while you type. Save a grey Python block to ⭐ My blocks (right-click it) to use it again in any project; your library stays in this browser. |
-| 💬 **A real terminal** | A full REPL to the device — tab completion, arrow-key history and colour all work, because bytes pass straight through. |
+| 💬 **A real terminal** | A full REPL to the device: tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Every program is a Python `.py` file, even one made of blocks, and it saves itself as you go. Click its name over the program for your files: open another, make files and folders, rename or delete them. Files are kept in this browser, or in Chrome and Edge in a folder on your computer. A file made of blocks opens again just as you left it. Run also puts the other `.py` files in your program's folder on the board (or the simulator), so `import safety` finds your `safety.py`; never a name the board needs itself, such as `boot.py` or a library module. |
 | 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. Then mission packs ([the format](docs/mission-packs.md)): open a pack file and it shows in a tutorial pane at the right, a mission at a time, kept in this browser for next time. |
@@ -62,7 +63,7 @@ Codacious talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).
-Safari and Firefox can still build blocks and download the Python — they just
+Safari and Firefox can still build blocks and download the Python; they just
 cannot connect to a device.
 
 ## Running it yourself
@@ -72,7 +73,7 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-To build the static site (it is just files — host it anywhere that serves
+To build the static site (it is just files: host it anywhere that serves
 HTTPS):
 
 ```bash
@@ -82,12 +83,12 @@ npm run preview  # serve dist/ locally
 
 `npm test` runs every suite in `tests/`, none of which need hardware. Among them:
 
-- **`tests/protocol.mjs`** — the debugger-output filter, and a round-trip of the
+- **`tests/protocol.mjs`**: the debugger-output filter, and a round-trip of the
   file transfer through a real Python interpreter, byte-comparing what the
   device would have written against the original program.
-- **`tests/smoke.mjs`** — builds every block in every toolbox in a headless
+- **`tests/smoke.mjs`**: builds every block in every toolbox in a headless
   browser and checks each one generates Python.
-- **`tests/subpath.mjs`** — serves `dist/` from a sub-path the way GitHub Pages
+- **`tests/subpath.mjs`**: serves `dist/` from a sub-path the way GitHub Pages
   does, then pulls the network and reloads, so the "works offline" promise
   cannot quietly break.
 - **`tests/new-build.mjs`**: after a deploy, a page still on the build its
@@ -135,13 +136,13 @@ root of a domain or from a sub-path such as
    repository unless the organisation is on GitHub Enterprise Cloud. Until it
    is, the deploy job skips quietly rather than failing red.
 2. Turn Pages on under **Settings → Pages → Build and deployment → Source:
-   GitHub Actions**. The workflow cannot do this for itself — creating a Pages
+   GitHub Actions**. The workflow cannot do this for itself: creating a Pages
    site needs admin access and `GITHUB_TOKEN` only reaches write.
 
 After that it is hands-off. There is no build step to configure, because Pages
 serves a pre-built artifact rather than running Jekyll.
 
-Hosting it somewhere else is just as easy — copy `dist/` onto any HTTPS host.
+Hosting it somewhere else is just as easy: copy `dist/` onto any HTTPS host.
 Web Serial needs a secure context, so `https://` (or `http://localhost`) is
 required; a site served over plain `http://` will load but will not connect to
 a device.
@@ -245,8 +246,15 @@ keeps the English placeholders.
 
 ## Contributing
 
-Yes please — especially new blocks. See [CONTRIBUTING.md](CONTRIBUTING.md); adding
+Yes please, especially new blocks. See [CONTRIBUTING.md](CONTRIBUTING.md); adding
 a block is about fifteen lines in one file.
+
+## Releases
+
+What changed in each release is in [CHANGELOG.md](CHANGELOG.md); how a release is
+made and tagged is in [RELEASING.md](RELEASING.md). The site always serves the
+latest `main`; a release is a named, tested point on it. Security problems: see
+[SECURITY.md](SECURITY.md).
 
 ## Licence
 
