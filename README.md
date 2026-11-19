@@ -42,7 +42,8 @@ and sound; the screen goes full screen for a class, with the arrow keys and A
 and B as its buttons) or CodeAIR (it flies; the published site is built with
 CodeAIR flight, see [sim/README.md](sim/README.md)), in a gymnasium, a classroom, a
 cafeteria or on an auditorium's stage. The terminal is a live Python prompt.
-It runs in any modern browser, no cable needed. For teachers:
+No cable needed: it runs in Chrome or Edge 137 or later, on a computer or
+Chromebook (see "Browser support"). For teachers:
 [sim/TEACHERS.md](sim/TEACHERS.md). How it works:
 [sim/README.md](sim/README.md).
 
@@ -63,8 +64,10 @@ Codacious talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).
-Safari and Firefox can still build blocks and download the Python; they just
-cannot connect to a device.
+The simulator needs WebAssembly's JavaScript Promise Integration (JSPI), which
+Chrome and Edge have from version 137. Safari and Firefox can still build blocks
+and show the Python; they cannot connect to a device, and until they have JSPI,
+pressing Simulate says so rather than starting (`src/sim/support.js`).
 
 ## Running it yourself
 
