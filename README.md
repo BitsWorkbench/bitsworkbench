@@ -32,7 +32,7 @@ Schools already teaching with [CodeSpace](https://firialabs.com) keep it.
 | 💬 **A real terminal** | A full REPL to the device: tab completion, arrow-key history and colour all work, because bytes pass straight through. |
 | ✈️ **Works offline** | Once the page has loaded it keeps working with no internet at all. Nothing is uploaded anywhere. |
 | 💾 **Nothing to lose** | Every program is a Python `.py` file, even one made of blocks, and it saves itself as you go. Click its name over the program for your files: open another, make files and folders, rename or delete them. Files are kept in this browser, or in Chrome and Edge in a folder on your computer. A file made of blocks opens again just as you left it. Run also puts the other `.py` files in your program's folder on the board (or the simulator), so `import safety` finds your `safety.py`; never a name the board needs itself, such as `boot.py` or a library module. |
-| 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. Then mission packs ([the format](docs/mission-packs.md)): open a pack file and it shows in a tutorial pane at the right, a mission at a time, kept in this browser for next time. |
+| 🧭 **Learn** | The top bar's first button. Two quick starts for each board, then more examples folded beneath: five or six short programs per board, easiest first, each with a goal. Open one and it becomes a new file; the one you had stays. Then mission packs ([the format](docs/mission-packs.md)): open a pack file and it shows a mission at a time, kept in this browser for next time. While a pack is open, a narrow rail at the right edge shows the mission and its steps (green once their goals are met); 🧭 on the rail, or a step, slides the mission out as a drawer over the simulator and terminal, and Run puts it away so the simulator is in view. Made for small screens: Chromebooks and iPads. |
 
 ## No device? Simulate one
 
@@ -214,7 +214,8 @@ src/
     regex.js           a pack's regexes: risky shapes refused, every test time-boxed in a worker
     trek.js            an objective's CodeTrek: captions, and its chunks as Python palette cards
     trek-blocks.js     the CodeTrek category in the block palette, its chunks made into blocks
-    learn.js           the pane in the app: opening packs, its divider, reopening after a reload
+    rail.js            the mission rail at the right edge: the drawer's button, the mission's steps
+    learn.js           packs in the app: opening them, the drawer and rail, reopening after a reload
   ui/          terminal, toasts, dialogs, the file browser and the app shell
   i18n/        every string the app shows, one table per language
 ```

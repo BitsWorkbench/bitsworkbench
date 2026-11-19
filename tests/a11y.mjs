@@ -251,6 +251,10 @@ await page.keyboard.press('Escape')
   await page.click('#learn-pane [data-learn="next"]')
   await page.click('#learn-pane .learn-answer >> text=That')
   await audit('tutorial pane, a quiz with a wrong answer picked')
+  await page.click('#learn-rail .rail-toggle')
+  await page.waitForFunction(() => document.querySelector('.workarea').dataset.drawer === 'closed')
+  await audit('mission rail, the drawer put away')
+  await page.click('#learn-rail .rail-toggle')
   await page.click('#learn-pane [data-learn="close"]')
 }
 
