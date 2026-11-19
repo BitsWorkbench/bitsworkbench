@@ -156,6 +156,8 @@ export default {
   'files.boardFromFile': 'Este programa es para un {device}, así que se muestran sus bloques.',
   'palette.label': 'Paleta de Python',
   'palette.hint': 'Arrástralo a tu programa, o presiona Enter para agregarlo donde está el cursor.',
+  'palette.smaller': 'Hacer la paleta más pequeña',
+  'palette.bigger': 'Mostrar los nombres de la paleta',
   'editor.find': 'Buscar',
   'editor.replace': 'Reemplazar',
   'editor.next': 'siguiente',

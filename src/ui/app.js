@@ -25,6 +25,7 @@ import { FilesPanel } from './files-panel.js'
 import { Learn } from '../learn/learn.js'
 import { installCodeTrek } from '../learn/trek-blocks.js'
 import { trekSnippets } from '../learn/trek.js'
+import { installPaletteSize } from './palette-size.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -89,6 +90,8 @@ export class App {
     this.device.sim.addEventListener('pick', (e) => this.learn.pick(e.detail))
     this._bindWorkspace()
     this._bindTextMode()
+    // Both palettes small or full, for small screens.
+    installPaletteSize({ root: document.querySelector('.editor-main'), button: $('btn-palette-size'), onChange: () => this.workspace.resize() })
 
     if (!this.workspace.restore() && this.pickedTarget) {
       this.workspace.loadProject(STARTER_PROJECTS[this.pickedTarget] || { blocks: {} })

@@ -159,6 +159,8 @@ export default {
   'files.savedDetail': '{file} is saved in {folder}.',
   'palette.label': 'Python palette',
   'palette.hint': 'Drag it into your program, or press Enter to add it where the cursor is.',
+  'palette.smaller': 'Make the palette smaller',
+  'palette.bigger': 'Show the palette’s names',
   // The Python editor's own panels (find and replace, folding)
   'editor.find': 'Find',
   'editor.replace': 'Replace',
