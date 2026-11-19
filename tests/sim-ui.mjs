@@ -906,21 +906,39 @@ with recorder:
       }
       return last
     }
-    // A press lands on the key, or it is let go and aimed again: the keys are 4 mm, and a board
-    // in flight drifts between reading where its key is and the mouse going down there. The
-    // view's own record of the keys held down says whether it landed.
+    // A press lands on the key, or it is let go and aimed again. The view's own record of the
+    // keys held down says whether it landed; a miss records what was under the mouse.
     const isDown = (k) => page.evaluate((key) => window.openCodeBot.device.sim.view.down.has(key), k)
     const click = async (n, holdMs = 150, whileHeld = null, until = () => true) => {
       let landed = false
+      const tries = []
       for (const t0 = Date.now(); !landed && Date.now() - t0 < 10000;) {
         const at = await steadyPoint(n)
         if (!at) { problems.push(`CodeAIR: no ${n} button on the model`); return null }
         await page.mouse.move(at.x, at.y)
         await page.mouse.down()
         landed = await isDown(n)
-        if (!landed) await page.mouse.up()
+        if (!landed) {
+          // what was under the mouse, for the failure to say why it missed
+          tries.push(await page.evaluate(({ x, y }) => {
+            const view = window.openCodeBot.device.sim.view
+            const s = window.openCodeBot.device.sim.lastFrame?.devices[0] ?? {}
+            const el = document.elementFromPoint(x, y)
+            return {
+              at: [Math.round(x), Math.round(y)], on: el?.className?.baseVal ?? el?.className ?? el?.tagName,
+              cursor: view.renderer.domElement.style.cursor, down: [...view.down],
+              pose: [s.x, s.y, s.z, s.heading].map((v) => v === undefined ? null : +v.toFixed(3)),
+              cam: view.camera.position.toArray().map((v) => +v.toFixed(3)), focus: document.activeElement?.id || document.activeElement?.tagName,
+            }
+          }, at))
+          await page.mouse.up()
+        }
       }
-      if (!landed) { problems.push(`CodeAIR: a click never landed on the ${n} key`); return null }
+      if (!landed) {
+        const presses = await page.evaluate(() => window.__presses.slice(-6))
+        problems.push(`CodeAIR: a click never landed on the ${n} key (${tries.length} tries; first ${JSON.stringify(tries[0])}; last ${JSON.stringify(tries.at(-1))}; presses ${JSON.stringify(presses)})`)
+        return null
+      }
       await page.waitForTimeout(holdMs)
       let held = whileHeld && await page.evaluate(whileHeld)
       for (const t0 = Date.now(); whileHeld && !until(held) && Date.now() - t0 < 10000;) {
@@ -951,9 +969,27 @@ while True:
 `) })
     await page.waitForFunction(() => window.__sim.out.includes('top') && window.openCodeBot.device.state === 'running', null, { timeout: 30000 })
       .catch(() => problems.push('CodeAIR: the button program never started'))
-    // From high above (Universal), where all three keys can be seen: from the side (Rotate)
-    // the model hides BTN-0 and BTN-1, and a click on a hidden key presses nothing (keys.js).
+    // Straight down onto the board, 15 cm over its keys: Universal, flown there as a student
+    // would. From the side (Rotate) the model hides BTN-0 and BTN-1, and a click on a hidden
+    // key presses nothing (keys.js). Universal's own place, 1.6 m up and looking in at an
+    // angle, failed two ways: a 4 mm key there is one pixel, so a click a pixel off missed;
+    // and at some headings the drone came to rest at after its flight, another part of it
+    // stands between that camera and reset. From straight above, nothing covers the keys
+    // whatever the heading, and each is a target about 14 pixels across (measured: the same
+    // at every heading tried).
     await page.evaluate(() => window.openCodeBot.device.sim.setCamera('universal'))
+    const apart = await page.evaluate(() => {
+      const view = window.openCodeBot.device.sim.view
+      const f = [...view.figures.values()][0]
+      const over = f.keyCentre(0).add(f.keyCentre(1)).add(f.keyCentre('reset')).multiplyScalar(1 / 3)
+      view.camera.position.set(over.x, over.y + 0.15, over.z + 0.0001)
+      view.camera.lookAt(over)
+      view.camera.updateMatrixWorld()
+      view._touch()
+      const a = view.keyPoint(0), b = view.keyPoint('reset')
+      return Math.hypot(a.x - b.x, a.y - b.y)
+    })
+    if (!(apart >= 40)) problems.push(`CodeAIR: from above, its keys are too close together to click (${apart} px apart)`)
     // held until the program has seen it, however long a slow machine takes
     await click(0, 150, () => window.__sim.out.includes('pressed 0'), (seen) => seen)
     await page.waitForFunction(() => window.__sim.out.includes('pressed 0'), null, { timeout: 15000 })
@@ -975,12 +1011,19 @@ with recorder:
 `))
     await page.waitForFunction(() => (window.openCodeBot.device.sim.lastFrame?.devices[0].z ?? 0) > 0.45, null, { timeout: 15000 })
       .catch(() => problems.push('CodeAIR: it never got to 0.45 m before the reset'))
-    // still from above, where the board's top, and its reset, can be seen
-    const fell = await click('reset', 900, () => {
+    // The reset pressed as a click that finds it presses it (the view's own press; a click
+    // finding the key is checked on the ground above). In flight the drone wobbles, and a
+    // click aimed at a 4 mm key on a moving board tests the aim, not the reset.
+    await page.evaluate(() => window.openCodeBot.device.sim.view._press('reset', true))
+    const fell = await page.waitForFunction(() => {
+      const s = window.openCodeBot.device.sim.lastFrame.devices[0]
+      return s.z < 0.05 && { z: s.z, reset: s.reset, state: window.openCodeBot.device.state }
+    }, null, { timeout: 15000 }).then((h) => h.jsonValue(), async () => page.evaluate(() => {
       const s = window.openCodeBot.device.sim.lastFrame.devices[0]
       return { z: s.z, reset: s.reset, state: window.openCodeBot.device.state }
-    }, (h) => h?.z < 0.05)
-    if (!(fell?.z < 0.05)) problems.push(`CodeAIR: a reset in flight did not drop it (${JSON.stringify(fell)})`)
+    }))
+    await page.evaluate(() => window.openCodeBot.device.sim.view._press('reset', false))
+    if (!(fell?.z < 0.05) || !fell.reset) problems.push(`CodeAIR: a reset in flight did not drop it (${JSON.stringify(fell)})`)
     await page.waitForTimeout(300)
     await page.evaluate(() => window.openCodeBot.device.stop())
     await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 }).catch(() => {})
