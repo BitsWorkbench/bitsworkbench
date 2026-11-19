@@ -9,6 +9,7 @@ import '@fontsource-variable/nunito'
 import '../sim.css'
 import './boards.css'
 import { SimDevice } from '../sim-device.js'
+import { browserCanSimulate } from '../support.js'
 import { holdButton } from '../hold-button.js'
 import { boardButtonsHtml, codexButtonsHtml } from '../sim-panel.js'
 import { t, tHtml, translatePage } from '../../i18n/index.js'
@@ -22,7 +23,11 @@ const MAX_BOARDS = 6
 
 const grid = document.getElementById('bd-grid')
 translatePage()
-if (!SimDevice.canSimulate('codeair')) document.querySelector('[data-i18n="boards.intro"]').textContent = t('boards.introNoFlight')
+if (!browserCanSimulate()) {
+  // Nothing here can run: say why, and offer no board to add.
+  document.querySelector('[data-i18n="boards.intro"]').textContent = `${t('sim.browserTitle')}. ${t('sim.browserDetail')}`
+  document.getElementById('bd-add').style.display = 'none' // .btn's display would win over `hidden`
+} else if (!SimDevice.canSimulate('codeair')) document.querySelector('[data-i18n="boards.intro"]').textContent = t('boards.introNoFlight')
 const addButton = document.getElementById('bd-add')
 const boards = []
 
@@ -199,7 +204,8 @@ const asked = new URLSearchParams(location.search).get('boards')?.split(',')
   .map((s) => s.split(':'))
   .filter(([k]) => KINDS.some(([id]) => id === k))
   .map(([kind, ex]) => ({ kind, code: (ex && example(kind, ex)) ?? undefined }))
-const start = asked?.length ? asked : load() ?? [{ kind: 'codex' }, { kind: 'codex' }]
+// A browser that cannot simulate starts none (and saves nothing over the boards kept here).
+const start = !browserCanSimulate() ? [] : asked?.length ? asked : load() ?? [{ kind: 'codex' }, { kind: 'codex' }]
 for (const spec of start.slice(0, MAX_BOARDS)) add(spec)
 addButton.addEventListener('click', () => { add({ kind: 'codex' }); save() })
 window.boards = boards       // for tests and the console

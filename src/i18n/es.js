@@ -510,6 +510,8 @@ export default {
   'sim.flightComingTitle': 'La simulación de vuelo ya viene',
   'sim.flightComingDetail': 'Un CodeAIR simulado está en camino. Por ahora, vuela tu programa en un CodeAIR real, o prueba CodeBot o CodeX en el simulador.',
   'sim.cannotTitle': '{device} todavía no se puede simular',
+  'sim.browserTitle': 'Este navegador no puede ejecutar el simulador',
+  'sim.browserDetail': 'El simulador necesita Chrome o Edge, versión 137 o posterior, en una computadora o Chromebook. En este navegador aún puedes crear programas y ver su Python.',
   'sim.thatDevice': 'Ese dispositivo',
   'sim.starting': 'Iniciando el simulador…',
   'sim.stoppedTitle': 'El simulador se detuvo',
