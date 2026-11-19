@@ -81,9 +81,22 @@ jobs:
   without-jspi:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Playwright's own image for the version package-lock.json pins (keep the
+    # two in step): Chromium, WebKit and Firefox with their system libraries
+    # and xvfb, so nothing comes from the Ubuntu mirror, whose slow days took
+    # WebKit's libraries past six minutes.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --ipc=host
     env:
       SIM_FLIGHT: 1
+      HOME: /root        # Firefox, as root in the container, wants a home of its own
     steps:
+      # The image has no git, which the build's CodeAIR flight library is fetched with.
+      - name: Install git
+        timeout-minutes: 3
+        run: apt-get update -q && apt-get install -y -q --no-install-recommends git ca-certificates
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -92,27 +105,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      # Playwright's browsers, kept between runs for the version the lock file pins.
-      - name: Cache the browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-chromium-webkit-firefox
-
-      - name: Install Chromium, WebKit and Firefox
-        run: npx playwright install chromium webkit firefox
-
-      # Their system libraries, retried when the Ubuntu mirror is flaky.
-      - name: Install the browsers' system libraries
-        timeout-minutes: 6
-        run: |
-          for attempt in 1 2 3; do
-            npx playwright install-deps chromium webkit firefox && exit 0
-            echo "install-deps failed (attempt $attempt), retrying"
-            sleep $((attempt * 10))
-          done
-          exit 1
 
       - run: npm run build
 
