@@ -287,10 +287,9 @@ export default {
       <li>La división entre los bloques y el panel lateral se mueve con las flechas.</li>
     </ul>`,
   'about.bodyHtml': `
-    <p>{app} es un editor de bloques gratuito y de código abierto para
-    <strong>CodeBot</strong>, <strong>CodeX</strong> y <strong>CodeAIR</strong> de Firia Labs.
-    Es una forma sencilla de empezar: cuando tus estudiantes estén listos para Python completo,
-    la plataforma CodeSpace los está esperando.</p>
+    <p>{app} es el editor y simulador gratuito y de código abierto de Firia Labs para
+    <strong>CodeBot</strong>, <strong>CodeX</strong> y <strong>CodeAIR</strong>:
+    bloques, y el Python real que generan, a un clic de distancia.</p>
     <p>Tus programas se ejecutan como CircuitPython real en el dispositivo, con las mismas
     bibliotecas que se documentan en
     <a href="https://docs.firialabs.com/" target="_blank" rel="noreferrer">docs.firialabs.com</a>.</p>
@@ -309,6 +308,7 @@ export default {
     a ningún sitio.</p>
     <p>Al abrir la página, la aplicación se carga desde el sitio que la aloja,
     como cualquier página web. Después, funciona sin conexión.</p>`,
+  'about.versionHtml': `<p class="about-version">Versión <span lang="zxx">{version}</span>, compilación <span lang="zxx">{build}</span>. Indica ambas cuando informes de un problema.</p>`,
 
   // Errores de Python, como los lee un estudiante
   'pyerr.NameError': 'Algo todavía no tiene nombre',
@@ -512,6 +512,8 @@ export default {
   'sim.flightComingTitle': 'La simulación de vuelo ya viene',
   'sim.flightComingDetail': 'Un CodeAIR simulado está en camino. Por ahora, vuela tu programa en un CodeAIR real, o prueba CodeBot o CodeX en el simulador.',
   'sim.cannotTitle': '{device} todavía no se puede simular',
+  'sim.browserTitle': 'Este navegador no puede ejecutar el simulador',
+  'sim.browserDetail': 'El simulador necesita Chrome o Edge, versión 137 o posterior, en una computadora o Chromebook. En este navegador aún puedes crear programas y ver su Python.',
   'sim.thatDevice': 'Ese dispositivo',
   'sim.starting': 'Iniciando el simulador…',
   'sim.stoppedTitle': 'El simulador se detuvo',

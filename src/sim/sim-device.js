@@ -7,6 +7,7 @@ import { t, language } from '../i18n/index.js'
 import { getTarget } from '../device/targets.js'
 import { KINDS, ROOMS, MUSIC } from './kinds.js'
 import { FLIGHT } from 'virtual:sim-flight'
+import { browserCanSimulate } from './support.js'
 import { Describer } from './describe.js'
 import { Speaker } from './sound.js'
 import { reloadIfStale } from '../ui/new-build.js'
@@ -42,11 +43,12 @@ export class SimDevice extends EventTarget {
   // CodeAIR needs a build with its flight library (sim/tools/flight-library.mjs).
   static canSimulate(targetId) {
     const kind = KINDS[targetId]
-    return !!kind && (!kind.needsFlight || FLIGHT)
+    return !!kind && (!kind.needsFlight || FLIGHT) && browserCanSimulate()
   }
 
   // Why a board cannot be simulated: [title, detail].
   static whyNot(targetId) {
+    if (!browserCanSimulate()) return [t('sim.browserTitle'), t('sim.browserDetail')]
     const device = getTarget(targetId)?.name ?? t('sim.thatDevice')
     if (KINDS[targetId]?.needsFlight) return [t('sim.flightComingTitle', { device }), t('sim.flightComingDetail')]
     return [t('sim.cannotTitle', { device }), t(FLIGHT ? 'sim.noneYetDetail' : 'sim.noneYetDetailNoFlight')]

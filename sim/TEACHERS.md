@@ -24,7 +24,9 @@ block, which helps a student see what each block does. Pause and Step stay
 until the program stops; then it is Run alone again. A real board cannot be
 paused, so with one plugged in, running shows Stop only.
 
-Nothing is installed and nothing is uploaded: it all runs in the browser. After
+Nothing is installed and nothing is uploaded: it all runs in the browser, which
+must be Chrome or Edge, version 137 or later (any supported Chromebook has it).
+In another browser, Simulate says it cannot run there. After
 the first visit the simulator works offline, in the gymnasium; another room
 works offline once it has been opened. On a slow school Chromebook the picture
 gets a little softer to keep moving smoothly; the program's timing does not

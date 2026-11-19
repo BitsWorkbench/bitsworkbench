@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { flightWanted, fetchedFlight, flightConfig } from './sim/tools/flight-library.mjs'
@@ -52,6 +53,18 @@ const licenses = {
   },
 }
 
+// Which build this is, for About and bug reports: package.json's version, and
+// the commit it was built from (CI's GITHUB_SHA, else git, else "local").
+const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
+function commit() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7)
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return 'local'
+  }
+}
+
 // The pages' titles before the strings load (and for anything that reads the
 // HTML alone): %BRAND_NAME% in index.html and boards.html is the product's name.
 const brandName = {
@@ -63,6 +76,10 @@ const brandName = {
 // HTTPS host (Web Serial requires a secure context; file:// will not work).
 export default defineConfig({
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __APP_BUILD__: JSON.stringify(commit()),
+  },
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
