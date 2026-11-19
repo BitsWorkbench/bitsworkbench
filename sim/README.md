@@ -193,15 +193,15 @@ slower than any real GPU. CI runs it as a report. On a cloud machine (2026-11-19
 
 | | Budget | CodeBot | CodeAIR |
 |---|---|---|---|
-| First visit, gzip | 600 KB | 720 KB | 720 KB |
-| First visit, to load | 3 s | 1.2 s | 1.2 s |
+| First visit, gzip | 600 KB | 576 KB | 576 KB |
+| First visit, to load | 3 s | 1.0 s | 1.0 s |
 | Simulator start, gzip | 1,400 KB | 1,292 KB | 1,397 KB |
-| Simulator start, to ready | 5 s | 1.7 s | 1.8 s |
-| Frames a second in the gym, moving | 20 | 44 | 31 |
+| Simulator start, to ready | 5 s | 1.7 s | 1.9 s |
+| Frames a second in the gym, moving | 20 | 44 | 32 |
 | Simulated time per wall second | 0.95 | 1.00 | 1.00 |
 
 The first visit is Blockly, the app and the terminal (the app's script is
-335 KB gzip, the terminal's 127 KB). The Python editor (CodeMirror, 104 KB gzip)
+336 KB gzip, the terminal's 127 KB). The Python editor (CodeMirror, 104 KB gzip)
 loads the first time a program is shown as Python, with a plain text box holding
 the program and taking typing until it is in (`src/editor/lazy-editor.js`), and
 markdown-it (46 KB gzip, with the mission text's rules) the first time a mission
