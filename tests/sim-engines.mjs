@@ -183,8 +183,23 @@ for (const name of ENGINES) {
   }
   // Sound: the Speaker's Web Audio started with the gesture that pressed
   // Simulate (Safari keeps it suspended otherwise).
-  check(await page.evaluate(() => window.openCodeBot.device.sim.speaker?.ctx?.state) === 'running', 'the simulator\'s sound is running after Simulate was pressed',
-    await page.evaluate(() => window.openCodeBot.device.sim.speaker?.ctx?.state))
+  // A machine with no audio output (a CI runner) keeps every AudioContext
+  // suspended, gesture or not: then a fresh one, made now, is suspended too,
+  // and there is nothing to judge. Ours suspended while a fresh one runs is
+  // the app's fault.
+  {
+    const sound = await page.evaluate(async () => {
+      const ours = window.openCodeBot.device.sim.speaker?.ctx?.state
+      if (ours === 'running') return { ours }
+      const fresh = new AudioContext()
+      await new Promise((r) => setTimeout(r, 1000))
+      const state = fresh.state
+      fresh.close()
+      return { ours, fresh: state }
+    })
+    if (sound.ours !== 'running' && sound.fresh !== 'running') console.log(`  skip  the simulator's sound after Simulate: this machine plays no audio (a fresh AudioContext is ${sound.fresh} too)`)
+    else check(sound.ours === 'running', 'the simulator\'s sound is running after Simulate was pressed', JSON.stringify(sound))
+  }
   // The 3D view: WebGL, and what it may use.
   const gl = await page.evaluate(() => {
     const c = document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl')
