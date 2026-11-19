@@ -7,6 +7,7 @@
  * mode the student is in; the others become panels.
  */
 import MarkdownIt from 'markdown-it'
+import { BRAND } from '../brand.js'
 
 const md = new MarkdownIt({ html: false, linkify: false, typographer: false })
 
@@ -37,7 +38,8 @@ const MARKER = /--(\/?)([A-Za-z]+)([^\n]*?)(\/?)--/g
  */
 export function renderMarkdown(text, { mode, assets = {}, label = (name) => name }) {
   const env = { assets }
-  const shown = forMode(text, mode)
+  // {app} is the product's name (src/brand.js), so a pack never writes it.
+  const shown = forMode(text, mode).replaceAll('{app}', BRAND.name)
   let html = ''
   let rest = shown
   // Sections are block-level: the Markdown between them renders on its own.

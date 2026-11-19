@@ -204,8 +204,11 @@ toast({ title: t('saved.title'), detail: t('saved.detail', { file: name }) })
 ```
 
 - **Placeholders** go in braces (`'Saved {file}.'`), and numbers in them are formatted
-  for the language. `{app}` is always the product's name, which lives in one place,
-  `app.name`.
+  for the language. `{app}` is always the product's name and `{issues}` where to report a
+  problem; both live in one place, `src/brand.js`, with the page titles, the installed app's
+  name and the banner of the Python the blocks write. Never write the name itself
+  (`npm run test:brand` checks), and never rename the `opencodebot.*` storage keys: they hold
+  students' work.
 - **Counts:** a string that depends on one is `{ one: '…', other: '…' }`, chosen by
   `{count}`. Join a list of names with `listOf()`.
 - **HTML:** a key ending in `Html` holds HTML, and its placeholders are escaped.

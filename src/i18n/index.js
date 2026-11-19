@@ -18,6 +18,7 @@
  * accented and each string in ⟦ ⟧. Text that shows up plain was not looked up
  * here (tests/pseudo.mjs checks the whole app this way).
  */
+import { BRAND } from '../brand.js'
 import en from './en.js'
 import es from './es.js'
 
@@ -83,7 +84,8 @@ export function setLanguage(lang) {
 /**
  * The string for `key`, with `params` put into its {placeholders}. Numbers are
  * formatted for the language. A key ending in `Html` is HTML: its params are
- * escaped. `{app}` is always the product's name.
+ * escaped. `{app}` is always the product's name and `{issues}` where to report
+ * a problem (src/brand.js), unless the caller passes its own.
  */
 export function t(key, params = {}) {
   let s = table[key] ?? en[key] ?? key
@@ -91,7 +93,7 @@ export function t(key, params = {}) {
   if (language === PSEUDO && s !== key) s = pseudo(s)
   const html = key.endsWith('Html')
   return s.replace(/\{(\w+)\}/g, (whole, name) => {
-    const v = name === 'app' && !(name in params) ? t('app.name') : params[name]
+    const v = name in params ? params[name] : name === 'app' ? t('app.name') : name === 'issues' ? BRAND.issues : undefined
     if (v === undefined) return whole
     const text = typeof v === 'number' ? number.format(v) : String(v)
     return html ? escapeHtml(text) : text
