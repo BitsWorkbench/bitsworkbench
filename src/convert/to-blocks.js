@@ -32,15 +32,17 @@ function patterns(targetId) {
 }
 
 /**
- * The banner the blocks write, under the product's name today or a past one
- * (a file saved then still starts with it): "Made with LabBlocks 💚 — ...".
+ * The banner the blocks write, under the product's name today or any past one
+ * (a file saved then still starts with it): "Made with LabBlocks 💚 — blocks
+ * in, Python out." Matched by its words, not the name, so a renamed product
+ * still reads every file it ever wrote.
  */
-const PAST_BANNERS = BRAND.pastNames.map((name) => new RegExp(`^Made with ${name} 💚 `))
+const PAST_BANNER = /^Made with \S+ 💚 (— )?[Bb]locks in, Python out\.$/
 
 /** Comments the blocks write themselves, at the top of every program. */
 const HEADER_COMMENT = (text) =>
   text === BANNER.replace(/^# /, '') ||
-  PAST_BANNERS.some((re) => re.test(text)) ||
+  PAST_BANNER.test(text) ||
   /^Device: /.test(text) ||
   text === 'Add some blocks and press Run!'
 

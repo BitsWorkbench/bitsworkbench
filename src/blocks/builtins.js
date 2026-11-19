@@ -1,5 +1,5 @@
 /**
- * Blockly's own blocks, writing the Python a student would. Codacious is
+ * Blockly's own blocks, writing the Python a student would. the app is
  * blocks that grow into real Python, and Python comes back to blocks, so a
  * block writes what a student would type, not Blockly's defensive forms.
  */

@@ -102,7 +102,7 @@ console.log('A good pack')
 console.log('Mistakes, each named where it is')
 const mistakes = [
   ['not JSON', 'not a pack', () => '{', true],
-  ['a newer format', 'needs a newer Codacious', (p) => ({ ...p, format: FORMAT + 1 })],
+  ['a newer format', `needs a newer ${BRAND.name}`, (p) => ({ ...p, format: FORMAT + 1 })],
   ['a missing field', 'title: missing', (p) => ({ ...p, title: undefined })],
   ['a field not in the format', 'colour: not a field', (p) => ({ ...p, colour: 'red' })],
   ['an unknown board', 'board: should be one of', (p) => ({ ...p, board: 'microbit' })],
@@ -180,7 +180,7 @@ console.log('A pack in two files')
   check('a rest\'s images are checked', has(problemsOf({ ...rest, assets: { 'x.svg': 'data:image/svg+xml;base64,AA==' } }, readRest), 'assets'))
 }
 
-console.log('The packs that come with Codacious')
+console.log('The packs that come with the app')
 {
   const dir = new URL('../public/learn/packs/', import.meta.url)
   const index = JSON.parse(readFileSync(new URL('index.json', dir), 'utf8'))
