@@ -40,6 +40,9 @@ The first public release, planned for December 1, 2026. Everything it holds:
 - Short examples for each board, easiest first, two of them as quick starts.
 - Mission packs open in a tutorial pane: steps, goals that tick as they are met,
   quizzes, CodeTrek in the palette, and each step taught in blocks or in Python.
+- Made for small screens: the mission slides out as a drawer over the simulator
+  and terminal, from a narrow rail at the right edge that shows the mission's
+  steps and which are done. Run puts the drawer away so the simulator is in view.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with
   CodeBot, Python with Robots, Python with CodeX, and Fly with Python.
 

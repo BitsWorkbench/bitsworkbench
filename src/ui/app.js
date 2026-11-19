@@ -61,10 +61,10 @@ export class App {
       saved: () => toast({ kind: 'info', title: t('myBlocks.saved'), detail: t('myBlocks.savedDetail') }),
     })
     this.terminal = new TerminalPanel($('terminal-host'), (data) => this.device.sendRaw(data))
-    // Mission packs: the tutorial pane at the right of the work area.
+    // Mission packs: the rail at the right of the work area, and the tutorial's drawer.
     this.learn = new Learn({
       pane: $('learn-pane'),
-      splitter: $('learn-splitter'),
+      rail: $('learn-rail'),
       workarea: document.querySelector('.workarea'),
       onResize: () => this._refitSide?.(),
       device: this.device,
@@ -273,6 +273,8 @@ export class App {
       : generateWithLines(this.workspace.workspace, this.workspace.targetId)
     this._ran = { code, blockAt, text: textMode }
     if (!(await this._copyCompanions())) return
+    // The mission drawer gets out of the way of the simulator and the terminal; the rail brings it back.
+    this.learn.collapse()
     this.terminal.say(t('term.sending'))
     await this.device.run(code)
   }
@@ -548,12 +550,8 @@ export class App {
       const rect = workarea.getBoundingClientRect()
       let pct
       if (vertical()) {
-        // An open tutorial pane is a row of its own, under the side, taking 40% of the height.
-        const learnH = this.learn.isOpen ? Math.round(rect.height * 0.4) : 0
-        // With the tutorial open, the side gives the editor most of what is left.
-        const most = learnH ? (rect.height - learnH) * 0.4 : rect.height - 140
-        const height = Math.min(Math.max(px, 120), most)
-        workarea.style.gridTemplateRows = `1fr 6px ${height}px${learnH ? ` ${learnH}px` : ''}`
+        const height = Math.min(Math.max(px, 120), rect.height - 140)
+        workarea.style.gridTemplateRows = `1fr 6px ${height}px`
         pct = 100 - (height / rect.height) * 100
       } else {
         const width = Math.min(Math.max(px, 220), rect.width - 280 - this.learn.width)
@@ -592,7 +590,7 @@ export class App {
       setSide(sideNow() + grow[e.key])
     })
     requestAnimationFrame(() => setSide(sideNow()))
-    // The tutorial pane opened, closed or changed width: the side fits again.
+    // The mission rail came or went: the side fits again.
     this._refitSide = () => setSide(sideNow())
 
     // On a narrow screen the side is a strip under the blocks: the simulator

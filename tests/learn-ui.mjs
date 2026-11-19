@@ -3,7 +3,8 @@
  * tutorial pane, its steps go forward and back, its text follows the
  * blocks/Python switch, a quiz marks answers, the place survives a reload, a
  * broken pack is refused with its problem named, a pack's second file joins
- * it, and closing the pane gives the side its room back.
+ * it, Run puts the drawer away, and closing the pack gives the side its room
+ * back. The drawer and rail at each screen size: learn-drawer.mjs.
  * Run after `npm run build`.
  */
 import { spawn } from 'node:child_process'
@@ -210,7 +211,7 @@ await page.waitForFunction(() => document.getElementById('modal')?.open)
 check((await page.locator('#modal [data-pack="UI"]').count()) === 1, 'Learn lists the pack, kept in this browser')
 await page.keyboard.press('Escape')
 await pane('[data-learn="close"]').click()
-check(await page.evaluate(() => document.getElementById('learn-pane').hidden), 'closing hides the pane')
+check(await page.evaluate(() => document.getElementById('learn-pane').hidden && document.getElementById('learn-rail').hidden), 'closing hides the pane and its rail')
 check(Math.abs((await sideWidth()) - sideBefore) < 2, 'and the side is as wide as before')
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForTimeout(300)
@@ -269,9 +270,14 @@ await page.click('#btn-connect')
 await page.waitForFunction(() => !document.getElementById('btn-run').disabled)
 await page.click('#btn-run')
 await page.waitForFunction(() => !document.getElementById('btn-stop').hidden)
+check((await page.evaluate(() => document.querySelector('.workarea').dataset.drawer)) === 'closed', 'Run puts the mission drawer away')
 await page.click('#btn-stop')
 await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 3, null, { timeout: 5000 })
 check((await ticked()).join() === 'true,true,true,false', 'a run meets the run goal, and its output the prints goal')
+await page.waitForTimeout(300)
+check((await page.evaluate(() => document.querySelector('.workarea').dataset.drawer)) === 'closed', 'and it stays away when the program stops')
+await page.click('#learn-rail .rail-toggle')
+await page.waitForFunction(() => document.querySelector('.workarea').dataset.drawer === 'open')
 
 await page.click('#btn-view')
 await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 4, null, { timeout: 5000 })
@@ -281,6 +287,7 @@ await page.waitForTimeout(300)
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => document.querySelectorAll('#learn-pane .learn-goals li[data-met="true"]').length === 4, null, { timeout: 5000 })
 check(true, 'met goals stay met after a reload')
+check((await page.getAttribute('#learn-rail [data-rail-step="0"]', 'data-done')) === 'true', 'and the rail shows the step as done')
 await pane('[data-learn="up"]').click()
 check((await pane('[data-mission="0"]').getAttribute('data-done')) === 'true', 'and the mission shows as finished')
 

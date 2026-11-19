@@ -3,8 +3,8 @@
  * at a time (its introduction, its objectives and quizzes, its finish), with
  * Back and Next. It shows the text for the mode the student is in, and, in
  * blocks, says when an objective is taught in Python. It fires `place` when
- * the student moves, `close` when they close it, and `python` when they ask to
- * switch to Python.
+ * the student moves, `shown` when it draws a place or its goals again,
+ * `close` when they close it, and `python` when they ask to switch to Python.
  *
  * A place is null (the pack's overview) or { mission, step }: step -1 is the
  * mission's introduction, 0 to n-1 its flow, n its finish.
@@ -65,6 +65,11 @@ export class Tutorial extends EventTarget {
     return !!m && Number.isInteger(place.step) && place.step >= -1 && place.step <= m.flow.length
   }
 
+  /** Go to a place, as Back and Next do. */
+  go(place) {
+    if (this._valid(place)) this._go(place)
+  }
+
   _go(place) {
     this.place = place
     this.done = []
@@ -109,6 +114,7 @@ export class Tutorial extends EventTarget {
     $('.learn-up').textContent = `‹ ${t('learn.missions')}`
     $('.learn-nav').hidden = !place
     $('.learn-body').innerHTML = place ? this._missionHtml(place) : this._packHtml()
+    this.dispatchEvent(new Event('shown'))
     if (!place) return
     const mission = pack.missions[place.mission]
     const n = mission.flow.length
@@ -178,6 +184,7 @@ export class Tutorial extends EventTarget {
     this.finished = finished
     const wrap = this.root.querySelector('.learn-goals-wrap')
     if (wrap && this.objective) wrap.innerHTML = this._goalsHtml(this.objective)
+    this.dispatchEvent(new Event('shown'))
   }
 
   _quizHtml(q) {
