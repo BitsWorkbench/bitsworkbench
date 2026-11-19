@@ -7,6 +7,9 @@ import { sincos } from './fmath.js'
 import { Radio } from './radio.js'
 import { Infrared } from './infrared.js'
 
+// Recorded sounds' ids start here; mixers' ids are 1000 and up (bridge/codex.js).
+const CLIP_BASE = 2000
+
 export class CodeX {
   constructor(env, rng, { id = 'codex' } = {}) {
     this.kind = 'codex'
@@ -26,8 +29,10 @@ export class CodeX {
     this.volts = 4.1
     this.volume = 0
     this.voices = []               // { freq, wave, gate, glide }
-    this.mixers = []               // [ { sample, level } per voice ]
+    this.mixers = []               // [ { sample, level, start, loop } per voice ]
     this.i2s = { source: -1, mixer: -1 }
+    this.clips = []                // recorded sounds, by id - CLIP_BASE: their names
+    this.starts = 0                // counts plays, so the same sound played again starts again
     this.radio = new Radio(rng)
     this.infrared = new Infrared(rng)
   }
@@ -90,6 +95,36 @@ export class CodeX {
     return out
   }
 
+  // A recorded sound (an MP3 from the CodeX's sounds/ folder): its id for the
+  // speaker. Ids from CLIP_BASE up, apart from the synthesised voices' ids.
+  clip(name) {
+    this.clips.push(name)
+    return CLIP_BASE + this.clips.length - 1
+  }
+
+  isClip(id) {
+    return id >= CLIP_BASE && id - CLIP_BASE < this.clips.length
+  }
+
+  // A play starting on the speaker or a mixer voice: a recorded sound gets a
+  // new start, so the speaker plays it from the beginning.
+  started(id) {
+    return this.isClip(id) ? ++this.starts : 0
+  }
+
+  // The recorded sounds playing now: { name, start, level, loop }. The
+  // speaker (src/sim/sound.js) plays each start once, and stops one that goes.
+  playing() {
+    if (this.volume <= 0) return []
+    const out = []
+    const add = (id, level, start, loop) => {
+      if (this.isClip(id)) out.push({ name: this.clips[id - CLIP_BASE], start, level: level * (this.volume / 100), loop: !!loop })
+    }
+    if (this.i2s.source >= 0) add(this.i2s.source, 1, this.i2s.start, this.i2s.loop)
+    if (this.i2s.mixer >= 0) for (const m of this.mixers[this.i2s.mixer] ?? []) if (m.sample >= 0) add(m.sample, m.level, m.start, m.loop)
+    return out
+  }
+
   snapshot() {
     return {
       id: this.id, kind: this.kind,
@@ -98,6 +133,7 @@ export class CodeX {
       brightness: this.brightness,
       buttons: [...this.buttons], reset: !!this.resetHeld,
       sound: this.sounding(),
+      clips: this.playing(),
       screenVersion: this.screen.version,
       tilt: [this.tiltX, this.tiltY],
     }

@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { flightWanted, fetchedFlight, flightConfig } from './sim/tools/flight-library.mjs'
+import { recordedSounds } from './sim/tools/codex-sounds.mjs'
 import { BRAND } from './src/brand.js'
 
 // CodeAIR flight (sim/tools/flight-library.mjs): with SIM_FLIGHT=1 the build
@@ -21,6 +22,17 @@ const flight = () => ({
   load(id) {
     if (id !== '\0virtual:sim-flight') return null
     return `export const FLIGHT = ${FLIGHT}\nexport const files = ${JSON.stringify(flightLib?.files ?? {})}\n`
+  },
+})
+
+// A CodeX's sound files (sim/tools/codex-sounds.mjs): which the simulator has a
+// recording of, and how long each plays, for the simulated CodeX's drive.
+const codexSoundsModule = () => ({
+  name: 'codex-sounds',
+  resolveId(id) { return id === 'virtual:codex-sounds' ? '\0virtual:codex-sounds' : null },
+  load(id) {
+    if (id !== '\0virtual:codex-sounds') return null
+    return `export const sounds = ${JSON.stringify(recordedSounds())}\n`
   },
 })
 
@@ -58,9 +70,10 @@ export default defineConfig({
     rollupOptions: { input: { main: 'index.html', boards: 'boards.html' } },
   },
   // The simulator's worker is a module (MicroPython's loader uses top-level await).
-  worker: { format: 'es', plugins: () => [flight()] },
+  worker: { format: 'es', plugins: () => [flight(), codexSoundsModule()] },
   plugins: [
     flight(),
+    codexSoundsModule(),
     licenses,
     brandName,
     VitePWA({

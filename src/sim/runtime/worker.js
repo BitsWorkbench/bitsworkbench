@@ -16,6 +16,7 @@ import { World } from '../world/world.js'
 import { Environment } from '../world/environment.js'
 import { createDevice } from '../devices.js'
 import { KINDS as BOARDS, driveFiles } from '../kinds.js'
+import { sounds as CODEX_SOUNDS } from 'virtual:codex-sounds'
 import { files as FLIGHT_FILES } from 'virtual:sim-flight'
 import { BroadcastAir } from './broadcast-air.js'
 import { layCourse, courseShape } from '../world/courses.js'
@@ -85,7 +86,7 @@ function build(kind, seed) {
   device = world.add(createDevice(kind, env, world.rng.fork(), spawn))
   for (const part of [device.radio, device.infrared]) if (part) air.add(part)
   engine = new Engine({
-    loadMicroPython, wasmUrl, world, files: pythonFiles(kind), drive: driveFiles(kind),
+    loadMicroPython, wasmUrl, world, files: pythonFiles(kind), drive: driveFiles(kind, CODEX_SOUNDS),
     bridge: device.bridge,
     stopGraceUs: device.stopGraceUs,
     speed: engine?.speed ?? 1,

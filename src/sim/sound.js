@@ -9,7 +9,7 @@
 //   music    a room's music track, looped, where the room has one
 //
 // Every sound here is synthesized (oscillators and filtered noise); the only
-// recorded audio is a room's music. Created on the click that starts the
+// recorded audio is a room's music and a CodeX's own sound files. Created on the click that starts the
 // simulator, which browsers require before they make sound. Headless runs
 // never make one: they are silent.
 import { settings, BUSES } from './settings.js'
@@ -64,8 +64,65 @@ export class Speaker {
   frame(d) {
     if (!this.ctx || !d) return
     this.play(d.sound ?? (d.tone ? [{ freq: d.tone, wave: 1, level: 1 }] : []))
+    this.clips(d.clips ?? [])
     this.whine(d.whine ?? [])
     this.knocks(d.hits ?? [])
+  }
+
+  // Recorded sounds on the speaker: { name, start, level, loop } for each one
+  // playing (world/codex.js). Each start plays once, from the beginning, at
+  // its level (the voice's level and the board's volume); one that leaves the
+  // list stops. The recordings come from sim-assets/codex/sounds/ when first
+  // played, then from the offline cache.
+  clips(list) {
+    if (!this.ctx || (!list.length && !this.clipsOn?.size)) return
+    this.clipsOn ??= new Map()     // start -> { gain, source }
+    const t = this.ctx.currentTime
+    const wanted = new Set(list.map((c) => c.start))
+    for (const [start, on] of this.clipsOn) {
+      if (wanted.has(start)) continue
+      try { on.source?.stop() } catch { /* never started */ }
+      on.gain.disconnect()
+      this.clipsOn.delete(start)
+    }
+    for (const c of list) {
+      const on = this.clipsOn.get(c.start)
+      if (on) {
+        on.gain.gain.setTargetAtTime(c.level, t, 0.01)
+        continue
+      }
+      const gain = this.ctx.createGain()
+      gain.gain.value = c.level
+      gain.connect(this.bus.speaker)
+      const entry = { gain, source: null }
+      this.clipsOn.set(c.start, entry)
+      this._recording(c.name).then((buffer) => {
+        if (!buffer || this.clipsOn.get(c.start) !== entry) return     // stopped meanwhile
+        const source = this.ctx.createBufferSource()
+        source.buffer = buffer
+        source.loop = c.loop
+        source.connect(gain)
+        source.start()
+        entry.source = source
+      })
+    }
+  }
+
+  // A recording from the CodeX's sounds/ folder, decoded once; null when the
+  // simulator does not have it.
+  _recording(name) {
+    this.recordings ??= new Map()
+    if (!this.recordings.has(name)) {
+      const url = new URL(`sim-assets/codex/sounds/${encodeURIComponent(name)}.mp3`, document.baseURI)
+      this.recordings.set(name, fetch(url)
+        .then((res) => (res.ok ? res.arrayBuffer() : null))
+        .then((data) => (data ? this.ctx.decodeAudioData(data) : null))
+        .catch((err) => {
+          console.warn(`sound ${name}`, err)
+          return null
+        }))
+    }
+    return this.recordings.get(name)
   }
 
   // The motors: { freq, level } for each one turning, as the frames bring

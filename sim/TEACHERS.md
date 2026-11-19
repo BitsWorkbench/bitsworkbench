@@ -63,10 +63,10 @@ to follow it.
 
 ## What the simulator does not do yet
 
-- **Sound files:** a simulated CodeX plays its sound files (`audio.mp3("sounds/welcome")`)
-  as a moment of silence, so the program carries on as it would on a CodeX. Tones,
-  notes and songs a program makes itself play out loud. To hear a sound file, use a
-  real CodeX.
+- **Sound files:** a simulated CodeX has the same sounds/ folder as a real one
+  (`audio.mp3("sounds/welcome")`), and the program waits while one plays, as on a
+  CodeX. The recordings this site carries play on the speaker, once sound is on
+  (the click on Simulate turns it on); any other plays as a moment of silence.
 
 ## Two boards at once: radio and infrared
 

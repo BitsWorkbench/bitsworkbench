@@ -14,6 +14,7 @@ import { KINDS as BOARDS, driveFiles } from './kinds.js'
 import { Lockstep, LockstepAir } from './runtime/lockstep.js'
 import { layCourse } from './world/courses.js'
 import { fetchedFlight } from '../../sim/tools/flight-library.mjs'
+import { recordedSounds, SOUNDS_DIR } from '../../sim/tools/codex-sounds.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -118,7 +119,8 @@ async function prepare(opts, seconds = 10, lockstep = null) {
     bridge: device.bridge,
     stopGraceUs: device.stopGraceUs,
     files: pythonFiles(device.kind),
-    drive: driveFiles(device.kind),
+    // A CodeX's sound files: the recordings in the repository, or `opts.sounds` ({ name: { seconds, audio } }).
+    drive: driveFiles(device.kind, opts.sounds ?? recordedSounds(path.join(ROOT, SOUNDS_DIR))),
     speed: opts.speed ?? Infinity,
     trace: !!opts.trace,
     lockstep, member,
@@ -141,5 +143,5 @@ async function prepare(opts, seconds = 10, lockstep = null) {
 }
 
 function pick(s) {
-  return { x: s.x, y: s.y, z: s.z, heading: s.heading, leds: s.leds, tone: s.tone, motors: s.motors, whine: s.whine }
+  return { x: s.x, y: s.y, z: s.z, heading: s.heading, leds: s.leds, tone: s.tone, motors: s.motors, whine: s.whine, clips: s.clips }
 }

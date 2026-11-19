@@ -7,7 +7,16 @@ export const KINDS = {
   codebot: { env: 'gym', view: '3d', python: ['common', 'codebot'] },
   // CodeX is held, not driven: its world is empty, and the view shows it in
   // the showroom (view.js), as CodeSpace's simulator does
-  codex: { env: 'empty', room: 'showroom', view: 'codex', python: ['common', 'radio', 'codex'], sounds: ['welcome', 'funk', 'roll', 'africa', 'techstyle', 'shire'] },
+  // `sounds`: the files in a CodeX's sounds/ folder as it ships (Firia Labs'
+  // labs-demos repository, codex/stock_sounds/): spoken words, then music.
+  codex: {
+    env: 'empty', room: 'showroom', view: 'codex', python: ['common', 'radio', 'codex'],
+    sounds: [
+      'a', 'b', 'button', 'codetrek', 'codex', 'display', 'down', 'led', 'left', 'mic', 'no', 'off', 'okay', 'on',
+      'power', 'right', 'up', 'yes', 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+      'welcome', 'funk', 'techstyle', 'shire', 'africa', 'bohemia', 'roll',
+    ],
+  },
   // and the flight library, which only a build with CodeAIR flight carries
   // (sim/tools/flight-library.mjs): without it CodeAIR is not offered
   codeair: { env: 'gym', view: '3d', python: ['common', 'radio', 'codeair'], needsFlight: true },
@@ -15,15 +24,19 @@ export const KINDS = {
 
 /**
  * The files a board ships with on its own drive, as the simulator has them:
- * { 'sounds/welcome.mp3': text }. CodeX's sound files are stand-ins (the
- * simulator has no recorded sound): each holds how long it plays, and the
- * simulated audiomp3 plays that long in silence. The names are the ones
- * Firia Labs' lessons use; a name a CodeX does not have is missing here too.
- * The lengths are a second each until the real ones are measured.
+ * { 'sounds/welcome.mp3': text }. A CodeX's sound files are stand-ins the
+ * simulated audiomp3 reads: "SIM-MP3 <seconds> <name> <1 if recorded>". A
+ * recorded one plays on the simulator's speaker (src/sim/sound.js); the rest
+ * play as silence; either way the program waits as long as it would on a
+ * CodeX. `sounds` is sim/tools/codex-sounds.mjs's table: { name: { seconds,
+ * audio } }. A name a CodeX does not have is missing here too.
  */
-export function driveFiles(kind) {
+export function driveFiles(kind, sounds = {}) {
   const files = {}
-  for (const name of KINDS[kind]?.sounds ?? []) files[`sounds/${name}.mp3`] = 'SIM-MP3 1.0\n'
+  for (const name of KINDS[kind]?.sounds ?? []) {
+    const { seconds = 1, audio = false } = sounds[name] ?? {}
+    files[`sounds/${name}.mp3`] = `SIM-MP3 ${seconds} ${name} ${audio ? 1 : 0}\n`
+  }
   return files
 }
 
