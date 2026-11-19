@@ -22,6 +22,7 @@ import { tree, statementsOf, lineAt, unwrap } from './tree.js'
 import { patternsFor } from './patterns.js'
 import { pythonGenerator } from 'blockly/python'
 import { generatePython, DEVICE_IMPORT, BANNER } from '../blocks/generate.js'
+import { BRAND } from '../brand.js'
 import { endOfLineData } from '../blocks/comments.js'
 
 const cache = new Map()
@@ -30,9 +31,18 @@ function patterns(targetId) {
   return cache.get(targetId)
 }
 
+/**
+ * The banner the blocks write, under the product's name today or a past one
+ * (a file saved then still starts with it): "Made with LabBlocks 💚 — ...".
+ */
+const PAST_BANNERS = BRAND.pastNames.map((name) => new RegExp(`^Made with ${name} 💚 `))
+
 /** Comments the blocks write themselves, at the top of every program. */
 const HEADER_COMMENT = (text) =>
-  text === BANNER.replace(/^# /, '') || /^Device: /.test(text) || text === 'Add some blocks and press Run!'
+  text === BANNER.replace(/^# /, '') ||
+  PAST_BANNERS.some((re) => re.test(text)) ||
+  /^Device: /.test(text) ||
+  text === 'Add some blocks and press Run!'
 
 /**
  * { ok: true, state, targetId }: the blocks, as a Blockly workspace state, and

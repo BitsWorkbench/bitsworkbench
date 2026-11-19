@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { readPack, readRest, joinRest, PackError, FORMAT } from '../src/learn/pack.js'
 import { renderMarkdown } from '../src/learn/markdown.js'
+import { BRAND } from '../src/brand.js'
 import { offersBlocks, greyShare, codeLines, MOST_GREY } from '../src/learn/offer.js'
 
 let failures = 0
@@ -80,6 +81,22 @@ console.log('A good pack')
   check('an objective takes the pack\'s board and 5 xp', a1.board === 'codebot' && a1.xp === 5)
   check('an objective keeps its own board and xp', a2.board === 'codex' && a2.xp === 10)
   check('a quiz gets no board', pack.missions[0].flow[1].board === undefined)
+}
+{
+  const raw = good()
+  raw.title = '{app} test pack'
+  raw.missions[0].brief = 'Meet {app}'
+  const o = raw.missions[0].flow[0]
+  o.title = 'In {app}'
+  o.trek = [{ md: '{app} lights them', python: 'print(f"{app}")\n' }]
+  o.code = 'app = 1\nprint(f"{app}")\n'
+  o.goals = [{ md: '{app} says hi', check: { prints: '{app}' } }]
+  raw.missions[0].flow[1].questions[0].answers[0].a = 'In {app}'
+  const pack = readPack(JSON.stringify(raw))
+  const p = pack.missions[0].flow[0]
+  const words = [pack.title, pack.missions[0].brief, p.title, p.trek[0].md, p.goals[0].md, pack.missions[0].flow[1].questions[0].answers[0].a]
+  check('{app} is the product\'s name in titles, briefs, captions, goals and answers', words.every((w) => w.includes(BRAND.name) && !w.includes('{app}')), words.join(' | '))
+  check('and is left as written in code and checks', p.code.includes('f"{app}"') && p.trek[0].python.includes('f"{app}"') && p.goals[0].check.prints === '{app}')
 }
 
 console.log('Mistakes, each named where it is')
@@ -192,6 +209,8 @@ console.log('A pack\'s Markdown, as HTML')
   const both = 'Now --Blocks--drag the block--/Blocks----Python--type the line--/Python-- please.'
   check('blocks mode keeps the Blocks text, inline', html(both) === '<p>Now drag the block please.</p>\n', html(both))
   check('Python mode keeps the Python text', html(both, 'python') === '<p>Now type the line please.</p>\n', html(both, 'python'))
+  const named = html('{app} saves your work --Caution--in {app}--/Caution--')
+  check('{app} is the product\'s name, in sections too', !named.includes('{app}') && named.split(BRAND.name).length === 3, named)
   const raw = html('<script>alert(1)</script> <img src=x onerror=alert(1)> <b>hi</b>')
   check('HTML in a pack is shown as text, never run', !/<script|<img|<b>/.test(raw) && raw.includes('&lt;script&gt;'), raw)
   const links = html('[web](https://firialabs.com) [bad](javascript:alert(1)) [data](data:text/html,hi)')

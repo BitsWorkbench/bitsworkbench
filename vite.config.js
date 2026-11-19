@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { flightWanted, fetchedFlight, flightConfig } from './sim/tools/flight-library.mjs'
+import { BRAND } from './src/brand.js'
 
 // CodeAIR flight (sim/tools/flight-library.mjs): with SIM_FLIGHT=1 the build
 // bundles the flight library fetched into sim/build/flight/, and stops if it
@@ -39,6 +40,13 @@ const licenses = {
   },
 }
 
+// The pages' titles before the strings load (and for anything that reads the
+// HTML alone): %BRAND_NAME% in index.html and boards.html is the product's name.
+const brandName = {
+  name: 'brand-name',
+  transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%BRAND_NAME%', BRAND.name) },
+}
+
 // Relative base so the built app can be dropped in any sub-path of an
 // HTTPS host (Web Serial requires a secure context; file:// will not work).
 export default defineConfig({
@@ -54,6 +62,7 @@ export default defineConfig({
   plugins: [
     flight(),
     licenses,
+    brandName,
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.svg', 'blockly-media/*'],
@@ -77,8 +86,8 @@ export default defineConfig({
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^boards$/],
       },
       manifest: {
-        name: 'Codacious',
-        short_name: 'Codacious',
+        name: BRAND.name,
+        short_name: BRAND.shortName,
         description: 'Friendly block coding for Firia Labs CodeBot, CodeX, and CodeAIR.',
         theme_color: '#4EB748',
         background_color: '#FFFDF7',

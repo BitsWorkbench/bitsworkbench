@@ -1,9 +1,12 @@
 // English: the reference table. Every key lives here first; other languages
 // translate what they can and fall back to this for the rest.
 // {app} is the product's name; other {placeholders} are filled in by the code.
+// {issues} is where a person reports a problem (src/brand.js).
 // A key ending in Html is HTML. A value of { one, other } is chosen by {count}.
+import { BRAND } from '../brand.js'
+
 export default {
-  'app.name': 'Codacious',
+  'app.name': BRAND.name,
   'app.description': 'Friendly block coding for Firia Labs CodeBot, CodeX, and CodeAIR.',
   'app.tagline': 'Dream it, build it',
   'app.beta': 'Beta',
@@ -80,7 +83,7 @@ export default {
   'run.copyFailedTitle': 'Could not copy {file} to the board',
   'run.copyFailedDetail': 'Your program did not run. Try Run again in a moment.',
   'run.folderUnreadTitle': 'Your other files were not copied to the board',
-  'run.folderUnreadDetail': 'Codacious could not read your program\'s folder. Your program runs, but it cannot import the files beside it.',
+  'run.folderUnreadDetail': '{app} could not read your program\'s folder. Your program runs, but it cannot import the files beside it.',
   'run.wrongTitle': 'Those blocks are for another device',
   'run.wrongDetail': 'Your project uses {names} blocks, but a {device} is plugged in.',
   'error.atLine': '(Python line {line})',
@@ -299,7 +302,7 @@ export default {
   'about.betaHtml': `
     <p><strong>Beta:</strong> this is an early public release, so some things
     may change or not work yet. If something goes wrong, please
-    <a href="https://github.com/firialabs/opencodebot/issues" target="_blank" rel="noreferrer">report
+    <a href="{issues}" target="_blank" rel="noreferrer">report
     a problem on GitHub</a> and tell us what you were doing.</p>`,
   'about.privacyHtml': `
     <h3>Your privacy</h3>
@@ -410,7 +413,7 @@ export default {
   'learn.packsIntro': 'A mission pack is a course: missions of short steps, each with goals to reach. Open one, and it waits here for next time.',
   'learn.openFile': '📂 Open a pack file…',
   'learn.opened': 'Opened “{title}”',
-  'learn.badPack': '“{name}” is not a mission pack Codacious can open',
+  'learn.badPack': '“{name}” is not a mission pack {app} can open',
   'learn.gone': 'That mission pack is no longer in this browser',
   'learn.unreachable': 'Could not load “{title}”. Check your connection and try again.',
   'learn.builtinGoal': '{device} · {brief}',
