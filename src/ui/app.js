@@ -34,6 +34,9 @@ const LAYOUTS = 'opencodebot.layouts.v1'
 const TAB_LOCK = 'opencodebot.editing'
 /** How many of a board's examples, easiest first, Learn shows as quick starts. */
 const QUICK_STARTS = 2
+/** This build: package.json's version and the commit, filled in by vite.config.js. */
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
+const APP_BUILD = typeof __APP_BUILD__ === 'string' ? __APP_BUILD__ : 'dev'
 
 /** A path's last part: its file name. */
 const baseName = (path) => path.split('/').pop()
@@ -1360,7 +1363,10 @@ export class App {
         showModal({ title: t('help.title'), bodyHtml: t('help.bodyHtml') })
         break
       case 'about':
-        showModal({ title: t('about.title'), bodyHtml: t('about.betaHtml') + t('about.bodyHtml') + t('about.privacyHtml') })
+        showModal({
+          title: t('about.title'),
+          bodyHtml: t('about.betaHtml') + t('about.bodyHtml') + t('about.privacyHtml') + t('about.versionHtml', { version: APP_VERSION, build: APP_BUILD }),
+        })
         break
       default:
         if (action.startsWith('lang:') && action.slice(5) !== language) setLanguage(action.slice(5))
