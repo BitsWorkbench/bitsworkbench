@@ -106,6 +106,15 @@ try {
   check('it still boots with the network unplugged', offline.booted)
   check('the toolbox still renders offline', offline.categories > 0, `(${offline.categories} categories)`)
   check('the bundled font is still there offline', offline.font.includes('Fredoka'), offline.font)
+
+  // With the service worker in charge, the boards page is the boards page,
+  // whatever its address carries (?lang= picks its language), online or not.
+  for (const query of ['?lang=es', '?lang=en&boards=codex']) {
+    await page.goto(`${url}boards.html${query}`, { waitUntil: 'load' })
+    await page.waitForTimeout(1000)
+    const shown = await page.evaluate(() => ({ boards: Array.isArray(window.boards), app: !!window.openCodeBot }))
+    check(`offline, boards.html${query} is the boards page, not the app`, shown.boards && !shown.app, JSON.stringify(shown))
+  }
   await context.setOffline(false)
 } catch (error) {
   // A wrong `base` in vite.config.js shows up here as a page that never

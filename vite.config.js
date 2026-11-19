@@ -111,9 +111,10 @@ export default defineConfig({
           options: { cacheName: 'sim-rooms', expiration: { maxEntries: 32 } },
         }],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
-        // boards.html?boards=codex,codeair is still boards.html, not the app
-        // (the navigation fallback).
-        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^boards$/],
+        // boards.html?boards=codex,codeair (or ?lang=es) is still boards.html,
+        // not the app (the navigation fallback). A parameter missing here makes
+        // a page it is on the app instead (tests/subpath.mjs).
+        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^boards$/, /^lang$/],
       },
       manifest: {
         name: BRAND.name,
