@@ -19,7 +19,6 @@ export class LazyPythonEditor {
     this.editor = null // the PythonEditor, once loaded
     this._text = ''
     this._line = null // a line to show once loaded
-    this._snippets = [] // snippets put in before it loaded, in order
     this._loading = null
     this.box = null
   }
@@ -109,6 +108,12 @@ export class LazyPythonEditor {
         box.dispatchEvent(new Event('input'))
       } else if (e.key !== 'Shift') delete box.dataset.tabLeaves
     })
+    // An input method's composition under way: the swap waits for it to end.
+    this._composingNow = false
+    box.addEventListener('compositionstart', () => { this._composingNow = true })
+    box.addEventListener('compositionend', () => { this._composingNow = false })
+    // Gone elsewhere (the terminal, a file's name): the editor does not take the focus back.
+    box.addEventListener('blur', () => { this._wantsFocus = false })
     this.parent.append(box)
     // The cursor at the end, as the editor puts it.
     box.setSelectionRange(box.value.length, box.value.length)
@@ -122,7 +127,7 @@ export class LazyPythonEditor {
    */
   async _swap(PythonEditor) {
     const box = this.box
-    if (this._composing(box)) await new Promise((resolve) => box.addEventListener('compositionend', () => setTimeout(resolve), { once: true }))
+    if (this._composingNow) await new Promise((resolve) => box.addEventListener('compositionend', () => setTimeout(resolve), { once: true }))
     const text = box.value
     const { selectionStart: from, selectionEnd: to } = box
     const focused = document.activeElement === box
@@ -136,21 +141,13 @@ export class LazyPythonEditor {
     box.remove()
     this.box = null
     this.editor = editor
-    for (const snippet of this._snippets.splice(0)) editor.insert(snippet)
     if (this._line) editor.showLine(this._line)
     this._line = null
-    if (focused || this._wantsFocus) editor.focus()
+    // The focus only if the box had it, or it was asked for and nothing else has it since.
+    const free = !document.activeElement || document.activeElement === document.body
+    if (focused || (this._wantsFocus && free)) editor.focus()
     this._wantsFocus = false
     return editor
-  }
-
-  _composing(box) {
-    if (this._composingNow === undefined) {
-      this._composingNow = false
-      box.addEventListener('compositionstart', () => { this._composingNow = true })
-      box.addEventListener('compositionend', () => { this._composingNow = false })
-    }
-    return this._composingNow
   }
 
   focus() {
@@ -171,8 +168,8 @@ export class LazyPythonEditor {
     }
   }
 
-  // Snippets: the palette is shown only in Python, which loads the editor;
-  // one used before it is in goes in once it is.
+  // Snippets: before the editor is in, one clicked or dropped on the box
+  // goes into the box at once, so the program always holds it.
 
   previewDrop(snippet, x, y, bottom) {
     this.editor?.previewDrop(snippet, x, y, bottom)
@@ -183,20 +180,54 @@ export class LazyPythonEditor {
   }
 
   drop(snippet, x, y, bottom) {
-    return this.editor ? this.editor.drop(snippet, x, y, bottom) : false
+    if (this.editor) return this.editor.drop(snippet, x, y, bottom)
+    const r = this.box?.getBoundingClientRect()
+    if (!r || x < r.left || x > r.right || y < r.top || y > r.bottom) return false
+    this.insert(snippet)
+    return true
   }
 
   insert(snippet) {
     if (this.editor) return this.editor.insert(snippet)
-    this._snippets.push(snippet)
-    this.load().then((editor) => {
-      // It could not load: the box takes the snippets' code as it is.
-      if (editor || !this.box) return
-      for (const s of this._snippets.splice(0)) {
-        const box = this.box
-        box.setRangeText(s.line ? `\n${s.code}\n` : s.code, box.selectionStart, box.selectionEnd, 'end')
-        box.dispatchEvent(new Event('input'))
+    this.load() // shows the box, if it is not there yet
+    const box = this.box
+    let text = box.value
+    let at = box.selectionStart
+    let end = box.selectionEnd
+    if (snippet.line) {
+      // On the cursor's line when it is blank; else on a new line after it,
+      // as deep, or one deeper when that line opens a block.
+      const start = text.lastIndexOf('\n', at - 1) + 1
+      const stop = text.indexOf('\n', at) === -1 ? text.length : text.indexOf('\n', at)
+      const line = text.slice(start, stop)
+      const indent = ' '.repeat(line.length - line.trimStart().length + (/:\s*(#.*)?$/.test(line) ? 4 : 0))
+      const code = snippet.code.split('\n').map((l) => (l ? indent + l : l)).join('\n')
+      if (line.trim()) {
+        text = `${text.slice(0, stop)}\n${code}${text.slice(stop)}`
+        at = end = stop + 1 + code.length
+      } else {
+        text = text.slice(0, start) + code + text.slice(stop)
+        at = end = start + code.length
       }
-    })
+    } else {
+      text = text.slice(0, at) + snippet.code + text.slice(end)
+      at = end = at + snippet.code.length
+    }
+    // What it needs at the top: radio's import first of all, the others after the last import.
+    const lines = text.split('\n')
+    const has = new Set(lines.map((l) => l.trim()))
+    const needs = [...(snippet.imports || []), ...(snippet.setup || [])].filter((l) => !has.has(l))
+    const top = needs.filter((l) => l === 'import radio')
+    const rest = needs.filter((l) => l !== 'import radio')
+    let last = -1
+    lines.forEach((l, i) => { if (/^(import|from)\s/.test(l)) last = i })
+    lines.splice(last + 1, 0, ...rest)
+    lines.unshift(...top)
+    const added = [...top, ...rest].reduce((n, l) => n + l.length + 1, 0)
+    text = lines.join('\n')
+    box.value = text
+    box.setSelectionRange(at + added, end + added)
+    box.dispatchEvent(new Event('input'))
+    box.focus()
   }
 }

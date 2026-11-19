@@ -45,7 +45,7 @@ const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePat
  * A fresh page (no service worker, so every request is the network's and
  * routes see it), welcomed, on CodeBot, with `project` saved if given.
  * `editor`: 'slow' holds the editor's part back until `release()`, 'gone'
- * fails it.
+ * fails it on the network, 'deployed' answers 404.
  */
 async function open({ project = null, editor = 'normal' } = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' })
@@ -61,6 +61,8 @@ async function open({ project = null, editor = 'normal' } = {}) {
   const held = new Promise((r) => { release = r })
   if (editor === 'slow') await context.route(EDITOR, async (route) => { await held; await route.continue() })
   if (editor === 'gone') await context.route(EDITOR, (route) => route.abort())
+  // Gone after a deploy: a 404, a moment late (time to type into the box first).
+  if (editor === 'deployed') await context.route(EDITOR, async (route) => { await new Promise((r) => setTimeout(r, 800)); await route.fulfill({ status: 404, body: '' }) })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
@@ -114,18 +116,48 @@ const editorIn = (page) => page.waitForSelector('#python-editor .cm-editor', { t
   await context.close()
 }
 
-// 3. A snippet used while the editor loads goes in once it is.
+// 3. A snippet used while the editor loads goes into the program at once, and stays through the swap.
 {
   const { context, page, release } = await open({ editor: 'slow' })
   await page.click('#btn-view')
   await page.click('.py-cat')
   const card = page.locator('.snippet').first()
-  const code = (await card.textContent()).trim()
+  const first = (await card.textContent()).trim().split('\n')[0]
   await card.click()
+  check((await pythonText(page)).includes(first), 'a snippet clicked while the editor loads is in the program at once')
   release()
   await editorIn(page)
-  await page.waitForFunction((c) => window.openCodeBot.pythonEditor.value.includes(c.split('\n')[0]), code, { timeout: 5000 }).catch(() => {})
-  check((await ed(page, 'e.value')).includes(code.split('\n')[0]), 'a snippet clicked while the editor loads goes in once it is')
+  check((await ed(page, 'e.value')).includes(first) && (await pythonText(page)) === (await ed(page, 'e.value')), 'and still there once the editor is in')
+  await context.close()
+}
+
+// 3b. A snippet clicked during the load, then straight back to blocks: the blocks have it.
+{
+  const { context, page, release } = await open({ editor: 'slow' })
+  await page.click('#btn-view')
+  await page.click('.py-cat')
+  await page.locator('.snippet').first().click()
+  const typed = await pythonText(page)
+  await page.click('#btn-view')
+  check((await page.evaluate(() => window.openCodeBot.workspace.mode)) === 'blocks', 'switching back to blocks during the load works')
+  const blocksPython = await page.evaluate(() => window.openCodeBot._blocksPython())
+  check(blocksPython.trim() === typed.trim(), 'and the blocks are the program with the snippet in it')
+  release()
+  await page.waitForTimeout(500)
+  await page.click('#btn-view')
+  await editorIn(page)
+  check((await ed(page, 'e.value')).trim() === typed.trim(), 'back in Python, the editor shows the same program')
+  await context.close()
+}
+
+// 3c. Gone elsewhere while the editor loads: it does not take the focus back.
+{
+  const { context, page, release } = await open({ editor: 'slow' })
+  await page.click('#btn-view')
+  await page.focus('#btn-files')
+  release()
+  await editorIn(page)
+  check(await page.evaluate(() => document.activeElement?.id === 'btn-files'), 'focus moved away during the load stays where the student put it')
   await context.close()
 }
 
@@ -141,27 +173,44 @@ const editorIn = (page) => page.waitForSelector('#python-editor .cm-editor', { t
   await context.close()
 }
 
-// 5. The editor cannot load (gone from the server, or offline): the box is the editor, and keeps the work.
+// 5. The editor cannot load (a flaky network, or offline before the app is kept): the page does
+// not reload; the box is the editor, takes snippets, and keeps the work.
 {
   const { context, page, errors } = await open({ editor: 'gone' })
-  // A missing part reloads the page once onto a new build (src/ui/new-build.js); here the part is
-  // missing on every load, so the page reloads once and then carries on with the box.
-  const reloaded = page.waitForEvent('load', { timeout: 10000 }).then(() => true, () => false)
+  let reloads = 0
+  page.on('load', () => reloads++)
   await page.click('#btn-view')
-  await reloaded
-  await page.waitForFunction(() => !!window.openCodeBot)
-  await page.waitForSelector('#python-editor .python-editor-box', { timeout: 10000 })
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1500)
+  check(reloads === 0, 'a part that failed on the network does not reload the page')
   check((await page.locator('#python-editor .python-editor-box').count()) === 1, 'with no editor to load, the text box stays and is the editor')
   await page.click('#python-editor .python-editor-box')
   await page.keyboard.press('Control+End')
   await page.keyboard.type('y = 2')
   check((await pythonText(page)).endsWith('y = 2'), 'typing in it is the program')
+  await page.click('.py-cat')
+  const first = (await page.locator('.snippet').first().textContent()).trim().split('\n')[0]
+  await page.locator('.snippet').first().click()
+  check((await pythonText(page)).includes(first), 'a snippet clicked goes into the box')
+  const before = await pythonText(page)
   await page.waitForTimeout(1500) // the app saves a moment after a change
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForSelector('#python-editor .python-editor-box', { timeout: 10000 })
-  check((await page.inputValue('#python-editor .python-editor-box')).endsWith('y = 2'), 'and it is kept across a reload')
+  check((await page.inputValue('#python-editor .python-editor-box')) === before, 'and the program is kept across a reload')
   check(!errors.some((e) => !/dynamically imported module|Importing a module script failed/i.test(e)), `no other page errors${errors.length ? `: ${errors.join('; ')}` : ''}`)
+  await context.close()
+}
+
+// 6. The editor's part is gone from the server (a deploy): the page reloads once onto the new
+// build, keeping what was typed while it was asked for; then the box carries on.
+{
+  const { context, page } = await open({ editor: 'deployed' })
+  await page.click('#btn-view')
+  const reloaded = page.waitForEvent('load', { timeout: 10000 }).then(() => true, () => false)
+  await page.keyboard.type('z = 3')
+  check(await reloaded, 'a part gone from the server reloads the page')
+  await page.waitForFunction(() => !!window.openCodeBot)
+  await page.waitForSelector('#python-editor .python-editor-box', { timeout: 10000 })
+  check((await page.inputValue('#python-editor .python-editor-box')).endsWith('z = 3'), 'and what was typed before it is kept')
   await context.close()
 }
 
