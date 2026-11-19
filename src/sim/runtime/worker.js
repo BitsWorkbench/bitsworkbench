@@ -1,13 +1,13 @@
 // The simulator's worker: the world and MicroPython together, on simulated
 // time. The page sends commands and gets frames, output and state back.
 //
-// in:  init { kind, env, assetsBase, seed, course }
+// in:  init { kind, env, assetsBase, seed, course, vm }   (vm: 'jspi' | 'asyncify')
 //      course { course }   (lay a line course, world/courses.js; null takes it up)
 //      room { env }        (move to another room; the course comes too)
 //      run { source, seed, stepFirst } | stop | pause | resume | step | stepLine
 //      speed { value } | input { what: 'button', n, down } | reset
 //      stdin { text }   (keys typed at the terminal: the REPL between programs)
-// out: ready { snapshot, course } | course { course } (its shape, to draw)
+// out: ready { snapshot, course, vm } | course { course } (its shape, to draw)
 //      frame { snapshot } | output { bytes }
 //      state { state, line } (line: main.py's, when paused) | done { result } | error { message }
 import { loadMicroPython } from './mp/micropython.mjs'
@@ -21,7 +21,18 @@ import { files as FLIGHT_FILES } from 'virtual:sim-flight'
 import { BroadcastAir } from './broadcast-air.js'
 import { layCourse, courseShape } from '../world/courses.js'
 
-const wasmUrl = new URL('./mp/micropython.wasm', import.meta.url).href
+// MicroPython: the JSPI build, bundled with this worker; or, where the page
+// found no JSPI (src/sim/support.js), the Asyncify build, fetched only then.
+let vm = { name: 'jspi', loadMicroPython, wasmUrl: new URL('./mp/micropython.wasm', import.meta.url).href }
+async function useVm(which) {
+  if (which !== 'asyncify') return
+  const mod = await import('./mp-asyncify/micropython-asyncify.mjs')
+  vm = {
+    name: 'asyncify',
+    loadMicroPython: mod.loadMicroPython,
+    wasmUrl: new URL('./mp-asyncify/micropython-asyncify.wasm', import.meta.url).href,
+  }
+}
 // The Python modules: the folders under python/ that the kind lists.
 const PY = import.meta.glob('../python/**/*.py', { query: '?raw', import: 'default', eager: true })
 function pythonFiles(kind) {
@@ -86,7 +97,7 @@ function build(kind, seed) {
   device = world.add(createDevice(kind, env, world.rng.fork(), spawn))
   for (const part of [device.radio, device.infrared]) if (part) air.add(part)
   engine = new Engine({
-    loadMicroPython, wasmUrl, world, files: pythonFiles(kind), drive: driveFiles(kind, CODEX_SOUNDS),
+    loadMicroPython: vm.loadMicroPython, wasmUrl: vm.wasmUrl, world, files: pythonFiles(kind), drive: driveFiles(kind, CODEX_SOUNDS),
     bridge: device.bridge,
     stopGraceUs: device.stopGraceUs,
     speed: engine?.speed ?? 1,
@@ -132,13 +143,14 @@ self.onmessage = async (e) => {
   try {
     switch (m.t) {
       case 'init':
+        await useVm(m.vm)
         assetsBase = m.assetsBase
         env = await loadEnv(m.env, assetsBase)
         course = m.course ?? null
         spawn = layCourse(env, course) ?? env.spawns[0]
         build(m.kind, m.seed ?? 1)
         idle(true)
-        post({ t: 'ready', snapshot: world.snapshot(), course: courseShape(course, env) })
+        post({ t: 'ready', snapshot: world.snapshot(), course: courseShape(course, env), vm: vm.name })
         break
       case 'room':
       case 'course':

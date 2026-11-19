@@ -515,7 +515,7 @@ export default {
   'sim.flightComingDetail': 'A simulated CodeAIR is on its way. For now, fly your program on a real CodeAIR, or try CodeBot or CodeX in the simulator.',
   'sim.cannotTitle': "{device} can't be simulated yet",
   'sim.browserTitle': "This browser can't run the simulator",
-  'sim.browserDetail': 'The simulator needs Chrome or Edge, version 137 or later, on a computer or Chromebook. In this browser you can still build programs and see their Python.',
+  'sim.browserDetail': "The simulator needs WebAssembly, which this browser lacks or has turned off (Safari's Lockdown Mode turns it off). It runs in current Chrome, Edge, Safari and Firefox. In this browser you can still build programs and see their Python.",
   'sim.thatDevice': 'That device',
   'sim.starting': 'Starting the simulator…',
   'sim.stoppedTitle': 'The simulator stopped',

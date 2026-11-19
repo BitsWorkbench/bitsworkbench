@@ -81,7 +81,9 @@ node sim/tools/render-icons.mjs   # redraw the device icons (public/icons/dev-*.
 The MicroPython build only matters when `sim/runtime/` changes: its output is
 committed, so building the site needs no Emscripten. It builds both the JSPI and the
 Asyncify MicroPython in one run. Node 24 or later (JSPI); `OCB_SIM_VM=asyncify node
-tests/sim.mjs` runs the simulator tests on the Asyncify build.
+tests/sim.mjs` runs the simulator tests on the Asyncify build, and `OCB_SIM_VM=asyncify node
+tests/sim-ui.mjs` the browser's (it takes JSPI away from the page, as Safari and Firefox
+lack it).
 
 ### CodeAIR flight
 

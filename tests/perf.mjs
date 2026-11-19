@@ -6,7 +6,8 @@
  * It measures the first visit (bytes, compressed, and time), the simulator's
  * start (bytes and time) and, with a program moving the device in the gym,
  * frames per second and whether simulated time keeps up with real time.
- * PERF_LIST=1 lists the simulator start's largest files.
+ * PERF_LIST=1 lists the simulator start's largest files. OCB_SIM_VM=asyncify
+ * measures the simulator as browsers without JSPI run it.
  * Exits 1 when a number misses its budget. Not part of `npm test`: a CI
  * runner's speed varies, so CI runs it as a report.
  */
@@ -25,6 +26,9 @@ const BUDGET = {
   simPerWall: 0.95,     // simulated seconds per wall second at 1x
 }
 const RATE = 4
+// OCB_SIM_VM=asyncify: the page without JSPI, as Safari and Firefox are, so the
+// simulator's numbers are the Asyncify build's (src/sim/support.js).
+const FALLBACK = process.env.OCB_SIM_VM === 'asyncify'
 const PORT = '4184'     // its own (sim-ui uses 4183)
 const URL = `http://localhost:${PORT}/`
 const DIST = new globalThis.URL('../dist/', import.meta.url).pathname
@@ -53,6 +57,7 @@ const flight = fs.existsSync(path.join(DIST, 'licenses/GPL-2.0.txt'))
 if (!flight) console.log('perf: no CodeAIR flight in this build, so CodeBot only')
 for (const kind of flight ? ['codebot', 'codeair'] : ['codebot']) {
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 }, serviceWorkers: 'block' })
+  if (FALLBACK) await context.addInitScript(() => { delete WebAssembly.Suspending; delete WebAssembly.promising })
   const page = await context.newPage()
   await page.addInitScript((k) => {
     localStorage.setItem('opencodebot.welcomed.v1', '1')
@@ -75,7 +80,9 @@ for (const kind of flight ? ['codebot', 'codeair'] : ['codebot']) {
   const simStartMs = Date.now() - t1
   await page.waitForLoadState('networkidle')
   // The page sees its workers' fetches too, except a module worker's wasm.
-  const wasm = fs.readdirSync(path.join(DIST, 'assets')).filter((f) => f.endsWith('.wasm')).map((f) => `${URL}assets/${f}`)
+  // Only the build of MicroPython this page runs (src/sim/support.js).
+  const wasm = fs.readdirSync(path.join(DIST, 'assets'))
+    .filter((f) => f.endsWith('.wasm') && f.includes('asyncify') === FALLBACK).map((f) => `${URL}assets/${f}`)
   for (const w of wasm) if (!urls.includes(w)) urls.push(w)
   if (process.env.PERF_LIST) console.log([...new Set(urls)].map((u) => [gz(u), u.replace(URL, '')]).sort((a, b) => b[0] - a[0]).slice(0, 12))
   const simKB = Math.round([...new Set(urls)].reduce((a, u) => a + gz(u), 0) / 1024)
@@ -101,7 +108,7 @@ for (const kind of flight ? ['codebot', 'codeair'] : ['codebot']) {
     if (!ok) misses.push(`${kind} ${k} ${v} (budget ${BUDGET[k]})`)
     return `${k} ${v}${ok ? '' : ' MISS'}`
   }).join(', ')
-  console.log(`perf ${kind} at ${RATE}x CPU, software GL: ${line}; pixel ratio ${run.ratio.toFixed(2)}`)
+  console.log(`perf ${kind}${FALLBACK ? ' (Asyncify)' : ''} at ${RATE}x CPU, software GL: ${line}; pixel ratio ${run.ratio.toFixed(2)}`)
 }
 await browser.close()
 stop()
