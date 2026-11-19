@@ -731,6 +731,33 @@ await test('a board described: where, which way, what it is doing; and what chan
   assert.match(describe({ kind: 'codex', pixels: [[1, 0, 0]], leds: [1, 0, 0, 0, 0, 0] }), /1 of 4 NeoPixels lit, 1 of 6 red LEDs on/)
 })
 
+console.log('CodeX sound files')
+
+await test("audio.mp3() of one of the CodeX's sounds plays a second of silence, and the program goes on", async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10,
+    source: 'from codex import *\nimport time\nt = time.monotonic()\naudio.mp3("sounds/welcome")\naudio.mp3("sounds/africa.mp3")\nprint("after", round(time.monotonic() - t, 1))',
+  })
+  assert.ok(!r.error && !r.timedOut, `${JSON.stringify({ error: r.error, timedOut: r.timedOut, simSeconds: r.simSeconds })} ${r.output}`)
+  const [, took] = r.output.match(/after ([\d.]+)/) ?? []
+  assert.ok(Number(took) >= 2 && Number(took) < 2.6, `two sounds took ${took} s: ${r.output}`)
+})
+
+await test("a sound file the CodeX does not have is an OSError, as on the board", async () => {
+  const r = await runHeadless({ kind: 'codex', seconds: 5, source: 'from codex import *\naudio.mp3("sounds/no_such_song")' })
+  assert.equal(r.error?.name, 'OSError', r.output)
+})
+
+await test('a sound played through the sound library is silent too, and plays its length', async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10,
+    source: 'from soundlib import *\nimport time\nm = soundmaker.get_mp3("sounds/roll")\nprint("playing", m.voice.playing)\ntime.sleep(1.2)\nprint("then", m.voice.playing)',
+  })
+  assert.equal(r.error, undefined, r.output)
+  assert.match(r.output, /playing True/)
+  assert.match(r.output, /then False/)
+})
+
 console.log('CodeX screen')
 
 await test("show() draws text as the firmware does: white, top left, scale 2", async () => {

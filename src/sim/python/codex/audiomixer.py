@@ -1,6 +1,6 @@
 # CircuitPython's audiomixer for the simulated CodeX.
 import _sim
-from audiobusio import _sim_id
+from audiobusio import _sim_id, _silence, _still_silent
 
 
 class MixerVoice:
@@ -9,18 +9,21 @@ class MixerVoice:
         self._n = n
         self._level = 1.0
         self._playing = False
+        self._silent_until = None
 
     def play(self, sample, *, loop=False):
-        self._playing = True
+        self._silent_until = _silence(sample, loop)
+        self._playing = self._silent_until is None    # a silent MP3 plays until its time is up
         _sim.mixer_voice(self._mixer, self._n, _sim_id(sample), self._level)
 
     def stop(self):
         self._playing = False
+        self._silent_until = None
         _sim.mixer_voice(self._mixer, self._n, -1, self._level)
 
     @property
     def playing(self):
-        return self._playing
+        return self._playing or _still_silent(self._silent_until)
 
     @property
     def level(self):

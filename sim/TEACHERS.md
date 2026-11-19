@@ -61,6 +61,13 @@ The line courses are an **oval**, a **figure eight**, an **oval with a gap**
 auditorium, on the stage), and choosing one puts the CodeBot on the line, ready
 to follow it.
 
+## What the simulator does not do yet
+
+- **Sound files:** a simulated CodeX plays its sound files (`audio.mp3("sounds/welcome")`)
+  as a moment of silence, so the program carries on as it would on a CodeX. Tones,
+  notes and songs a program makes itself play out loud. To hear a sound file, use a
+  real CodeX.
+
 ## Two boards at once: radio and infrared
 
 CodeX and CodeAIR talk by radio and infrared. To try a program between two

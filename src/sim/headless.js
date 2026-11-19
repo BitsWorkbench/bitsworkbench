@@ -10,7 +10,7 @@ import { World } from './world/world.js'
 import { Environment } from './world/environment.js'
 import { createDevice } from './devices.js'
 import { Engine } from './runtime/engine.js'
-import { KINDS as BOARDS } from './kinds.js'
+import { KINDS as BOARDS, driveFiles } from './kinds.js'
 import { Lockstep, LockstepAir } from './runtime/lockstep.js'
 import { layCourse } from './world/courses.js'
 import { fetchedFlight } from '../../sim/tools/flight-library.mjs'
@@ -118,6 +118,7 @@ async function prepare(opts, seconds = 10, lockstep = null) {
     bridge: device.bridge,
     stopGraceUs: device.stopGraceUs,
     files: pythonFiles(device.kind),
+    drive: driveFiles(device.kind),
     speed: opts.speed ?? Infinity,
     trace: !!opts.trace,
     lockstep, member,
