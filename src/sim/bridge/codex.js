@@ -136,16 +136,17 @@ export function codexBridge(cx) {
       voice_freq(id, f) { cx.voices[id].freq = f },
       voice_gate(id, on) { cx.voices[id].gate = !!on },
       voice_wave(id, w) { cx.voices[id].wave = w },
-      i2s_play(id) {
-        const mixer = id >= 1000 ? id - 1000 : -1
-        cx.i2s = { source: mixer >= 0 ? -1 : id, mixer }
+      i2s_play(id, loop) {
+        const mixer = id >= 1000 && id < 2000 ? id - 1000 : -1
+        cx.i2s = { source: mixer >= 0 ? -1 : id, mixer, start: cx.started(id), loop: !!loop }
       },
+      clip_new(name) { return cx.clip(name) },
       i2s_playing: () => cx.i2s.source !== -1 || cx.i2s.mixer !== -1,
       mixer_new(n) {
         cx.mixers.push(Array.from({ length: n }, () => ({ sample: -1, level: 1 })))
         return 1000 + cx.mixers.length - 1      // mixer ids are 1000 and up
       },
-      mixer_voice(m, n, sample, level) { cx.mixers[m - 1000][n] = { sample, level } },
+      mixer_voice(m, n, sample, level, loop) { cx.mixers[m - 1000][n] = { sample, level, start: cx.started(sample), loop: !!loop } },
       mixer_level(m, n, level) { cx.mixers[m - 1000][n].level = level },
       audio_volume(v) { cx.volume = v },
 

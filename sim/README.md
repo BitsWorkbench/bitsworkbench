@@ -107,6 +107,24 @@ carry the modules flat in `cflib/` with `__init__.py`, and the licence at
 `COPYING`, as the firmware has them; Bitcraze's own library will not run here,
 as the firmware's copy is ported to CircuitPython.
 
+### CodeX sound files
+
+A simulated CodeX has the sounds/ folder a CodeX ships with (the names are
+`sounds` in `src/sim/kinds.js`; the files come from Firia Labs' labs-demos
+repository, `codex/stock_sounds/`). On its drive each is a stand-in naming its
+length (`driveFiles()`); the simulated `audiomp3` plays it for that long, so a
+program waits as on a CodeX. A name the CodeX does not have is an OSError, as on
+the board.
+
+A recording in `public/sim-assets/codex/sounds/<name>.mp3` is heard: the build
+reads its length from its MP3 frames (`sim/tools/codex-sounds.mjs`, the
+`virtual:codex-sounds` module), the world reports it in the CodeX's `clips`, and
+`src/sim/sound.js` fetches, decodes and plays it on the speaker bus, at the
+voice's level and the board's volume, stopping it when the program does. The
+service worker precaches them with the rest. A name with no recording here plays
+as a second of silence. Put a recording there only when Firia Labs may publish
+it under this repository's terms.
+
 ## Testing
 
 ```bash

@@ -3,7 +3,10 @@
 // Uses the gym when its built assets are present (they are not published
 // yet), and an empty room otherwise.
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import assert from 'node:assert/strict'
+import { mp3Seconds, recordedSounds } from '../sim/tools/codex-sounds.mjs'
 import { runHeadless, runHeadlessGroup } from '../src/sim/headless.js'
 import { REMOTE_CODEX, LISTENER_CODEX, LISTENER_CODEAIR, REMOTE_FOR_CODEAIR, XFLY_CODEAIR } from '../src/sim/boards/examples.js'
 import { COURSES, courseShape } from '../src/sim/world/courses.js'
@@ -729,6 +732,115 @@ await test('a board described: where, which way, what it is doing; and what chan
   assert.match(describe(air, { room: 'auditorium' }), /CodeAIR in the auditorium, flying 0\.5 m up,.*Motors on\. 1 of 8 NeoPixels lit\./)
   assert.equal(change({ ...air, above: 0 }, air, 'still', 'still'), 'Took off.')
   assert.match(describe({ kind: 'codex', pixels: [[1, 0, 0]], leds: [1, 0, 0, 0, 0, 0] }), /1 of 4 NeoPixels lit, 1 of 6 red LEDs on/)
+})
+
+console.log('CodeX sound files')
+
+// An MP3 of `frames` MPEG-1 Layer III frames (128 kbit/s, 44.1 kHz: 417 bytes,
+// 1152 samples each), with an ID3 tag and an encoder's Info frame in front.
+function fakeMp3(frames) {
+  const frame = () => { const f = Buffer.alloc(417); f.set([0xff, 0xfb, 0x90, 0x00]); return f }
+  const info = frame()
+  info.write('Info', 36, 'latin1')
+  const id3 = Buffer.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 20, ...new Array(20).fill(0)])
+  return Buffer.concat([id3, info, ...Array.from({ length: frames }, frame)])
+}
+
+await test('an MP3 plays as long as its frames say (the ID3 tag and Info frame left out)', async () => {
+  assert.equal(mp3Seconds(fakeMp3(100)).toFixed(4), (100 * 1152 / 44100).toFixed(4))
+  assert.equal(mp3Seconds(Buffer.from('not an mp3')), 0)
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-sounds-'))
+  fs.writeFileSync(path.join(dir, 'welcome.mp3'), fakeMp3(200))
+  const table = recordedSounds(dir)
+  assert.deepEqual(Object.keys(table), ['welcome'])
+  assert.equal(table.welcome.audio, true)
+  assert.equal(table.welcome.seconds, Math.round(200 * 1152 / 44100 * 1000) / 1000)
+  fs.rmSync(dir, { recursive: true })
+})
+
+await test("audio.mp3() of a recorded sound plays it on the speaker, for its length, and the program waits", async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10, traceEveryMs: 100, sounds: { welcome: { seconds: 2.5, audio: true } },
+    source: 'from codex import *\nimport time\nt = time.monotonic()\naudio.mp3("sounds/welcome")\nprint("after", round(time.monotonic() - t, 1))\ntime.sleep(0.5)',
+  })
+  assert.ok(!r.error && !r.timedOut, `${JSON.stringify({ error: r.error, timedOut: r.timedOut })} ${r.output}`)
+  assert.match(r.output, /after 2\.5/)
+  // The CodeX library takes a moment to start: times from the play.
+  const t0 = r.trace.find((s) => s.clips?.length)?.t
+  assert.ok(t0 !== undefined, 'the speaker plays it')
+  const during = r.trace.filter((s) => s.t >= t0 && s.t < t0 + 2.3)
+  assert.ok(during.every((s) => s.clips?.length === 1 && s.clips[0].name === 'welcome' && s.clips[0].level > 0), `welcome all along: ${JSON.stringify(during.map((s) => s.clips))}`)
+  assert.equal(new Set(during.map((s) => s.clips[0].start)).size, 1, 'one play, started once')
+  const after = r.trace.filter((s) => s.t > t0 + 2.7)
+  assert.ok(after.length && after.every((s) => !s.clips?.length), `and then nothing: ${JSON.stringify(after.map((s) => s.clips))}`)
+})
+
+await test('a recorded sound played again starts again; a looped one plays until stopped; volume 0 is silent', async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10, traceEveryMs: 100, sounds: { funk: { seconds: 1, audio: true } },
+    source: [
+      'from soundlib import *', 'import time',
+      'm = soundmaker.get_mp3("sounds/funk", play=False)',
+      'm.play()', 'time.sleep(0.5)', 'm.play()', 'time.sleep(0.5)',
+      'm.play(loop=True)', 'time.sleep(2)', 'm.stop()', 'time.sleep(0.5)',
+    ].join('\n'),
+  })
+  assert.ok(!r.error, r.output)
+  const starts = [...new Set(r.trace.flatMap((s) => (s.clips ?? []).map((c) => c.start)))]
+  assert.equal(starts.length, 3, `three plays: ${JSON.stringify(starts)}`)
+  // Times from the first play: the third starts at 1 s, loops for 2 s, then stops.
+  const t0 = r.trace.find((s) => s.clips?.length).t
+  const looping = r.trace.filter((s) => s.t > t0 + 1.2 && s.t < t0 + 2.9)
+  assert.ok(looping.length && looping.every((s) => s.clips?.[0]?.loop), `the third loops past its length: ${JSON.stringify(looping.map((s) => s.clips))}`)
+  assert.ok(r.trace.filter((s) => s.t > t0 + 3.2).every((s) => !s.clips?.length), 'and stops when stopped')
+
+  const v = await runHeadless({
+    kind: 'codex', seconds: 10, traceEveryMs: 100, sounds: { funk: { seconds: 1, audio: true } },
+    source: 'from codex import *\naudio.set_volume(30)\naudio.mp3("sounds/funk")\naudio.set_volume(0)\naudio.mp3("sounds/funk")',
+  })
+  assert.ok(!v.error, v.output)
+  const levels = v.trace.flatMap((s) => (s.clips ?? []).map((c) => c.level))
+  assert.ok(levels.length && levels.every((l) => Math.abs(l - 0.3) < 1e-9), `at volume 30, level 0.3: ${JSON.stringify([...new Set(levels)])}`)
+})
+
+await test("with no recording, a CodeX's sound plays a second of silence, and the program goes on", async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10, traceEveryMs: 100, sounds: {},
+    source: 'from codex import *\nimport time\nt = time.monotonic()\naudio.mp3("sounds/welcome")\naudio.mp3("sounds/africa.mp3")\nprint("after", round(time.monotonic() - t, 1))',
+  })
+  assert.ok(!r.error && !r.timedOut, `${JSON.stringify({ error: r.error, timedOut: r.timedOut, simSeconds: r.simSeconds })} ${r.output}`)
+  const [, took] = r.output.match(/after ([\d.]+)/) ?? []
+  assert.ok(Number(took) >= 2 && Number(took) < 2.6, `two sounds took ${took} s: ${r.output}`)
+  assert.ok(r.trace.every((s) => !s.clips?.length), 'and the speaker plays nothing')
+})
+
+await test("every name in a CodeX's sounds/ folder plays; a name it does not have is an OSError, as on the board", async () => {
+  const names = ['a', 'zero', 'nine', 'codetrek', 'okay', 'bohemia']
+  const ok = await runHeadless({ kind: 'codex', seconds: 20, sounds: {}, source: `from codex import *\nfor n in ${JSON.stringify(names)}:\n    audio.mp3("sounds/" + n)\nprint("all played")` })
+  assert.ok(!ok.error, ok.output)
+  assert.match(ok.output, /all played/)
+  const r = await runHeadless({ kind: 'codex', seconds: 5, source: 'from codex import *\naudio.mp3("sounds/no_such_song")' })
+  assert.equal(r.error?.name, 'OSError', r.output)
+})
+
+await test('a sound played through the sound library plays its length too', async () => {
+  const r = await runHeadless({
+    kind: 'codex', seconds: 10, sounds: {},
+    source: 'from soundlib import *\nimport time\nm = soundmaker.get_mp3("sounds/roll")\nprint("playing", m.voice.playing)\ntime.sleep(1.2)\nprint("then", m.voice.playing)',
+  })
+  assert.equal(r.error, undefined, r.output)
+  assert.match(r.output, /playing True/)
+  assert.match(r.output, /then False/)
+})
+
+// With Firia Labs' labs-demos checked out beside this one, the real files' lengths match ffprobe's.
+const STOCK = new URL('../../labs-demos/codex/stock_sounds/', import.meta.url)
+await (fs.existsSync(STOCK) ? test : async (name) => console.log('  skip ', name, '(no ../labs-demos checkout)'))("the CodeX's own files' lengths, as ffprobe gives them", async () => {
+  const table = recordedSounds(STOCK.pathname)
+  assert.equal(Object.keys(table).length, 35)
+  assert.equal(table.welcome.seconds, 7.092)
+  assert.equal(table.roll.seconds, 41.076)
+  assert.equal(table.a.seconds, 0.468)
 })
 
 console.log('CodeX screen')

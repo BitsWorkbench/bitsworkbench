@@ -22,6 +22,7 @@ export class Engine {
   //   bridge           (engine) => the `_sim` module object the shims call
   //   stopGraceUs      simulated time a stopped program has to clean up
   //   files            { 'botcore.py': source, ... } put on the VM's path
+  //   drive            { 'sounds/welcome.mp3': text, ... } on the board's own drive, as it ships
   //   speed            simulated seconds per wall second; Infinity = flat out
   //   usPerBranch      simulated microseconds charged per backward branch
   //   hookPeriod       branches between charges
@@ -249,6 +250,11 @@ export class Engine {
       const dir = name.includes('/') ? '/lib/' + name.slice(0, name.lastIndexOf('/')) : null
       if (dir) mp.FS.mkdirTree(dir)
       mp.FS.writeFile('/lib/' + name, src)
+    }
+    // The board's own files, then the student's (which may replace them, as on a board).
+    for (const [name, src] of Object.entries(this.o.drive ?? {})) {
+      if (name.includes('/')) mp.FS.mkdirTree('/' + name.slice(0, name.lastIndexOf('/')))
+      mp.FS.writeFile('/' + name, src)
     }
     for (const [name, src] of Object.entries(this.userFiles)) mp.FS.writeFile('/' + name, src)
     const bridge = this.o.bridge(this)
