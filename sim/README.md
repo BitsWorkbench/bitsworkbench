@@ -231,6 +231,7 @@ iPad's screen and touch (a tap on the toolbox; a finger dragged on the 3D view, 
 ```bash
 xvfb-run -a node tests/sim-engines.mjs                                  # WebKit and Firefox
 OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+OCB_BENCH=1 xvfb-run -a node tests/sim-engines.mjs                      # with the flat-out benchmarks
 ```
 
 Measured on a development laptop (2026-11-19; software GL; Chromium's JSPI for comparison):
@@ -241,16 +242,18 @@ Measured on a development laptop (2026-11-19; software GL; Chromium's JSPI for c
 | First program, Run to output | 40 ms | 137 ms | 101 ms | 87 ms |
 | CPU-bound program through the simulator, flat out | 1.0 s | 1.6 s | 3.3 s | 6.9 s |
 | The same, MicroPython alone | | 1.1 s | 1.6 s | 5.6 s |
-| Busy program, motors on, simulated seconds per wall second | 1.00 | 1.00 | 0.44 to 0.72 | 0.97 |
+| Busy program, motors on, simulated seconds per wall second | 1.00 | 1.00 | 0.72 to 0.89 | 0.97 |
 
 WebKit keeps up with a busy program alone (1.01) and with a sleeping one with the motors on
 (1.01); a busy program with the motors on falls behind, so the world's physics in WebKit's
 JavaScript is the cost there, not the Asyncify build alone. The program and the world stay
-in step; on a slow device they run slower than real time together.
+in step; on a slow device they run slower than real time together. Right after the flat-out
+benchmarks the same page measured 0.44 (and a CI runner's WebKit 0.00 to 0.14): something the
+flat-out runs leave behind slows WebKit further, not yet found.
 
 What only a real iPad shows (for whoever tests one; Safari on iPadOS 17 or later):
 - Simulate, then Run CodeBot's starter project: it drives, at the pace of the clock.
-- Real-time pace with the motors on (WebKit on a laptop measured 0.44 to 0.72 of real time):
+- Real-time pace with the motors on (WebKit on a laptop measured 0.72 to 0.89 of real time):
   run this on CodeBot and time it with a stopwatch from Run to `done`. 30 s is real time;
   60 s is half. Note the iPad's model, and try an older iPad if there is one.
 

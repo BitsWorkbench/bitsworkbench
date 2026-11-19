@@ -10,6 +10,7 @@
  * checklist in sim/README.md for what only a real iPad shows). A finger
  * dragged on the 3D view is tested only with OCB_ENGINES=chromium (which has
  * JSPI, so add OCB_SIM_VM=asyncify to run the fallback there too).
+ * OCB_BENCH=1 adds flat-out CPU and sleep benchmarks (about a minute an engine).
  * Needs `npx playwright install webkit firefox` (and their system libraries),
  * and for Firefox a display: run it under `xvfb-run -a` on a machine without one.
  */
@@ -146,8 +147,9 @@ for (const name of ENGINES) {
     await run(page, "print(6 * 7)")
     check(await waitOut(page, /42/), 'and the next program runs')
   }
-  // The CPU and the suspensions, flat out (simulated time unpaced).
-  {
+  // The CPU and the suspensions, flat out (simulated time unpaced), with
+  // OCB_BENCH=1: about a minute an engine, so not in CI.
+  if (process.env.OCB_BENCH) {
     await page.evaluate(() => window.openCodeBot.device.sim.setSpeed(Infinity))
     const bench = async (code, mark) => {
       const times = []
@@ -164,6 +166,8 @@ for (const name of ENGINES) {
     const sleeps = await bench("import time\nfor i in range(2000):\n    time.sleep(0.001)\nprint('slp' + 'done')", 'slpdone')
     console.log(`      CPU-bound program: ${cpu} ms; 2,000 sleeps: ${sleeps} ms (median of 3)`)
     await page.evaluate(() => window.openCodeBot.device.sim.setSpeed(1))
+  }
+  {
     // At 1x, a program that never sleeps: does simulated time keep up with the
     // wall clock (as tests/perf.mjs asks of a Chromebook)? Reported, not judged:
     // this machine's software GL is not an iPad's GPU.

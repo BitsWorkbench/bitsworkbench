@@ -52,33 +52,6 @@ jobs:
 
       - run: npm test
 
-      # The simulator again on the Asyncify build of MicroPython, the one
-      # browsers without JSPI (Safari, Firefox) run (sim/DESIGN.md, section 1).
-      # The browser suite takes JSPI away from the page, which then chooses the
-      # Asyncify build itself.
-      - name: Simulator on the Asyncify build
-        run: |
-          OCB_SIM_VM=asyncify node tests/sim.mjs
-          OCB_SIM_VM=asyncify node tests/sim-ui.mjs
-
-      # Safari's engine and Firefox, which have no JSPI, for real (retrying the
-      # system libraries, as for Chromium above).
-      - name: Install WebKit and Firefox
-        run: |
-          npx playwright install webkit firefox
-          for attempt in 1 2 3; do
-            npx playwright install-deps webkit firefox && exit 0
-            echo "install-deps failed (attempt $attempt), retrying"
-            sleep $((attempt * 10))
-          done
-          exit 1
-
-      - name: Simulator in WebKit and Firefox, and on an iPad's screen
-        run: |
-          xvfb-run -a node tests/sim-engines.mjs
-          OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
-          OCB_ENGINES=chromium OCB_SIM_VM=asyncify OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
-
       # The tested bundle, for a preview on Firebase (the `preview` job below).
       - if: vars.FIREBASE_PROJECT_ID != ''
         uses: actions/upload-artifact@v4
@@ -99,6 +72,71 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-screenshots
+          path: tests/screenshots/
+          if-no-files-found: ignore
+
+  # The simulator as browsers without JSPI run it (Safari, so every iPad, and
+  # Firefox): the Asyncify build of MicroPython (sim/DESIGN.md, section 1). Its
+  # own job, beside build-and-test, so neither waits on the other.
+  without-jspi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SIM_FLIGHT: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Playwright's browsers, kept between runs for the version the lock file pins.
+      - name: Cache the browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-chromium-webkit-firefox
+
+      - name: Install Chromium, WebKit and Firefox
+        run: npx playwright install chromium webkit firefox
+
+      # Their system libraries, retried when the Ubuntu mirror is flaky.
+      - name: Install the browsers' system libraries
+        timeout-minutes: 6
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install-deps chromium webkit firefox && exit 0
+            echo "install-deps failed (attempt $attempt), retrying"
+            sleep $((attempt * 10))
+          done
+          exit 1
+
+      - run: npm run build
+
+      # The simulator suites with the Asyncify build: headless, then in the app,
+      # where the browser suite takes JSPI away from the page, which then
+      # chooses the Asyncify build itself.
+      - name: Simulator on the Asyncify build
+        run: |
+          OCB_SIM_VM=asyncify node tests/sim.mjs
+          OCB_SIM_VM=asyncify node tests/sim-ui.mjs
+
+      # Safari's engine and Firefox, which have no JSPI, for real; then WebKit
+      # and Chromium's fallback on an iPad's screen.
+      - name: Simulator in WebKit and Firefox, and on an iPad's screen
+        run: |
+          xvfb-run -a node tests/sim-engines.mjs
+          OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+          OCB_ENGINES=chromium OCB_SIM_VM=asyncify OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
+
+      - name: Keep the test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-without-jspi
           path: tests/screenshots/
           if-no-files-found: ignore
 
