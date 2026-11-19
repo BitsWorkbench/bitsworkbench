@@ -337,7 +337,24 @@ function allIds(pack) {
   return out
 }
 
-function withDefaults(pack) {
+/** Fields that hold code, checks or names of things, where `{app}` is left as written. */
+const NOT_WORDS = new Set(['id', 'board', 'code', 'solution', 'python', 'check', 'assets', 'avatar', 'sim', 'format', 'continues'])
+
+/**
+ * The pack's words with `{app}` as the product's name (src/brand.js): titles,
+ * briefs, Markdown, captions, quizzes. A pack is kept as its file's text and
+ * read afresh each time, so a renamed product reads right in packs kept before.
+ */
+export function named(value, key = '') {
+  if (NOT_WORDS.has(key)) return value
+  if (typeof value === 'string') return value.replaceAll('{app}', BRAND.name)
+  if (Array.isArray(value)) return value.map((v) => named(v))
+  if (isObject(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, named(v, k)]))
+  return value
+}
+
+function withDefaults(raw) {
+  const pack = named(raw)
   return {
     ...pack,
     missions: pack.missions.map((m) => ({

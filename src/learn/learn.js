@@ -6,7 +6,7 @@
 import { t } from '../i18n/index.js'
 import { toast } from '../ui/notify.js'
 import { Library } from './library.js'
-import { PackError } from './pack.js'
+import { PackError, named } from './pack.js'
 import { Tutorial } from './tutorial.js'
 import { GoalWatcher } from './goals.js'
 import { RegexTester } from './regex.js'
@@ -103,7 +103,7 @@ export class Learn {
     try {
       const res = await fetch(new URL('learn/packs/index.json', document.baseURI))
       const list = res.ok ? await res.json() : []
-      return Array.isArray(list) ? list.filter((p) => p && typeof p.id === 'string' && typeof p.file === 'string' && !/[/\\]/.test(p.file)) : []
+      return Array.isArray(list) ? list.filter((p) => p && typeof p.id === 'string' && typeof p.file === 'string' && !/[/\\]/.test(p.file)).map((p) => named(p)) : []
     } catch {
       return []
     }
