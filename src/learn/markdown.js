@@ -8,11 +8,13 @@
  */
 import MarkdownIt from 'markdown-it'
 import { BRAND } from '../brand.js'
+import { esc } from './esc.js'
+
+// The tutorial loads this module when a pack first opens (tutorial.js
+// loadMarkdown); anything needed before then imports esc from esc.js.
+export { esc }
 
 const md = new MarkdownIt({ html: false, linkify: false, typographer: false })
-
-/** Text made safe to put in HTML, attributes included. */
-export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
 md.validateLink = (url) => /^https?:\/\//i.test(url) || /^[\w.-]+$/.test(url)
 md.renderer.rules.link_open = (tokens, i, options, env, self) => {

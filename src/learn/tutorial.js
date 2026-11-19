@@ -10,7 +10,21 @@
  * mission's introduction, 0 to n-1 its flow, n its finish.
  */
 import { t } from '../i18n/index.js'
-import { renderMarkdown, esc } from './markdown.js'
+import { esc } from './esc.js'
+
+// Markdown (markdown-it) comes in when a pack first opens, not with the page.
+let renderMarkdown = null
+let markdownLoading = null
+/** Load the Markdown renderer; resolves either way (without it, text shows plain). */
+export function loadMarkdown() {
+  if (renderMarkdown) return Promise.resolve()
+  // No module: it was gone after a deploy and the page is reloading (src/ui/new-build.js).
+  markdownLoading ??= import('./markdown.js')
+    .then((m) => { renderMarkdown = m?.renderMarkdown ?? null })
+    .catch((err) => console.warn('Markdown did not load; mission text shows plain.', err))
+    .then(() => { if (!renderMarkdown) markdownLoading = null }) // the next pack opened tries again
+  return markdownLoading
+}
 
 export class Tutorial extends EventTarget {
   /** `offersBlocks(objective, board)`: whether the objective is taught in blocks. */
@@ -80,6 +94,7 @@ export class Tutorial extends EventTarget {
   }
 
   _md(text) {
+    if (text && !renderMarkdown) return text.split(/\n\s*\n/).map((p) => `<p>${esc(p)}</p>`).join('')
     return text ? renderMarkdown(text, { mode: this.mode, assets: this.pack.assets, label: (name, title) => t(`learn.section.${name}`, { name: title }) }) : ''
   }
 

@@ -9,7 +9,7 @@ import { t } from '../i18n/index.js'
 import { toast } from '../ui/notify.js'
 import { Library } from './library.js'
 import { PackError, named } from './pack.js'
-import { Tutorial } from './tutorial.js'
+import { Tutorial, loadMarkdown } from './tutorial.js'
 import { GoalWatcher } from './goals.js'
 import { RegexTester } from './regex.js'
 import { offersBlocks } from './offer.js'
@@ -190,6 +190,7 @@ export class Learn {
       this._save({ id: null })
       return
     }
+    await loadMarkdown()
     this.tutorial.finished = await this.library.finished(pack)
     this.tutorial.show(pack, await this.library.place(id))
     this._save({ id })

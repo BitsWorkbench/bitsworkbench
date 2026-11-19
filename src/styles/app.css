@@ -770,6 +770,23 @@ kbd {
   isolation: isolate;
 }
 .python-editor .cm-editor { flex: 1 1 auto; min-width: 0; height: 100%; }
+/* What holds the program, and takes typing, while the editor loads (src/editor/lazy-editor.js). */
+.python-editor-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  resize: none;
+  padding: 4px 6px 24px 40px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 4;
+  white-space: pre;
+}
+.python-editor-box:focus { outline: none; box-shadow: inset 0 0 0 2px var(--green); }
 .python-editor .cm-editor.cm-focused { outline: none; }
 .python-editor .cm-editor:focus-within { box-shadow: inset 0 0 0 2px var(--green); }
 .python-editor .cm-scroller {
