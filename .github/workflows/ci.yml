@@ -134,6 +134,11 @@ jobs:
           OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
           OCB_ENGINES=chromium OCB_SIM_VM=asyncify OCB_DEVICE='iPad (gen 7) landscape' node tests/sim-engines.mjs
 
+      # The free missions that come with the app, opened from Learn and stepped
+      # through on the simulator in Safari's engine, on an iPad's screen.
+      - name: Learn's packs in WebKit, on an iPad's screen
+        run: OCB_ENGINES=webkit OCB_DEVICE='iPad (gen 7) landscape' node tests/learn-packs-ui.mjs
+
       - name: Keep the test screenshots
         if: failure()
         uses: actions/upload-artifact@v4

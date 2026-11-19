@@ -31,7 +31,7 @@ export class LocalFolderStore {
   async pickFolder() {
     let handle
     try {
-      handle = await window.showDirectoryPicker({ id: 'codacious', mode: 'readwrite' })
+      handle = await window.showDirectoryPicker({ id: 'opencodebot', mode: 'readwrite' })
     } catch {
       return null // the student cancelled
     }

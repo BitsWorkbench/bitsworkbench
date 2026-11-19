@@ -1395,7 +1395,7 @@ export class App {
   /**
    * The Learn panel: a board switch, then that board's quick starts (its two
    * easiest examples) and, folded away, the rest of its examples; then the
-   * mission packs that come with Codacious, those kept in this browser from
+   * mission packs that come with the app, those kept in this browser from
    * a file, and a button to open a pack file.
    */
   _learnHtml(device, moreOpen, { kept, builtins }) {

@@ -445,13 +445,13 @@ console.log('A click on a part of the board')
   check((await pane('.learn-goals li[data-met="true"]').count()) === 1, 'a click on the part the goal names meets it')
 }
 
-console.log('A pack that comes with Codacious')
+console.log('A pack that comes with the app')
 {
   const index = await page.evaluate(() => fetch(new URL('learn/packs/index.json', document.baseURI)).then((r) => r.json()))
   const first = index[0]
   await page.click('#btn-learn')
   await page.waitForFunction(() => document.getElementById('modal')?.open)
-  check((await page.locator('#modal [data-builtin]').count()) === index.length, `Learn lists the packs that come with Codacious (${index.map((p) => p.id).join(', ')})`)
+  check((await page.locator('#modal [data-builtin]').count()) === index.length, `Learn lists the packs that come with the app (${index.map((p) => p.id).join(', ')})`)
   check(await page.locator(`#modal [data-builtin="${first.id}"]`).innerText().then((s) => s.includes(first.title)), 'each card names its pack')
   await page.click(`#modal [data-builtin="${first.id}"]`)
   await page.waitForFunction((title) => !document.getElementById('learn-pane').hidden && document.querySelector('#learn-pane .learn-pack-title')?.textContent === title, first.title, { timeout: 30000 })
