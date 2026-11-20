@@ -116,9 +116,11 @@ for (const name of ENGINES) {
         // Which goals this test can meet: not a code goal no program from the pack meets.
         const expected = item.goals.map((g) => leaves(g.check).filter(isCode).every((c) => program != null && met(c, seenOf(program))))
         if (program != null) {
-          await page.evaluate((text) => {
+          await page.evaluate(async (text) => {
             const app = window.openCodeBot
             if (app.workspace.mode !== 'text') app._toText()
+            // The editor loads the first time Python shows (src/editor/lazy-editor.js).
+            await app.pythonEditor.load()
             const view = app.pythonEditor.view
             view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
           }, program)

@@ -16,7 +16,7 @@ const DRAG_START_PX = 6
 export class SnippetPalette {
   /**
    * @param {HTMLElement} host the palette's element
-   * @param {{ editor: () => import('./python-editor.js').PythonEditor, beforeUse: () => void,
+   * @param {{ editor: () => import('./lazy-editor.js').LazyPythonEditor, beforeUse: () => void,
    *   myBlocks?: () => Array<{ name: string, code: string, value: boolean }>,
    *   trek?: () => Array<object>, used?: (snippet: object) => void }} options
    *   myBlocks gives the student's saved blocks, for the My blocks category;

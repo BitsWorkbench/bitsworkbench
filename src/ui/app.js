@@ -14,7 +14,7 @@ import { t, listOf, LANGUAGES, language, languageName, setLanguage } from '../i1
 import { DeviceSwitch } from '../sim/device-switch.js'
 import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
-import { PythonEditor } from '../editor/python-editor.js'
+import { LazyPythonEditor } from '../editor/lazy-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
 import { pythonToBlocks } from '../convert/to-blocks.js'
 import { createFileStores } from '../files/store.js'
@@ -782,7 +782,8 @@ export class App {
   // ------------------------------------------------------- blocks or text
 
   _bindTextMode() {
-    this.pythonEditor = new PythonEditor($('python-editor'), {
+    // CodeMirror comes in the first time Python is shown (_showMode).
+    this.pythonEditor = new LazyPythonEditor($('python-editor'), {
       label: t('text.editorLabel'),
       describedBy: 'python-editor-help',
       onChange: (text) => this.workspace.setPythonText(text),
@@ -861,6 +862,7 @@ export class App {
   _showMode() {
     const python = this.workspace.mode === 'text'
     if (python && this.pythonEditor.value !== this.workspace.pythonText) this.pythonEditor.value = this.workspace.pythonText
+    if (python) this.pythonEditor.load()
     this.view = python ? 'python' : 'blocks'
     $('code-pane').hidden = !python
     $('blockly-root').hidden = python

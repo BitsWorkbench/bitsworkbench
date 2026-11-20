@@ -8,7 +8,7 @@
  * (tutorial.js) when the student picks a step.
  */
 import { t } from '../i18n/index.js'
-import { esc } from './markdown.js'
+import { esc } from './esc.js'
 
 export class Rail extends EventTarget {
   /** `root`, the rail's element; `controls`, the id of the drawer it opens. */

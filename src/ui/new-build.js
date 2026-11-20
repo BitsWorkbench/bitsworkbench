@@ -70,9 +70,14 @@ export function followNewBuilds(save, { reload = () => location.reload() } = {})
     return true
   }
 
-  // A late part's module or its styles (Vite's loader says which).
+  // A late part's module or its styles (Vite's loader says which). The server
+  // is asked first: a part that failed on a flaky network, or offline, is not
+  // gone, and the page carries on (the Python editor, loaded on the first
+  // switch to Python, then leaves its text box as the editor).
   window.addEventListener('vite:preloadError', (e) => {
-    if (reloadOnce()) e.preventDefault()
+    const url = /https?:\/\/[^\s'"]+/.exec(String(e.payload?.message ?? ''))?.[0]
+    if (url) reloadIfGone(url)
+    else reloadIfStale()
   })
   window.addEventListener('unhandledrejection', (e) => {
     if (isMissingPart(e.reason) && reloadOnce()) e.preventDefault()
