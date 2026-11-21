@@ -1,0 +1,142 @@
+{
+ "when": "2026-11-21T22:58:30.112Z",
+ "chromium": {
+  "cpu 1x": {
+   "sim alone": {
+    "frames": 205,
+    "fps": 41,
+    "median": 16.7,
+    "p95": 50,
+    "janky": 19
+   },
+   "sim + CSS/SVG effects": {
+    "frames": 126,
+    "fps": 25,
+    "median": 33.4,
+    "p95": 66.7,
+    "janky": 44
+   },
+   "sim + lean CSS/SVG effects": {
+    "frames": 164,
+    "fps": 33,
+    "median": 33.3,
+    "p95": 50.1,
+    "janky": 28
+   },
+   "sim + WebGL overlay": {
+    "frames": 121,
+    "fps": 24,
+    "median": 33.4,
+    "p95": 66.7,
+    "janky": 47
+   }
+  },
+  "cpu 4x": {
+   "sim alone": {
+    "frames": 138,
+    "fps": 28,
+    "median": 33.3,
+    "p95": 66.7,
+    "janky": 36
+   },
+   "sim + CSS/SVG effects": {
+    "frames": 102,
+    "fps": 20,
+    "median": 50,
+    "p95": 66.7,
+    "janky": 67
+   },
+   "sim + lean CSS/SVG effects": {
+    "frames": 104,
+    "fps": 21,
+    "median": 50,
+    "p95": 66.7,
+    "janky": 66
+   },
+   "sim + WebGL overlay": {
+    "frames": 92,
+    "fps": 18,
+    "median": 50,
+    "p95": 83.3,
+    "janky": 83
+   }
+  },
+  "cpu 6x": {
+   "sim alone": {
+    "frames": 111,
+    "fps": 22,
+    "median": 49.9,
+    "p95": 66.7,
+    "janky": 53
+   },
+   "sim + CSS/SVG effects": {
+    "frames": 89,
+    "fps": 18,
+    "median": 50,
+    "p95": 83.3,
+    "janky": 88
+   },
+   "sim + lean CSS/SVG effects": {
+    "frames": 94,
+    "fps": 19,
+    "median": 50,
+    "p95": 66.7,
+    "janky": 77
+   },
+   "sim + WebGL overlay": {
+    "frames": 83,
+    "fps": 17,
+    "median": 50.1,
+    "p95": 83.4,
+    "janky": 96
+   }
+  },
+  "features": {
+   "webgl2": true,
+   "webgpu": false,
+   "webgpuAdapter": null,
+   "waapi": true,
+   "clipPath": true,
+   "svgMask": true,
+   "reducedMotionQuery": true,
+   "inert": true,
+   "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+  },
+  "version": "151.0.7922.34"
+ },
+ "webkit": {
+  "features": {
+   "webgl2": true,
+   "webgpu": false,
+   "webgpuAdapter": null,
+   "waapi": true,
+   "clipPath": true,
+   "svgMask": true,
+   "reducedMotionQuery": true,
+   "inert": true,
+   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+  },
+  "version": "26.0",
+  "D page, idle": {
+   "frames": 247,
+   "fps": 62,
+   "median": 16,
+   "p95": 17,
+   "janky": 0
+  },
+  "D page, block flying": {
+   "frames": 209,
+   "fps": 52,
+   "median": 17,
+   "p95": 37,
+   "janky": 10
+  },
+  "D page, beams + glows + rings": {
+   "frames": 244,
+   "fps": 61,
+   "median": 16,
+   "p95": 18,
+   "janky": 1
+  }
+ }
+}

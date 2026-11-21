@@ -1,0 +1,93 @@
+{
+  "format": 2,
+  "id": "LCX_Welcome",
+  "title": "Welcome",
+  "board": "codex",
+  "promise": "In about two minutes, make CodeX say your name and light up.",
+  "start": { "code": "from codex import *\n\ndisplay.show(\"Hi there!\")\n" },
+  "goal": { "code": "from codex import *\n\ndisplay.show(\"Hi, I'm Sam!\")\npixels.fill(RED)\n" },
+  "steps": [
+    {
+      "id": "look",
+      "say": "This is CodeX's twin. Drag it to spin it around.",
+      "point": "sim",
+      "do": { "event": "orbit" },
+      "skippable": true,
+      "cheer": "Real CodeX works just the same."
+    },
+    {
+      "id": "run",
+      "say": "This program shows **Hi there!** on CodeX's screen. Press **▶ Run**.",
+      "point": "run",
+      "also": "block:display.show(...)",
+      "do": { "runs": true },
+      "fx": ["beam block:display.show(...) > screen", "zoom screen"],
+      "cheer": "It ran! Look at the screen."
+    },
+    {
+      "id": "name",
+      "say": "Make it yours. Click **Hi there!** and type your name.",
+      "point": "field:display.show(...)",
+      "do": { "all": [{ "has": "display.show(...)" }, { "has": "display.show('Hi there!')", "max": 0 }] },
+      "hints": ["Click right on the words **Hi there!** inside the blue block."],
+      "cheer": "Nice name."
+    },
+    {
+      "id": "run-name",
+      "say": "Run it again.",
+      "point": "run",
+      "do": { "runs": true },
+      "fx": ["zoom screen"],
+      "cheer": "That's your code, running on CodeX."
+    },
+    {
+      "id": "palette",
+      "say": "Every block lives in the palette. Open **✨ Lights**.",
+      "point": "palette:Lights",
+      "do": { "event": "palette", "name": "Lights" },
+      "cheer": "These blocks control CodeX's lights."
+    },
+    {
+      "id": "add",
+      "say": "Drag **set all neopixels** under your **show** block.",
+      "point": "palette-item:pixels.fill(...)",
+      "to": "after:display.show(...)",
+      "do": { "has": "pixels.fill(...)" },
+      "fx": ["ghost"],
+      "hints": ["Press and hold the pink block, then let go just under the blue one."],
+      "cheer": "Snap!"
+    },
+    {
+      "id": "run-lights",
+      "say": "Run it, and watch CodeX's four corners.",
+      "point": "run",
+      "do": { "runs": true },
+      "fx": ["beam block:pixels.fill(...) > part:^Neo_", "pulse part:^Neo_"],
+      "show": { "card": "picture", "asset": "neopixel.svg", "caption": "Those are **NeoPixels**: tiny lights that can be any color." },
+      "cheer": "Lights on!"
+    },
+    {
+      "id": "switch",
+      "say": "Same program, in Python. Flip the **Blocks / Python** switch.",
+      "point": "switch",
+      "do": { "event": "switched" },
+      "fx": ["morph"],
+      "show": { "card": "compare", "caption": "Each block is one line of Python. Switch back any time." },
+      "cheer": "Two languages, one program."
+    },
+    {
+      "id": "check",
+      "ask": "Which line lights CodeX up?",
+      "answers": [
+        { "a": "`display.show(...)`" },
+        { "a": "`pixels.fill(RED)`", "correct": true },
+        { "a": "`from codex import *`" }
+      ],
+      "cheer": "Right: `pixels` are the lights."
+    }
+  ],
+  "complete": {
+    "say": "You ran code, made it yours, and lit up CodeX.",
+    "more": "{app} saves your work as you go, in this browser.\n\nGot a real CodeX? **Connect** runs the same program on it. That's the next mission."
+  }
+}

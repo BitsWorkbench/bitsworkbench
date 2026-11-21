@@ -1,0 +1,21 @@
+{
+  "lang": "es",
+  "of": "LCX_Welcome",
+  "title": "Bienvenida",
+  "promise": "En unos dos minutos, haz que CodeX diga tu nombre y se ilumine.",
+  "steps": {
+    "look": { "say": "Este es el gemelo de CodeX. Arrástralo para girarlo.", "cheer": "El CodeX real funciona igual." },
+    "run": { "say": "Este programa muestra **Hi there!** en la pantalla de CodeX. Pulsa **▶ Ejecutar**.", "cheer": "¡Funcionó! Mira la pantalla." },
+    "name": { "say": "Hazlo tuyo. Haz clic en **Hi there!** y escribe tu nombre.", "hints": ["Haz clic justo en las palabras **Hi there!** dentro del bloque azul."], "cheer": "Buen nombre." },
+    "run-name": { "say": "Ejecútalo otra vez.", "cheer": "Ese es tu código, funcionando en CodeX." },
+    "palette": { "say": "Todos los bloques están en la paleta. Abre **✨ Luces**.", "cheer": "Estos bloques controlan las luces de CodeX." },
+    "add": { "say": "Arrastra **set all neopixels** debajo de tu bloque **show**.", "hints": ["Mantén pulsado el bloque rosa y suéltalo justo debajo del azul."], "cheer": "¡Encaja!" },
+    "run-lights": { "say": "Ejecútalo y mira las cuatro esquinas de CodeX.", "caption": "Son **NeoPixels**: lucecitas que pueden ser de cualquier color.", "cheer": "¡Luces encendidas!" },
+    "switch": { "say": "El mismo programa, en Python. Cambia el interruptor **Bloques / Python**.", "caption": "Cada bloque es una línea de Python. Vuelve cuando quieras.", "cheer": "Dos lenguajes, un programa." },
+    "check": { "ask": "¿Qué línea ilumina CodeX?", "answers": ["`display.show(...)`", "`pixels.fill(RED)`", "`from codex import *`"], "cheer": "Exacto: `pixels` son las luces." }
+  },
+  "complete": {
+    "say": "Ejecutaste código, lo hiciste tuyo e iluminaste CodeX.",
+    "more": "{app} guarda tu trabajo mientras avanzas, en este navegador.\n\n¿Tienes un CodeX de verdad? **Conectar** ejecuta el mismo programa en él. Esa es la siguiente misión."
+  }
+}

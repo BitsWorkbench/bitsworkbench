@@ -1,0 +1,252 @@
+{
+ "today": [
+  {
+   "mission": "Welcome",
+   "part": "Mission overview",
+   "words": 75
+  },
+  {
+   "mission": "Welcome",
+   "part": "Missions and Objectives",
+   "instructions": 97,
+   "goals": 18,
+   "complete": 49,
+   "trek": 0,
+   "words": 164
+  },
+  {
+   "mission": "Welcome",
+   "part": "Your Program",
+   "instructions": 39,
+   "goals": 6,
+   "complete": 19,
+   "trek": 0,
+   "words": 64
+  },
+  {
+   "mission": "Welcome",
+   "part": "The Palette",
+   "instructions": 31,
+   "goals": 10,
+   "complete": 33,
+   "trek": 0,
+   "words": 74
+  },
+  {
+   "mission": "Welcome",
+   "part": "The Simulator",
+   "instructions": 71,
+   "goals": 3,
+   "complete": 33,
+   "trek": 0,
+   "words": 107
+  },
+  {
+   "mission": "Welcome",
+   "part": "Quiz: Your First Mission Quiz",
+   "words": 61
+  },
+  {
+   "mission": "Welcome",
+   "part": "Mission complete",
+   "words": 43
+  },
+  {
+   "mission": "Light Show",
+   "part": "Mission overview",
+   "words": 125
+  },
+  {
+   "mission": "Light Show",
+   "part": "Find the Pixels",
+   "instructions": 82,
+   "goals": 18,
+   "complete": 9,
+   "trek": 0,
+   "words": 109
+  },
+  {
+   "mission": "Light Show",
+   "part": "Turn on the Red Light",
+   "instructions": 141,
+   "goals": 16,
+   "complete": 11,
+   "trek": 14,
+   "words": 168
+  },
+  {
+   "mission": "Light Show",
+   "part": "Two in a Row?",
+   "instructions": 110,
+   "goals": 11,
+   "complete": 8,
+   "trek": 27,
+   "words": 129
+  },
+  {
+   "mission": "Light Show",
+   "part": "What's Going On?",
+   "instructions": 159,
+   "goals": 26,
+   "complete": 22,
+   "trek": 14,
+   "words": 207
+  },
+  {
+   "mission": "Light Show",
+   "part": "Quiz: Two Images",
+   "words": 37
+  },
+  {
+   "mission": "Light Show",
+   "part": "Find the Bug",
+   "instructions": 102,
+   "goals": 13,
+   "complete": 7,
+   "trek": 0,
+   "words": 122
+  },
+  {
+   "mission": "Light Show",
+   "part": "Step by Step Colors",
+   "instructions": 103,
+   "goals": 14,
+   "complete": 9,
+   "trek": 0,
+   "words": 126
+  },
+  {
+   "mission": "Light Show",
+   "part": "Slow it Down",
+   "instructions": 116,
+   "goals": 20,
+   "complete": 19,
+   "trek": 21,
+   "words": 155
+  },
+  {
+   "mission": "Light Show",
+   "part": "Name that Number",
+   "instructions": 216,
+   "goals": 18,
+   "complete": 25,
+   "trek": 15,
+   "words": 259
+  },
+  {
+   "mission": "Light Show",
+   "part": "Quiz: Variable Questions",
+   "words": 53
+  },
+  {
+   "mission": "Light Show",
+   "part": "Warning Sign",
+   "instructions": 181,
+   "goals": 29,
+   "complete": 8,
+   "trek": 49,
+   "words": 218
+  },
+  {
+   "mission": "Light Show",
+   "part": "Mission complete",
+   "words": 58
+  }
+ ],
+ "journey": [
+  {
+   "part": "Opening card",
+   "words": 13
+  },
+  {
+   "part": "look",
+   "say": 10,
+   "cheer": 6,
+   "card": 0,
+   "optional": 0,
+   "words": 16
+  },
+  {
+   "part": "run",
+   "say": 10,
+   "cheer": 6,
+   "card": 0,
+   "optional": 0,
+   "words": 16
+  },
+  {
+   "part": "name",
+   "say": 10,
+   "cheer": 2,
+   "card": 0,
+   "optional": 11,
+   "words": 12
+  },
+  {
+   "part": "run-name",
+   "say": 3,
+   "cheer": 6,
+   "card": 0,
+   "optional": 0,
+   "words": 9
+  },
+  {
+   "part": "palette",
+   "say": 8,
+   "cheer": 5,
+   "card": 0,
+   "optional": 0,
+   "words": 13
+  },
+  {
+   "part": "add",
+   "say": 8,
+   "cheer": 1,
+   "card": 0,
+   "optional": 14,
+   "words": 9
+  },
+  {
+   "part": "run-lights",
+   "say": 7,
+   "cheer": 2,
+   "card": 10,
+   "optional": 0,
+   "words": 19
+  },
+  {
+   "part": "switch",
+   "say": 9,
+   "cheer": 4,
+   "card": 11,
+   "optional": 0,
+   "words": 24
+  },
+  {
+   "part": "check",
+   "say": 10,
+   "cheer": 5,
+   "card": 0,
+   "optional": 0,
+   "words": 15
+  },
+  {
+   "part": "Finish card",
+   "words": 10,
+   "optional": 25
+  }
+ ],
+ "totals": {
+  "todayWelcome": 588,
+  "todayWelcomeObjectives": [
+   164,
+   64,
+   74,
+   107
+  ],
+  "todayLightShow": 1766,
+  "journey": 156,
+  "journeyMaxStep": 24,
+  "journeyOptional": 50
+ }
+}
