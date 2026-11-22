@@ -9,7 +9,7 @@ some blocks together, and press Run. No board yet? Press Simulate and the
 program runs on a simulated one. No install, no accounts, no setup: just a
 web page, and a USB cable when there is a board.
 
-**▶ [Open OpenCodeBot](https://firialabs.github.io/opencodebot/)**: nothing to
+**▶ [Open OpenCodeBot](https://firialabs-open-editor.web.app/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
 
 Everything it makes is real CircuitPython, and the Python is one click away,
@@ -94,8 +94,8 @@ npm run preview  # serve dist/ locally
   device would have written against the original program.
 - **`tests/smoke.mjs`**: builds every block in every toolbox in a headless
   browser and checks each one generates Python.
-- **`tests/subpath.mjs`**: serves `dist/` from a sub-path the way GitHub Pages
-  does, then pulls the network and reloads, so the "works offline" promise
+- **`tests/subpath.mjs`**: serves `dist/` from a sub-path, as a host serving
+  several projects does, then pulls the network and reloads, so the "works offline" promise
   cannot quietly break.
 - **`tests/new-build.mjs`**: after a deploy, a page still on the build its
   service worker kept can lose the parts it loads late (the simulator's view,
@@ -129,56 +129,52 @@ npm run preview  # serve dist/ locally
   Then goals ticking as the student types, runs and switches, staying met
   after a reload, and a slow regex stopped without hanging the page.
 
-### Hosting on GitHub Pages
+### Deploying your own copy
 
-`dist/` is a plain static bundle with a relative base path, so it works from the
-root of a domain or from a sub-path such as
-`https://firialabs.github.io/opencodebot/`.
+`npm run build` writes `dist/`, a plain static site with a relative base path:
+any static host can serve it, from the root of a domain or from a sub-path such
+as `/opencodebot/`. Nothing in it needs a server, a database or an account.
+Firebase Hosting is one way, and the one Firia uses; GitHub Pages, Netlify,
+Cloudflare Pages, S3 or your school's own web server work as well.
 
-`.github/workflows/deploy.yml` builds, tests and publishes it on every push to
-`main`. Setting it up on a fresh fork takes two one-time steps:
+Whatever the host, set these, as `firebase.json` does for Firebase
+(`tests/hosting.mjs` checks every built file against it):
 
-1. Make the repository **public**. GitHub Pages cannot publish from a private
-   repository unless the organisation is on GitHub Enterprise Cloud. Until it
-   is, the deploy job skips quietly rather than failing red.
-2. Turn Pages on under **Settings → Pages → Build and deployment → Source:
-   GitHub Actions**. The workflow cannot do this for itself: creating a Pages
-   site needs admin access and `GITHUB_TOKEN` only reaches write.
+- **HTTPS.** Web Serial needs a secure context, so `https://` (or
+  `http://localhost`) is required; over plain `http://` the page loads but
+  never connects to a device.
+- **Checked afresh on every visit** (`Cache-Control: no-cache`): `/`,
+  `index.html`, `boards.html`, `sw.js`, `registerSW.js`, `workbox-*.js`,
+  `manifest.webmanifest` and everything under `learn/`. Cached longer, these
+  can leave students on an old build.
+- **Kept a year** (`Cache-Control: public, max-age=31536000, immutable`):
+  `assets/`, whose file names carry their content's hash.
+- **Kept an hour** (`Cache-Control: public, max-age=3600`): `sim-assets/`,
+  `blockly-media/`, `icons/` and `licenses/`.
+- **`Content-Type: application/wasm`** for `.wasm` files.
+- **On every response:** `X-Content-Type-Options: nosniff`, and
+  `Referrer-Policy: no-referrer` so no page tells another site where a student
+  came from.
 
-After that it is hands-off. There is no build step to configure, because Pages
-serves a pre-built artifact rather than running Jekyll.
+With Firebase: make a project with Hosting on (and nothing else, for the
+privacy promise), then from a built checkout run
+`npx firebase-tools use --add` to pick it (this writes `.firebaserc`, which
+git ignores) and `npx firebase-tools deploy --only hosting`.
 
-Hosting it somewhere else is just as easy: copy `dist/` onto any HTTPS host.
-Web Serial needs a secure context, so `https://` (or `http://localhost`) is
-required; a site served over plain `http://` will load but will not connect to
-a device.
+### How Firia deploys
 
-### Hosting on Firebase
+Firia's copy is at **https://firialabs-open-editor.web.app/**, on Firebase
+Hosting. `.github/workflows/deploy.yml` builds, tests and publishes the tested
+bundle there on every merge to `main`, and CI gives each pull request from a
+branch of this repository a preview address, posted on the pull request and
+kept a week. Both run only in `firialabs/opencodebot`, so a fork never tries to
+deploy as Firia, and only once the repository has:
 
-The site's own address is served by Firebase Hosting, as CodeSpace is.
-`firebase.json` sets its headers: the pages, the service worker and the mission
-packs are checked afresh on every visit, the files named by their content are
-kept a year, and no page tells another site where a student came from
-(`tests/hosting.mjs` checks every built file against them).
-
-`.github/workflows/deploy.yml` publishes the same tested bundle it gives Pages,
-and each pull request from a branch of this repository gets a preview address,
-posted on the pull request and kept a week. Both stay off until the repository
-has what they need, set once by an owner:
-
-1. **A Firebase project** with Hosting on (console.firebase.google.com). Nothing
-   else in it: no Analytics, no other Firebase product (the privacy promise).
-2. **A service account** that may deploy to it: in the Google Cloud console,
-   IAM, a service account with the *Firebase Hosting Admin* role (or run
-   `firebase init hosting:github`, which makes one). Its JSON key goes in the
-   repository's secret `FIREBASE_SERVICE_ACCOUNT`.
-3. **The project's id** in the repository's variable `FIREBASE_PROJECT_ID`
-   (Settings, Secrets and variables, Actions, Variables). This turns the jobs on.
-4. **The address**: in Firebase, Hosting, Add custom domain, then the DNS records
-   it asks for at the domain's registrar. The certificate follows by itself.
-
-Then the next merge to `main` publishes. To publish by hand from a built
-checkout: `npx firebase-tools deploy --only hosting --project <id>`.
+1. **The project's id** in the repository variable `FIREBASE_PROJECT_ID`
+   (Settings, Secrets and variables, Actions, Variables).
+2. **A service account** with the *Firebase Hosting Admin* role, its JSON key
+   in the repository secret `FIREBASE_SERVICE_ACCOUNT`. The key lives only
+   there, never in a file in the repository.
 
 ## How it works
 
