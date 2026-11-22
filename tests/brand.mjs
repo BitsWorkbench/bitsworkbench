@@ -48,7 +48,7 @@ for (const file of sources) {
 
 if (existsSync('dist/index.html')) {
   const page = readFileSync('dist/index.html', 'utf8')
-  check(page.includes(`<title data-i18n="app.name">${BRAND.name}</title>`), 'the built page is titled with the name')
+  check(page.includes(`<title data-i18n="app.title">${BRAND.name} Beta</title>`), 'the built page is titled with the name, in Beta')
   check(readFileSync('dist/boards.html', 'utf8').includes(`>${BRAND.name} boards</title>`), 'and so is the boards page')
   check(!page.includes('%BRAND_NAME%'), 'no placeholder is left in the built page')
   const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'))

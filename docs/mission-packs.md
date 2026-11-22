@@ -34,7 +34,7 @@ once a pack is in use.
 
 | Field | Required | What it is |
 |---|---|---|
-| `format` | yes | `1`. A pack with a higher number needs a newer OpenCodeBot. |
+| `format` | yes | `1`. A pack with a higher number needs a newer BitsWorkbench. |
 | `id`, `title`, `brief` | yes | Text. |
 | `overview`, `complete` | no | Markdown. |
 | `board` | yes | `codebot`, `codex` or `codeair`: the board an objective runs on unless it names its own. The student runs it in the simulator or on a board over USB. |
@@ -92,7 +92,7 @@ Any other field is an error, so a misspelt field name is caught rather than igno
 | `goals` | yes | What finishes the objective: `{ "md", "check" }` each (below). |
 | `hints` | no | Markdown, up to three. |
 | `complete` | no | Markdown shown when the goals are met. |
-| `blocks` | no | Whether the objective is taught in blocks, `true` or `false`. Left out, OpenCodeBot decides (below). |
+| `blocks` | no | Whether the objective is taught in blocks, `true` or `false`. Left out, BitsWorkbench decides (below). |
 | `sim` | no | `{ "room", "course" }`: where the simulated board starts, by the ids in `src/sim/kinds.js` (`ROOMS`) and `src/sim/world/courses.js` (`COURSES`). |
 
 The code is always Python. In blocks mode the student sees the same program as blocks, made by
@@ -102,7 +102,7 @@ The student can switch between blocks and Python at any time, mid-objective: the
 same, and the text, the CodeTrek and the palette follow the switch. But some Python has no
 block (a `def` that returns a value, lists and dicts, f-strings, `try`), and stays a grey Python
 block; an objective whose code is mostly grey blocks is Python in disguise. So each objective is
-**taught in blocks** or not. Unless its `blocks` field says, OpenCodeBot works it out from the
+**taught in blocks** or not. Unless its `blocks` field says, BitsWorkbench works it out from the
 program the objective builds toward (its `solution`, else its `code`, else its CodeTrek's
 chunks): taught in blocks when at most a quarter of its lines, not counting blank lines,
 comments and imports, would be grey Python blocks, and not when more are or the code does not
@@ -215,7 +215,7 @@ until the student switches back.
 }
 ```
 
-Every question has at least two answers and at least one correct one. OpenCodeBot shuffles the
+Every question has at least two answers and at least one correct one. BitsWorkbench shuffles the
 answers; with several correct, the student finds them all.
 
 ## Markdown
@@ -267,15 +267,15 @@ make Python. A **pattern** is one Python statement or expression:
 | `{ "all": [check, ...] }`, `{ "any": [check, ...] }` | Every check, or any one, is met. |
 | `{ "prints": "regex" }` | A run prints a line matching the regular expression. |
 | `{ "runs": true }` | The program runs to its end, or is stopped, without an error. Add `"seconds": n` for at least n seconds of running. |
-| `{ "event": "name" }` | The student does something in OpenCodeBot: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
+| `{ "event": "name" }` | The student does something in BitsWorkbench: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
 | `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches: the name the board's CAD model gives it, as listed in the built model's `public/sim-assets/models/<model>.parts.json` (made from `sim/assets/` by `sim/tools/build-models.mjs`). These are the names CodeSpace's packs use, such as `Cylinder.015` for CodeBot's wheel encoder or `BTN_A` on CodeX. A click is a press and release in place; a drag that turns the camera is not one. |
 
-A goal once met stays met, and OpenCodeBot keeps which goals each objective has met. Code checks
+A goal once met stays met, and BitsWorkbench keeps which goals each objective has met. Code checks
 are checked as the student edits, a moment after they pause.
 
 A regular expression (`prints`, `pick`) must not be able to backtrack without end: the reader
 refuses a repeat inside a repeat (`(a+)+`), a repeated choice (`(a|ab)*`) and back-references.
-OpenCodeBot also tests each one away from the page on at most 1000 characters, and one that takes
+BitsWorkbench also tests each one away from the page on at most 1000 characters, and one that takes
 over a tenth of a second never matches from then on.
 
 ## A pack in two files
@@ -293,9 +293,9 @@ the first file does not have. It has no other fields. Opened with the first part
 follow the first part's, its images join the first part's, and progress carries across, since
 it is kept by id.
 
-## The packs that come with OpenCodeBot
+## The packs that come with BitsWorkbench
 
-`public/learn/packs/` holds the packs OpenCodeBot offers in Learn, beside `index.json`, their list:
+`public/learn/packs/` holds the packs BitsWorkbench offers in Learn, beside `index.json`, their list:
 
 ```json
 [{ "id": "PWR", "file": "PWR.json", "title": "Python with Robots", "brief": "One line", "board": "codebot" }]

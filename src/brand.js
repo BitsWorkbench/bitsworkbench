@@ -12,16 +12,16 @@
  */
 export const BRAND = {
   /** The product's name, as a person reads it. */
-  name: 'OpenCodeBot',
+  name: 'BitsWorkbench',
   /** Under an installed app's icon: keep it to about 12 characters. */
-  shortName: 'OpenCodeBot',
+  shortName: 'BitsWorkbench',
   /**
    * Names it was made under before, kept out of the code as this one is
    * (tests/brand.mjs). Python written then starts with a banner naming one;
    * any "Made with <name>" banner is read as the blocks' own
    * (src/convert/to-blocks.js), so a past name need not be listed for that.
    */
-  pastNames: ['LabBlocks'],
+  pastNames: ['OpenCodeBot', 'Codacious', 'LabBlocks', 'BotBlocks'],
   /** Where a person reports a problem. */
   issues: 'https://github.com/firialabs/opencodebot/issues',
 }

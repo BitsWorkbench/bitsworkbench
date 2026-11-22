@@ -11,6 +11,8 @@ export default {
   'app.tagline': 'Dream it, build it',
   'app.beta': 'Beta',
   'app.betaTitle': 'An early public release: see About',
+  // The browser tab's title. Drop " Beta" here and in pageTitle when the Beta ends.
+  'app.title': '{app} Beta',
   // This language's name for itself, shown in the language menu.
   'lang.name': 'English',
 
@@ -28,7 +30,7 @@ export default {
   'run.controlsLabel': 'Run your program',
   'btn.more': 'More',
   'project.default': 'My project',
-  'project.pageTitle': '{name} · {app}',
+  'project.pageTitle': '{name} · {app} Beta',
   'menu.examples': '📚 Examples… (in Learn)',
   'menu.import': '📂 Open a file from your computer…',
   'menu.exportPy': '🐍 Download Python',
@@ -203,7 +205,7 @@ export default {
   'saved.detail': 'Look in your Downloads folder for {file}.',
   'opened.title': 'Project opened!',
   'openFailed.title': 'Could not open that file',
-  'openFailed.notProject': 'That file does not look like an {app} project.',
+  'openFailed.notProject': 'That file does not look like a project {app} can open.',
   'browser.note': 'This browser cannot connect to devices. Try Chrome or Edge.',
   'browser.noSerial': 'This browser does not support Web Serial, so {app} cannot talk to your device.',
   'browser.noSerialHint': 'You can still build blocks and download the Python. Chrome or Edge on a computer will connect.',
