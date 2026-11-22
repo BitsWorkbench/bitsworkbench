@@ -97,6 +97,26 @@ export class Places {
     }
   }
 
+  /** Every box a place names: each part on its own for `part:`, else the one box (or none). */
+  boxes(place) {
+    if (place?.startsWith('part:')) return this.sim()?.partBoxes?.(new RegExp(place.slice(5))) ?? []
+    const found = this.resolve(place)
+    return found ? [found.box] : []
+  }
+
+  /** The student's statement blocks, in program order (one per line of code). */
+  programBlocks() {
+    const { blockAt } = generateWithLines(this.workspace, this.blocks.targetId)
+    const seen = new Set()
+    return Object.keys(blockAt).map(Number).sort((a, b) => a - b).map((n) => blockAt[n])
+      .filter((id) => id && !seen.has(id) && seen.add(id)).map((id) => this.workspace.getBlockById(id)).filter(Boolean)
+  }
+
+  /** The student's program as Python, the same in either mode. */
+  programText() {
+    return generatePython(this.workspace, this.blocks.targetId)
+  }
+
   /** Open a palette category (a step pointing into it, after a click elsewhere closed it). */
   openPalette(id) {
     const toolbox = this.workspace.getToolbox()

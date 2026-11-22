@@ -334,7 +334,12 @@ class Checker {
         part: [this.place, false],
       }), false],
       fx: [(f, where) => this.list(f, where, (e, w) => {
-        if (typeof e !== 'string' || !EFFECTS.includes(e.split(' ')[0])) this.problem(w, `should start with one of ${EFFECTS.join(', ')}`)
+        if (typeof e !== 'string' || !EFFECTS.includes(e.split(' ')[0])) return this.problem(w, `should start with one of ${EFFECTS.join(', ')}`)
+        const [kind, ...rest] = e.split(' ')
+        const places = rest.join(' ').split(' > ').filter(Boolean)
+        const wants = { ghost: 0, morph: 0, zoom: 1, pulse: 1, beam: 2 }[kind]
+        if (places.length !== wants) return this.problem(w, `${kind} takes ${wants === 2 ? 'two places, as "from > to"' : wants ? 'a place' : 'nothing'}`)
+        places.forEach((p) => this.place(p.trim(), w))
       }), false],
     })
     if (asks && Array.isArray(v.answers) && !v.answers.some((a) => a?.correct === true)) this.problem(`${at}.answers`, 'none is correct')
