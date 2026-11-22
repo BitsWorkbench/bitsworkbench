@@ -76,7 +76,11 @@ export class Library {
     const goalsOf = new Map(all.map((d) => [d.key.slice(pack.id.length + 1), d.goals]))
     const out = new Set()
     for (const m of pack.missions) {
-      for (const s of m.flow) if (s.type === 'objective' && s.goals.every((_, i) => goalsOf.get(s.id)?.[i])) out.add(s.id)
+      for (const s of m.flow) {
+        if (s.type === 'objective' && s.goals.every((_, i) => goalsOf.get(s.id)?.[i])) out.add(s.id)
+        // A journey keeps the ids of its steps done, and '$done' once finished (journey/journey.js).
+        if (s.type === 'journey' && goalsOf.get(s.id)?.includes?.('$done')) out.add(s.id)
+      }
     }
     return out
   }

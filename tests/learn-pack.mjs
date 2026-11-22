@@ -47,6 +47,18 @@ const quiz = (id) => ({
   questions: [{ id: `${id}_Q1`, q: 'How many LEDs?', answers: [{ a: 'Four' }, { a: 'Eight', correct: true }] }],
 })
 
+function journey(step) {
+  const first = { id: 'J_1', say: 'Press **Run**.', point: 'run', do: { runs: true }, ...step }
+  for (const k of Object.keys(first)) if (first[k] === undefined) delete first[k]
+  return {
+    type: 'journey',
+    id: 'J',
+    title: 'Hello',
+    promise: 'Make it light up.',
+    chapters: [{ id: 'J_C', title: 'One', code: 'from botcore import *\n', steps: [first, { id: 'J_2', say: 'Open **Lights**.', point: 'palette:lights', do: { event: 'palette', name: 'lights' }, fx: ['pulse part:^LED'] }] }],
+  }
+}
+
 const good = () => ({
   format: FORMAT,
   id: 'T',
@@ -125,8 +137,21 @@ const mistakes = [
   ['sections crossed', '--/Blocks-- closes --Python--', (p) => ((p.missions[0].overview = '--Blocks----Python--x--/Blocks----/Python--'), p)],
   ['a new file with no title', 'write a new file as', (p) => ((p.missions[0].overview = '--File--'), p)],
   ['four hints', 'three at most', (p) => ((p.missions[0].flow[0].hints = ['a', 'b', 'c', 'd']), p)],
-  ['an unknown step', 'flow[0].type: should be objective or quiz', (p) => ((p.missions[0].flow[0].type = 'video'), p)],
+  ['an unknown step', 'flow[0].type: should be objective, quiz or journey', (p) => ((p.missions[0].flow[0].type = 'video'), p)],
+  ['a journey step pointing nowhere', 'should start with one of run', (p) => (p.missions[0].flow.push(journey({ point: 'banana' })), p)],
+  ['a journey step with a bad pattern', 'steps[0].point', (p) => (p.missions[0].flow.push(journey({ point: 'block:display.show(' })), p)],
+  ['a journey step with an unknown effect', 'should start with one of ghost', (p) => (p.missions[0].flow.push(journey({ fx: ['sparkle'] })), p)],
+  ['a journey question with no right answer', 'answers: none is correct', (p) => (p.missions[0].flow.push(journey({ say: undefined, do: undefined, ask: 'Which?', answers: [{ a: 'x' }, { a: 'y' }] })), p)],
 ]
+// A journey (docs/mission-packs.md, "Journeys") reads, with its defaults.
+{
+  const raw = good()
+  raw.missions[0].flow.push(journey({}))
+  const pack = readPack(JSON.stringify(raw))
+  const j = pack.missions[0].flow.at(-1)
+  check('a journey reads, with its xp and board filled in', j.type === 'journey' && j.xp === 5 && j.board === raw.board && j.chapters[0].steps.length === 2)
+}
+
 for (const [label, expected, change, rawText] of mistakes) {
   let problems
   if (rawText) {

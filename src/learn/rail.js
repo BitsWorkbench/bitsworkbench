@@ -34,7 +34,7 @@ export class Rail extends EventTarget {
       const count = mission.flow.length
       const buttons = mission.flow
         .map((item, i) => {
-          const done = item.type === 'objective' && finished.has(item.id)
+          const done = item.type !== 'quiz' && finished.has(item.id)
           const here = i === place.step
           const name = t('learn.railStep', { step: i + 1, count, title: item.title }) + (done ? ` ${t('learn.railDone')}` : '')
           return `<li><button type="button" class="rail-step" data-rail-step="${i}" data-done="${done}" title="${esc(name)}" aria-label="${esc(name)}"${here ? ' aria-current="step"' : ''}>${item.type === 'quiz' ? '?' : i + 1}</button></li>`

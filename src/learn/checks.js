@@ -45,6 +45,15 @@ export function met(check, seen) {
   return false
 }
 
+/** The nodes of a program's text matching a pattern, in order ([] when it does not parse). */
+export function find(source, pattern) {
+  try {
+    return matches(programOf(source), patternOf(pattern))
+  } catch {
+    return []
+  }
+}
+
 /** Every regex in a check (with `prints` or `pick`), for the caller to test what happens against. */
 export function regexesOf(check, kind) {
   if (check.all || check.any) return (check.all || check.any).flatMap((c) => regexesOf(c, kind))

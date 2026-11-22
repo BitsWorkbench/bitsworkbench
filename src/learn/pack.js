@@ -10,7 +10,14 @@ import { BRAND } from '../brand.js'
 export const FORMAT = 1
 export const BOARDS = ['codebot', 'codex', 'codeair']
 export const SECTIONS = ['Blocks', 'Python', 'Concept', 'Caution', 'Peek', 'Remix', 'Run', 'Debug', 'Touch', 'ConsoleData', 'CheckTheTrek']
-export const EVENTS = ['edited', 'file-created', 'trek-used', 'stepped', 'switched']
+export const EVENTS = ['edited', 'file-created', 'trek-used', 'stepped', 'switched', 'orbit', 'palette']
+
+/** A journey step's named places (docs/mission-packs.md, "Journeys"): the kind, before any `:`. */
+export const PLACES = ['run', 'stop', 'step', 'switch', 'sim', 'terminal', 'palette', 'palette-item', 'block', 'field', 'after', 'part']
+/** Effects a journey step can ask for, by name. */
+export const EFFECTS = ['ghost', 'beam', 'zoom', 'pulse', 'morph']
+/** Explainer cards a journey step can show. */
+export const CARDS = ['picture', 'compare', 'callout']
 
 /** A pack that breaks the format: `problems` is every one, `where: what` each. */
 export class PackError extends Error {
@@ -251,7 +258,8 @@ class Checker {
     if (!isObject(v)) return this.problem(at, 'should be an object')
     if (v.type === 'objective') this.objective(v, at)
     else if (v.type === 'quiz') this.quiz(v, at)
-    else this.problem(`${at}.type`, 'should be objective or quiz')
+    else if (v.type === 'journey') this.journey(v, at)
+    else this.problem(`${at}.type`, 'should be objective, quiz or journey')
   }
 
   objective(v, at) {
@@ -272,6 +280,75 @@ class Checker {
       sim: [(s, where) => this.fields(s, where, { room: [this.text, false], course: [this.text, false] }), false],
     })
     if (Array.isArray(v.hints) && v.hints.length > 3) this.problem(`${at}.hints`, 'three at most')
+  }
+
+  /**
+   * A journey: the objective's work as small guided steps, in chapters. Each
+   * chapter may start from a program (`code`), the same in blocks and in
+   * Python, so a student can pick up a chapter in either mode.
+   */
+  journey(v, at) {
+    this.fields(v, at, {
+      type: () => {},
+      id: this.id,
+      title: this.text,
+      xp: [this.whole, false],
+      board: [(b, where) => this.oneOf(b, where, BOARDS), false],
+      promise: this.md,
+      chapters: (c, where) => this.list(c, where, this.chapter),
+      solution: [this.python, false],
+      complete: [this.md, false],
+      sim: [(s, where) => this.fields(s, where, { room: [this.text, false], course: [this.text, false] }), false],
+    })
+  }
+
+  chapter(v, at) {
+    this.fields(v, at, {
+      id: this.id,
+      title: this.text,
+      code: [this.python, false],
+      steps: (s, where) => this.list(s, where, this.journeyStep),
+    })
+  }
+
+  journeyStep(v, at) {
+    if (!isObject(v)) return this.problem(at, 'should be an object')
+    const asks = 'ask' in v
+    this.fields(v, at, {
+      id: this.id,
+      mode: [(m, where) => this.oneOf(m, where, ['blocks', 'python']), false],
+      ...(asks
+        ? {
+            ask: this.md,
+            answers: (a, where) => this.list(a, where, (answer, w) => this.fields(answer, w, { a: this.md, correct: [this.yes, false] }), { min: 2 }),
+          }
+        : { say: this.md, point: [this.place, false], palette: [this.text, false], to: [this.place, false], do: this.check }),
+      cheer: [this.md, false],
+      hints: [(h, where) => this.list(h, where, this.md, { min: 0 }), false],
+      more: [this.md, false],
+      skippable: [this.yes, false],
+      show: [(c, where) => this.fields(c, where, {
+        card: (k, w) => this.oneOf(k, w, CARDS),
+        caption: this.md,
+        asset: [this.asset, false],
+        part: [this.place, false],
+      }), false],
+      fx: [(f, where) => this.list(f, where, (e, w) => {
+        if (typeof e !== 'string' || !EFFECTS.includes(e.split(' ')[0])) this.problem(w, `should start with one of ${EFFECTS.join(', ')}`)
+      }), false],
+    })
+    if (asks && Array.isArray(v.answers) && !v.answers.some((a) => a?.correct === true)) this.problem(`${at}.answers`, 'none is correct')
+    if (Array.isArray(v.hints) && v.hints.length > 3) this.problem(`${at}.hints`, 'three at most')
+  }
+
+  /** A named place on screen: `run`, `palette:lights`, `block:display.show(...)`, `part:^Neo_0$`... */
+  place(v, at) {
+    if (typeof v !== 'string') return this.problem(at, 'should be a place')
+    const [kind, arg] = v.split(/:(.*)/s)
+    if (!PLACES.includes(kind)) return this.problem(at, `should start with one of ${PLACES.join(', ')}`)
+    if (['palette', 'palette-item', 'block', 'field', 'after', 'part'].includes(kind) && !arg) return this.problem(at, `${kind} needs what it names, after a colon`)
+    if (['palette-item', 'block', 'field', 'after'].includes(kind)) this.pattern(arg, at)
+    if (kind === 'part') this.regex(arg, at)
   }
 
   quiz(v, at) {
@@ -304,7 +381,7 @@ class Checker {
     this.fields(v, at, CHECKS[kinds[0]](this))
     if (v.min !== undefined && v.max !== undefined && v.max < v.min) this.problem(at, 'max is less than min')
     if (v.event === 'file-created' && v.name === undefined) this.problem(at, 'file-created needs the file\'s name')
-    if (v.event !== undefined && v.event !== 'file-created' && v.name !== undefined) this.problem(`${at}.name`, `${v.event} takes no name`)
+    if (v.event !== undefined && !['file-created', 'palette'].includes(v.event) && v.name !== undefined) this.problem(`${at}.name`, `${v.event} takes no name`)
   }
 }
 
@@ -332,13 +409,17 @@ function allIds(pack) {
     m.flow.forEach((s, j) => {
       out.push([s.id, `missions[${i}].flow[${j}]`])
       s.questions?.forEach((q, k) => out.push([q.id, `missions[${i}].flow[${j}].questions[${k}]`]))
+      s.chapters?.forEach((c, k) => {
+        out.push([c.id, `missions[${i}].flow[${j}].chapters[${k}]`])
+        c.steps?.forEach((st, n) => out.push([st.id, `missions[${i}].flow[${j}].chapters[${k}].steps[${n}]`]))
+      })
     })
   })
   return out
 }
 
 /** Fields that hold code, checks or names of things, where `{app}` is left as written. */
-const NOT_WORDS = new Set(['id', 'board', 'code', 'solution', 'python', 'check', 'assets', 'avatar', 'sim', 'format', 'continues'])
+const NOT_WORDS = new Set(['id', 'board', 'code', 'solution', 'python', 'check', 'assets', 'avatar', 'sim', 'format', 'continues', 'do', 'point', 'palette', 'to', 'fx', 'mode', 'card', 'part'])
 
 /**
  * The pack's words with `{app}` as the product's name (src/brand.js): titles,
@@ -359,7 +440,7 @@ function withDefaults(raw) {
     ...pack,
     missions: pack.missions.map((m) => ({
       ...m,
-      flow: m.flow.map((s) => (s.type === 'objective' ? { xp: 5, board: pack.board, ...s } : s)),
+      flow: m.flow.map((s) => (s.type === 'objective' || s.type === 'journey' ? { xp: 5, board: pack.board, ...s } : s)),
     })),
   }
 }
