@@ -90,6 +90,7 @@ const SIZES = [
   ['Chromebook 1366x768', 1366, 768, false],
   ['iPad 1024x768', 1024, 768, true, 'reduce'],
   ['iPad upright 768x1024', 768, 1024, true],
+  ['Phone 390x844', 390, 844, true],
 ]
 
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
