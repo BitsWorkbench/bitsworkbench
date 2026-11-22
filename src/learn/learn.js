@@ -30,10 +30,11 @@ export class Learn {
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
    * For journeys: `blocks`, the BlockWorkspace; `simView()`, the simulator's
-   * view while it is open; `loadProgram(python)`, to start a chapter over;
+   * view while it is open; `startOver(python)`, to start a chapter over
+   * (true once its program is in place, the student's kept);
    * `switchMode(mode)`, back to the mode a paused journey is in.
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, loadProgram, switchMode }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, startOver, switchMode }) {
     this.pane = pane
     this.railEl = rail
     this.workarea = workarea
@@ -80,7 +81,7 @@ export class Learn {
       watcher: new GoalWatcher({ device, program, tester }),
       library: this.library,
       side: () => ({ sim: box('#panel-sim'), terminal: box('#panel-terminal') }),
-      loadProgram,
+      startOver,
     })
     this.tutorial.addEventListener('journey', (e) => this._startJourney(e.detail.chapter))
     this.journey.addEventListener('progress', () => this._journeyProgress())
@@ -97,12 +98,13 @@ export class Learn {
   }
 
   /** Hand the journey on show over to the coach: the drawer goes, the coach comes. */
-  _startJourney(chapter) {
+  async _startJourney(chapter) {
     const item = this.tutorial.objective
     if (item?.type !== 'journey') return
+    // A chapter started over asks first when it would replace the student's work: kept working, nothing changes.
+    if (!(await this.journey.start(this.tutorial.pack, item, this.tutorial.mode, { chapter }))) return
     this.collapse()
     this._save({ journey: true })
-    this.journey.start(this.tutorial.pack, item, this.tutorial.mode, { chapter })
   }
 
   async _journeyProgress() {

@@ -227,13 +227,55 @@ for (const [name, width, height, touch] of SIZES) {
   check((await page.getAttribute('#learn-rail [data-rail-step="0"]', 'data-done')) === 'true', 'the rail shows the journey done')
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scrolling')
 
-  // A chapter started over loads its program.
+  // A chapter started over loads its program, but never loses the student's:
+  // when theirs differs, it asks; keeping working changes nothing; starting
+  // over keeps theirs as a file beside it first.
+  const python = () => page.evaluate(() => window.openCodeBot._currentPython())
+  const browserFiles = () => page.evaluate(async () => {
+    const store = window.openCodeBot.stores.browser
+    const out = {}
+    for (const e of await store.list('')) if (e.kind === 'file') out[e.path] = await store.read(e.path)
+    return out
+  })
+  const filesBefore = Object.keys(await browserFiles())
   await page.click('#learn-rail [data-rail-step="0"]')
   await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
+  await page.waitForTimeout(500)
+  check(await page.locator('#modal[open]').isVisible(), 'starting a chapter over asks first, the program being different')
+  await page.click('#modal[open] button[value="cancel"]')
+  await page.waitForTimeout(400)
+  check((await python()).includes('pixels.fill'), 'keeping working leaves the program as it was')
+  check(await page.isVisible('#learn-pane [data-learn="journey"][data-chapter="1"]'), 'and the drawer where it was')
+  await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
+  await page.waitForSelector('#modal[open]')
+  await page.click('#modal[open] button[value="ok"]')
   await page.waitForTimeout(700)
-  const py = await page.evaluate(() => window.openCodeBot._currentPython())
+  const py = await python()
   check(py.includes("Hi, I'm Sam!") && !py.includes('pixels.fill'), 'starting chapter 2 over loads its program')
   check((await page.locator('.journey-n').first().innerText()).includes('4'), 'and points at its first step')
+  const files = await browserFiles()
+  const kept = Object.keys(files).filter((p) => !filesBefore.includes(p))
+  check(kept.length === 1 && files[kept[0]].includes('pixels.fill(RED)'), `the program before is kept as a file (${kept.join(', ')})`)
+  // The same chapter again, the program now its start: nothing to keep, nothing asked.
+  await page.click('#learn-rail [data-rail-step="0"]')
+  await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
+  await page.waitForTimeout(500)
+  check(!(await page.locator('#modal[open]').isVisible()), 'no question when the program is already the chapter\'s start')
+  check(Object.keys(await browserFiles()).length === kept.length + filesBefore.length, 'and no file kept')
+  // Programs that differ only by a comment, or by a line's indentation, are different: it asks.
+  const asks = async (now, chapter) => {
+    await page.evaluate((py) => {
+      const app = window.openCodeBot
+      app.workspace.replaceBlocks(app.blocksFromPython(py).state)
+    }, now)
+    const answer = page.evaluate((py) => window.openCodeBot._startOver(py), chapter)
+    const asked = await page.waitForSelector('#modal[open]', { timeout: 2000 }).then(() => true, () => false)
+    if (asked) await page.click('#modal[open] button[value="cancel"]')
+    return asked && (await answer) === false
+  }
+  const loop = 'from codex import *\n\nwhile True:\n    display.show("a")\n    pixels.off()\n'
+  check(await asks(loop, loop.replace('    pixels.off()', 'pixels.off()')), 'a line moved out of a loop is a different program')
+  check(await asks(loop, `${loop}# my note\n`), 'so is one with a comment of its own')
   await context.close()
 }
 await browser.close()
