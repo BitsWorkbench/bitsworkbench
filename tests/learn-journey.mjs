@@ -56,7 +56,7 @@ export const PACK = {
               code: START,
               steps: [
                 { id: 'J_look', say: 'Drag CodeX to spin it around.', point: 'sim', do: { event: 'orbit' }, skippable: true },
-                { id: 'J_run', say: 'Press **Run**.', point: 'run', do: { runs: true }, cheer: 'It ran!' },
+                { id: 'J_run', say: 'Press **Run**.', point: 'run', do: { runs: true }, cheer: 'It ran!', fx: ['beam block:display.show(...) > part:^LCD_Shield$', 'zoom part:^LCD_Shield$'] },
                 {
                   id: 'J_name',
                   say: 'Click **Hi there!** and type your name.',
@@ -72,7 +72,7 @@ export const PACK = {
               code: 'from codex import *\n\ndisplay.show("Hi, I\'m Sam!")\n',
               steps: [
                 { id: 'J_palette', say: 'Open **Lights**.', point: 'palette:lights', do: { event: 'palette', name: 'lights' } },
-                { id: 'J_add', say: 'Drag **set all neopixels** under your show block.', point: 'palette-item:pixels.fill(...)', palette: 'lights', to: 'after:display.show(...)', do: { has: 'pixels.fill(...)' } },
+                { id: 'J_add', say: 'Drag **set all neopixels** under your show block.', point: 'palette-item:pixels.fill(...)', palette: 'lights', to: 'after:display.show(...)', do: { has: 'pixels.fill(...)' }, fx: ['ghost', 'pulse part:^Neo_', 'morph'], show: { card: 'compare', caption: 'Each block is a line of Python.' } },
                 { id: 'J_ask', ask: 'Which line lights CodeX up?', answers: [{ a: '`display.show(...)`' }, { a: '`pixels.fill(...)`', correct: true }] },
               ],
             },
@@ -87,14 +87,15 @@ export const PACK = {
 
 const SIZES = [
   ['Chromebook 1366x768', 1366, 768, false],
-  ['iPad 1024x768', 1024, 768, true],
+  ['iPad 1024x768', 1024, 768, true, 'reduce'],
   ['iPad upright 768x1024', 768, 1024, true],
 ]
 
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
-for (const [name, width, height, touch] of SIZES) {
-  console.log(name)
-  const context = await browser.newContext({ viewport: { width, height }, hasTouch: touch })
+for (const [name, width, height, touch, motion = 'no-preference'] of SIZES) {
+  const reduced = motion === 'reduce'
+  console.log(`${name}${reduced ? ', reduced motion' : ''}`)
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: touch, reducedMotion: motion })
   const page = await context.newPage()
   page.on('pageerror', (e) => problems.push(`${name}: page error: ${e.message}`))
   await page.goto(BASE, { waitUntil: 'networkidle' })
@@ -171,6 +172,9 @@ for (const [name, width, height, touch] of SIZES) {
   await page.click('#btn-run')
   await page.waitForFunction(() => document.querySelector('.journey-bubble')?.classList.contains('good'), null, { timeout: 15000 }).catch(() => {})
   check(await bubble().evaluate((b) => b.classList.contains('good')), 'running meets it')
+  await page.waitForTimeout(400)
+  check(await page.locator('.journey-fx-beam path').count() >= 1, 'a beam from the block to the screen')
+  check(await page.locator('.journey-fx-lens canvas').count() === 1, 'and a magnifier on the screen')
   await next()
 
   // 3: the field, by its ring; a hint on request
@@ -207,12 +211,23 @@ for (const [name, width, height, touch] of SIZES) {
     return ring.left >= fly.left - 12 && ring.right <= fly.right + 40
   })
   check(flyoutRinged, 'step 5 rings a block in the open Lights flyout')
+  await page.waitForTimeout(700)
+  check(await page.locator('.journey-fx-ghost svg').count() === 1 && await page.locator('.journey-fx-slot').count() === 1, 'the block\'s ghost and the slot where it goes')
+  check((await page.locator('.journey-fx-hand').count()) === (reduced ? 0 : 1), reduced ? 'no hand under reduced motion' : 'a hand carries it')
+  if (reduced) check(await page.evaluate(() => document.getAnimations().filter((a) => a.effect?.target?.closest?.('.journey-fx')).length === 0), 'nothing in the effects moves')
+  await page.click('.journey-bubble [data-journey="show-me"]')
+  await page.waitForTimeout(300)
+  check(await page.locator('.journey-fx-ghost').count() === 1, 'Show me plays it again')
   await page.evaluate(() => {
     const app = window.openCodeBot
     app.workspace.replaceBlocks(app.blocksFromPython('from codex import *\n\ndisplay.show("Hi, I\'m Sam!")\npixels.fill(RED)\n').state)
   })
   await page.waitForTimeout(900)
   check(await bubble().evaluate((b) => b.classList.contains('good')), 'adding the block meets it')
+  check(await page.locator('.journey-fx-ghost').count() === 0, 'the ghost goes once it is met')
+  check(await page.locator('.journey-fx-glow').count() === 4, 'each NeoPixel glows')
+  check(await page.locator('.journey-fx-morph').count() === 2, 'each block lights in turn')
+  check((await page.locator('.journey-card .journey-code').innerText()).includes('pixels.fill(RED)'), 'the compare card shows the program as Python')
   await next()
 
   // Switching mode pauses; switching back carries on.
@@ -229,6 +244,7 @@ for (const [name, width, height, touch] of SIZES) {
   await page.click('.journey-answers [data-value="1"]')
   await next()
   check((await page.locator('.journey-centre h2').innerText()).includes('Mission complete'), 'the finish card')
+  check((await page.locator('.journey-fx-confetti').count() > 0) === !reduced, reduced ? 'no confetti under reduced motion' : 'confetti')
   await page.click('.journey-centre [data-journey="finish"]')
   await page.waitForTimeout(500)
   check((await page.locator('#learn-pane .learn-title').innerText()) === 'After', 'Next goes on to what follows, in the drawer')

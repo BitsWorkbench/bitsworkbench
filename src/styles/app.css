@@ -1125,3 +1125,22 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .journey-layer *, .journey-layer *::before { animation: none !important; transition: none !important; }
 }
+
+/* A journey's effects (src/learn/journey/effects.js): moving things are
+   transformed and faded only, and carry no filters. */
+.journey-fx { position: fixed; inset: 0; pointer-events: none; z-index: 59; overflow: hidden; }
+.journey-fx > * { position: absolute; pointer-events: none; }
+.journey-fx-svg { left: 0; top: 0; }
+.journey-fx-clip { overflow: hidden; }
+.journey-fx-sweep { position: absolute; top: 0; bottom: 0; width: 120px; background: linear-gradient(90deg, rgba(244, 208, 56, 0), rgba(244, 208, 56, 0.35), rgba(244, 208, 56, 0)); }
+.journey-fx-slot { border: 2.5px dashed var(--gold-dark); border-radius: 8px; background: rgba(244, 208, 56, 0.14); }
+.journey-fx-ghost { opacity: 0.9; background: none !important; will-change: transform, opacity; }
+.journey-fx-ghost svg { position: absolute; left: 0; top: 0; background: none !important; }
+.journey-fx-hand { font-size: 30px; line-height: 1; will-change: transform, opacity; }
+.journey-fx-beam path { fill: none; stroke: var(--gold); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 10 12; }
+.journey-fx-tether { fill: none; stroke: #fff; stroke-width: 2.5; stroke-dasharray: 4 5; }
+.journey-fx-lens { border-radius: 50%; border: 5px solid #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); background: #000; overflow: hidden; }
+.journey-fx-lens canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+.journey-fx-glow { border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(244, 208, 56, 0.55) 35%, rgba(244, 208, 56, 0) 70%); }
+.journey-fx-wave { border-radius: 50%; border: 2px solid rgba(244, 208, 56, 0.95); }
+.journey-fx-morph { background: rgba(244, 208, 56, 0.4); border-radius: 6px; transform-origin: left; }

@@ -179,7 +179,7 @@ Each step is either something to do or a question:
 | `more` | Markdown: more to read, folded. |
 | `skippable` | `true`: the student may skip it (any step that needs sight, such as turning the camera). |
 | `show` | A card beside the simulator once met: `{ "card": "picture", "asset": "...", "caption": "..." }`, `compare` (the program as Python) or `callout`. |
-| `fx` | Effects, by name: `ghost`, `beam`, `zoom`, `pulse`, `morph`. |
+| `fx` | Effects: `ghost` (while the step waits, the `point` block flies to `to`, with a hand; "Show me" plays it again), and once met `beam <place> > <place>` (a line of light, to each part of a `part:`), `zoom <place>` (a magnifier on the board's screen), `pulse <place>` (each part glows), `morph` (each of the student's blocks lights in turn). Under reduced motion they stand still. |
 | `mode` | `blocks` or `python`: a step only that mode plays. |
 
 **Places** name things on screen, never selectors: `run`, `stop`, `step`, `switch` (Blocks or

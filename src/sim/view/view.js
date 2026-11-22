@@ -228,14 +228,25 @@ export class SimView {
   // The box on the page around the parts of a board's model whose names
   // match `re`, for a mission journey to point at: { x, y, w, h }, or null.
   partBox(re) {
+    const boxes = this.partBoxes(re)
+    if (!boxes.length) return null
+    const x0 = Math.min(...boxes.map((b) => b.x)), y0 = Math.min(...boxes.map((b) => b.y))
+    const x1 = Math.max(...boxes.map((b) => b.x + b.w)), y1 = Math.max(...boxes.map((b) => b.y + b.h))
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+  }
+
+  // Each matching part's own box on the page, in model order (a journey's
+  // effect lights each NeoPixel): [{ name, x, y, w, h }], those on screen.
+  partBoxes(re) {
     const r = this.renderer.domElement.getBoundingClientRect()
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+    const out = []
     for (const f of this.figures.values()) {
       const parts = f.parts
       if (!parts) continue
       parts.model.updateWorldMatrix(true, false)
       for (const { name, box } of parts.boxes) {
         if (!re.test(name)) continue
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
         for (let i = 0; i < 8; i++) {
           const p = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z)
           parts.model.localToWorld(p).project(this.camera)
@@ -243,12 +254,19 @@ export class SimView {
           const py = r.top + ((1 - p.y) / 2) * r.height
           x0 = Math.min(x0, px); y0 = Math.min(y0, py); x1 = Math.max(x1, px); y1 = Math.max(y1, py)
         }
+        // Clipped to the canvas: a part off screen is pointed at where it leaves it.
+        x0 = Math.max(x0, r.left); y0 = Math.max(y0, r.top); x1 = Math.min(x1, r.right); y1 = Math.min(y1, r.bottom)
+        if (x1 > x0 && y1 > y0) out.push({ name, x: x0, y: y0, w: x1 - x0, h: y1 - y0 })
       }
     }
-    if (x0 === Infinity) return null
-    // Clipped to the canvas: a part off screen is pointed at where it leaves it.
-    x0 = Math.max(x0, r.left); y0 = Math.max(y0, r.top); x1 = Math.min(x1, r.right); y1 = Math.min(y1, r.bottom)
-    return x1 > x0 && y1 > y0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null
+    return out
+  }
+
+  // The board's screen as a picture, top row first, for a journey's magnifier:
+  // an ImageData, or null when no board has a screen.
+  screenImage() {
+    for (const f of this.figures.values()) if (f.screenImage) return f.screenImage()
+    return null
   }
 
   // Where the middle of the rotation arrow for `axis` ('x' or 'y') is on the
