@@ -4,7 +4,8 @@
  * student would press. Authors name places, never selectors, so the app can
  * change its markup without breaking a pack:
  *
- *   run, stop, step, switch, sim, terminal   the app's own controls
+ *   run, stop, pause, step, switch, sim,     the app's own controls (step
+ *   terminal                                 shows once a run is paused)
  *   palette:lights                           a palette category, by its id
  *   palette-item:pixels.fill(...)            the block in the open category whose code matches
  *   block:display.show(...)                  the student's block whose code matches
@@ -20,7 +21,7 @@ import { generatePython, generateWithLines } from '../../blocks/generate.js'
 import { lineAt } from '../../convert/tree.js'
 import { find } from '../checks.js'
 
-const CONTROLS = { run: '#btn-run', stop: '#btn-stop', step: '#btn-step', switch: '#btn-view', terminal: '#panel-terminal' }
+const CONTROLS = { run: '#btn-run', stop: '#btn-stop', pause: '#btn-pause', step: '#btn-step', switch: '#btn-view', terminal: '#panel-terminal' }
 
 /** A DOMRect-like box, or null when the element is missing or hidden. */
 function boxOf(el) {

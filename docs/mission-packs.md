@@ -182,7 +182,8 @@ Each step is either something to do or a question:
 | `fx` | Effects: `ghost` (while the step waits, the `point` block flies to `to`, with a hand; "Show me" plays it again), and once met `beam <place> > <place>` (a line of light, to each part of a `part:`), `zoom <place>` (a magnifier on the board's screen), `pulse <place>` (each part glows), `morph` (each of the student's blocks lights in turn). Under reduced motion they stand still. |
 | `mode` | `blocks` or `python`: a step only that mode plays. |
 
-**Places** name things on screen, never selectors: `run`, `stop`, `step`, `switch` (Blocks or
+**Places** name things on screen, never selectors: `run`, `stop`, `pause`, `step` (shown once a
+running program is paused), `switch` (Blocks or
 Python), `sim`, `terminal`; `palette:lights`, a category by its id (`basics`, `screen`,
 `lights`, `sound`, `sensors`, `radio`, `move`, `logic`, `loops`, `math`, `text`, `lists`,
 `variables`, `functions`, `python`); `palette-item:` and a pattern, the block in the open
