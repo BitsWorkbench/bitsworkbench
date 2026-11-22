@@ -264,6 +264,7 @@ for (const [name, width, height, touch] of SIZES) {
   const files = await browserFiles()
   const kept = Object.keys(files).filter((p) => !filesBefore.includes(p))
   check(kept.length === 1 && files[kept[0]].includes('pixels.fill(RED)'), `the program before is kept as a file (${kept.join(', ')})`)
+  check(kept.every((p) => /^[A-Za-z_][A-Za-z0-9_]*\.py$/.test(p)), 'named so a board takes it (letters, digits and _)')
   // The same chapter again, the program now its start: nothing to keep, nothing asked.
   await page.click('#learn-rail [data-rail-step="0"]')
   await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')

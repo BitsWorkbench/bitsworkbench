@@ -845,7 +845,7 @@ export class App {
    * A journey's chapter started over: its program `python` replaces the
    * student's, which is never lost. When theirs is already the chapter's
    * start, it is simply loaded; otherwise the student is asked, and theirs is
-   * kept first as a file beside the open one (main-saved.py, main-saved-2.py...),
+   * kept first as a file beside the open one (main_saved.py, main_saved_2.py...),
    * which they can open again from Files. True when the program was replaced.
    */
   async _startOver(python) {
@@ -867,7 +867,8 @@ export class App {
     const slash = open.path.lastIndexOf('/') + 1
     const stem = open.path.slice(slash).replace(/\.py$/i, '')
     let path
-    for (let n = 1; !path || (await store.exists(path)); n++) path = `${open.path.slice(0, slash)}${stem}-${t('journey.keptSuffix')}${n > 1 ? `-${n}` : ''}.py`
+    // Letters, digits and _ only: a board takes a program's other files by names Python can import.
+    for (let n = 1; !path || (await store.exists(path)); n++) path = `${open.path.slice(0, slash)}${stem}_${t('journey.keptSuffix')}${n > 1 ? `_${n}` : ''}.py`
     const name = baseName(path)
     const ok = await showModal({
       title: t('journey.overTitle'),

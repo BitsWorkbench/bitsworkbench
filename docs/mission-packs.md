@@ -158,7 +158,7 @@ drawer puts the drawer away; leaving it, or finishing, brings the drawer back at
 |---|---|---|
 | `id`, `title` | yes | Text. |
 | `promise` | yes | Markdown: shown on the opening card and in the drawer. |
-| `chapters` | yes | The steps in chapters, each `{ id, title, code, steps }`. `code` (optional) is the program at the chapter's start, the same in blocks and Python: a student can start a chapter over from it, from the drawer, and the journey begins from the first chapter's. Their own program is never lost: when it differs from `code`, they are asked, and it is kept first as a file beside theirs (`main-saved.py`). |
+| `chapters` | yes | The steps in chapters, each `{ id, title, code, steps }`. `code` (optional) is the program at the chapter's start, the same in blocks and Python: a student can start a chapter over from it, from the drawer, and the journey begins from the first chapter's. Their own program is never lost: when it differs from `code`, they are asked, and it is kept first as a file beside theirs (`main_saved.py`). |
 | `solution` | no | The capstone: the program at the end. The answer key, never shown. |
 | `complete` | no | Markdown on the finish card. |
 | `xp`, `board`, `sim` | no | As for an objective. |
