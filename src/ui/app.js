@@ -73,6 +73,10 @@ export class App {
       onTrek: (trek) => this._showTrek(trek),
       blocksFromPython: (python, board) => pythonToBlocks(python, board),
       toPython: () => this.workspace.mode === 'text' || this._toText(),
+      blocks: this.workspace,
+      simView: () => this.device.sim.view ?? null,
+      loadProgram: (python) => this._loadProgram(python),
+      switchMode: (mode) => ((mode === 'python') !== (this.workspace.mode === 'text') ? this._toggleView() : null),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
     this.trek = null
@@ -88,6 +92,14 @@ export class App {
     this.device.sim.addEventListener('line', (e) => this._showLine(e.detail.line))
     // A click on a part of the simulated board, for a mission's `pick` goal.
     this.device.sim.addEventListener('pick', (e) => this.learn.pick(e.detail))
+    // Turning the simulator's camera, and opening a palette category: a journey's `orbit` and `palette` events.
+    this.device.sim.addEventListener('orbit', () => this.learn.event('orbit'))
+    this.workspace.workspace.addChangeListener((e) => {
+      if (e.type !== Blockly.Events.TOOLBOX_ITEM_SELECT || !e.newItem) return
+      // The event names the category by its words; a journey names it by its id (`lights`).
+      const item = this.workspace.workspace.getToolbox()?.getToolboxItems().find((i) => i.getName?.() === e.newItem)
+      this.learn.event('palette', item?.getId() ?? e.newItem)
+    })
     this._bindWorkspace()
     this._bindTextMode()
     // Both palettes small or full, for small screens.
@@ -814,6 +826,18 @@ export class App {
     this.workspace.setMode('text', back && back.python === python ? back.text : python)
     this._typedBack = null
     this.pythonEditor.focus()
+  }
+
+  /** Replace the program with `python`, in the mode the student is in (a journey's chapter started over). */
+  _loadProgram(python) {
+    if (this.workspace.mode === 'text') {
+      this.workspace.setPythonText(python)
+      this.pythonEditor.value = python
+    } else {
+      const result = this.blocksFromPython(python)
+      if (result.ok) this.workspace.replaceBlocks(result.state)
+    }
+    this._fileChanged?.()
   }
 
   /** Python as blocks for the picked board: { ok, state } or { ok: false, line }. */

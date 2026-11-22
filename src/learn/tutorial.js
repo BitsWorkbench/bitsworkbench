@@ -65,7 +65,12 @@ export class Tutorial extends EventTarget {
   /** The objective on show, or null. */
   get objective() {
     const item = this.place && this.pack.missions[this.place.mission].flow[this.place.step]
-    return item?.type === 'objective' ? item : null
+    return item?.type === 'objective' || item?.type === 'journey' ? item : null
+  }
+
+  /** Draw the place on show again (a journey's progress changed). */
+  refresh() {
+    if (this.pack) this._render()
   }
 
   setMode(mode) {
@@ -93,6 +98,17 @@ export class Tutorial extends EventTarget {
     this.dispatchEvent(new CustomEvent('place', { detail: place }))
   }
 
+  /** Markdown to HTML in a given mode, for the journey's coach. */
+  mdFor(text, mode) {
+    const was = this.mode
+    this.mode = mode
+    try {
+      return this._md(text)
+    } finally {
+      this.mode = was
+    }
+  }
+
   _md(text) {
     if (text && !renderMarkdown) return text.split(/\n\s*\n/).map((p) => `<p>${esc(p)}</p>`).join('')
     return text ? renderMarkdown(text, { mode: this.mode, assets: this.pack.assets, label: (name, title) => t(`learn.section.${name}`, { name: title }) }) : ''
@@ -109,6 +125,8 @@ export class Tutorial extends EventTarget {
         return this.dispatchEvent(new Event('close'))
       case 'python':
         return this.dispatchEvent(new Event('python'))
+      case 'journey':
+        return this.dispatchEvent(new CustomEvent('journey', { detail: { chapter: el.dataset.chapter === undefined ? null : Number(el.dataset.chapter) } }))
       case 'up':
         return this._go(null)
       case 'back':
@@ -159,7 +177,7 @@ export class Tutorial extends EventTarget {
     if (step === -1) return `<p class="learn-kicker">${esc(t('learn.missionN', { n: mi + 1 }))}</p><h3 class="learn-title">${esc(mission.title)}</h3><div class="learn-md">${this._md(mission.overview || mission.brief)}</div>`
     if (step === mission.flow.length) return `<h3 class="learn-title">${esc(t('learn.missionDone', { title: mission.title }))}</h3><div class="learn-md">${this._md(mission.complete)}</div>`
     const item = mission.flow[step]
-    return item.type === 'quiz' ? this._quizHtml(item) : this._objectiveHtml(item)
+    return item.type === 'quiz' ? this._quizHtml(item) : item.type === 'journey' ? this._journeyHtml(item) : this._objectiveHtml(item)
   }
 
   _objectiveHtml(o) {
@@ -170,6 +188,29 @@ export class Tutorial extends EventTarget {
       <h4 class="learn-head">${esc(t('learn.goals'))}</h4>
       <div class="learn-goals-wrap" aria-live="polite">${this._goalsHtml(o)}</div>
       ${hints}`
+  }
+
+  /**
+   * A journey in the drawer: what it makes, its chapters, and the button
+   * that hands over to the coach (journey/journey.js). A finished chapter can
+   * be started over from its own program.
+   */
+  _journeyHtml(j) {
+    const done = new Set(this.journeyProgress || [])
+    const chapters = j.chapters
+      .map((c, i) => {
+        const steps = c.steps.filter((s) => !s.mode || s.mode === this.mode)
+        const all = steps.length > 0 && steps.every((s) => done.has(s.id))
+        const again = c.code && (all || done.size) ? `<button type="button" class="btn-plain learn-link" data-learn="journey" data-chapter="${i}">${esc(t('journey.chapterAgain'))}</button>` : ''
+        return `<li data-met="${all}"><span class="learn-box" aria-hidden="true">${all ? '✓' : ''}</span><span class="sr-only">${esc(t(all ? 'learn.goalMet' : 'learn.goalOpen'))}</span><span>${esc(c.title)}</span> ${again}</li>`
+      })
+      .join('')
+    const started = done.size > 0
+    return `<h3 class="learn-title">${esc(j.title)}</h3>
+      <div class="learn-md">${this._md(j.promise)}</div>
+      <p><button type="button" class="btn" data-learn="journey">${esc(t(done.has('$done') ? 'journey.again' : started ? 'journey.carryOn' : 'journey.start'))}</button></p>
+      <h4 class="learn-head">${esc(t('journey.chapters'))}</h4>
+      <ul class="learn-goals">${chapters}</ul>`
   }
 
   /** In blocks, a word that this objective is taught in Python, with the switch. */
@@ -198,7 +239,7 @@ export class Tutorial extends EventTarget {
     this.done = done
     this.finished = finished
     const wrap = this.root.querySelector('.learn-goals-wrap')
-    if (wrap && this.objective) wrap.innerHTML = this._goalsHtml(this.objective)
+    if (wrap && this.objective?.goals) wrap.innerHTML = this._goalsHtml(this.objective)
     this.dispatchEvent(new Event('shown'))
   }
 

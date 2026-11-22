@@ -12,8 +12,11 @@ const bool = (on) => ({ shadow: { type: 'logic_boolean', fields: { BOOL: on ? 'T
 
 const block = (type, inputs) => (inputs ? { kind: 'block', type, inputs } : { kind: 'block', type })
 
+// Each category's id is its style's name (`lights` for lights_category): a mission
+// journey points at a category by it (docs/mission-packs.md, `palette:lights`).
 const category = (name, style, contents) => ({
   kind: 'category',
+  toolboxitemid: style.replace(/_category$/, ''),
   name,
   categorystyle: style,
   contents,
@@ -84,11 +87,11 @@ const generalTail = [
   category(t('cat.text'), 'text_category', text),
   category(t('cat.lists'), 'lists_category', lists),
   SEP,
-  { kind: 'category', name: t('cat.variables'), categorystyle: 'variables_category', custom: 'VARIABLE' },
-  { kind: 'category', name: t('cat.functions'), categorystyle: 'functions_category', custom: 'PROCEDURE' },
+  { kind: 'category', toolboxitemid: 'variables', name: t('cat.variables'), categorystyle: 'variables_category', custom: 'VARIABLE' },
+  { kind: 'category', toolboxitemid: 'functions', name: t('cat.functions'), categorystyle: 'functions_category', custom: 'PROCEDURE' },
   category(t('cat.python'), 'python_category', python),
   // A student's own saved grey blocks (src/my-blocks), filled in as it opens.
-  { kind: 'category', name: t('cat.myBlocks'), categorystyle: 'python_category', custom: 'MY_BLOCKS' },
+  { kind: 'category', toolboxitemid: 'my-blocks', name: t('cat.myBlocks'), categorystyle: 'python_category', custom: 'MY_BLOCKS' },
 ]
 
 // ---------------------------------------------------------------- CodeX

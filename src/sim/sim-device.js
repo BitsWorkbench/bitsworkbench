@@ -130,6 +130,8 @@ export class SimDevice extends EventTarget {
         this.view.setCamera(this.cameraMode)
         await this.view.loadRoom(room).catch((err) => console.warn('room', err))
       }
+      // The student turning the camera: a mission journey can ask for it (the `orbit` event).
+      this.view.controls?.addEventListener('start', () => this.dispatchEvent(new CustomEvent('orbit')))
     }
   }
 

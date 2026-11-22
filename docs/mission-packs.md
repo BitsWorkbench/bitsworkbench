@@ -59,8 +59,8 @@ Any other field is an error, so a misspelt field name is caught rather than igno
 }
 ```
 
-`flow` is the mission's objectives and quizzes, in order. Each item has `type`, `objective`
-or `quiz`, and the fields below.
+`flow` is the mission's objectives, quizzes and journeys, in order. Each item has `type`, `objective`,
+`quiz` or `journey`, and the fields below.
 
 ## Objectives
 
@@ -115,6 +115,84 @@ mode and as a card of Python in Python mode. A chunk's imports go in once at the
 program, wherever it is dropped; in blocks they are the blocks' own business. A chunk's
 `pass  # TODO: ...` lines are "to do" blocks, and stay "to do" blocks through the round trip.
 Dragging a chunk in (or clicking its card) is the `trek-used` event.
+
+## Journeys
+
+A journey is a mission's work as small guided steps instead of objectives to read. A coach
+points at one thing at a time on the real screen (Run, a palette category, the block to drag,
+the text to change, a part of the simulated board), with a sentence or two; the step is met
+the moment the student does it, checked as goals are; and the bubble turns green with a cheer
+and Next. A strip over the simulator shows where the student is. Starting a journey from the
+drawer puts the drawer away; leaving it, or finishing, brings the drawer back at what follows.
+
+```json
+{
+  "type": "journey",
+  "id": "SAMPLE_Lights_J",
+  "title": "Lights",
+  "promise": "Markdown: what the student will have made",
+  "chapters": [
+    {
+      "id": "SAMPLE_Lights_C1",
+      "title": "Say it",
+      "code": "from codex import *\n\ndisplay.show(\"Hi there!\")\n",
+      "steps": [
+        { "id": "SAMPLE_run", "say": "Press **▶ Run**.", "point": "run", "do": { "runs": true }, "cheer": "It ran!" },
+        {
+          "id": "SAMPLE_add",
+          "say": "Drag **set all neopixels** under your **show** block.",
+          "point": "palette-item:pixels.fill(...)",
+          "palette": "lights",
+          "do": { "has": "pixels.fill(...)" }
+        },
+        { "id": "SAMPLE_ask", "ask": "Which line lights CodeX up?", "answers": [{ "a": "`display.show(...)`" }, { "a": "`pixels.fill(...)`", "correct": true }] }
+      ]
+    }
+  ],
+  "solution": "from codex import *\n\ndisplay.show(\"Hi, I'm Sam!\")\npixels.fill(RED)\n",
+  "complete": "Markdown: well done"
+}
+```
+
+| Field | Required | What it is |
+|---|---|---|
+| `id`, `title` | yes | Text. |
+| `promise` | yes | Markdown: shown on the opening card and in the drawer. |
+| `chapters` | yes | The steps in chapters, each `{ id, title, code, steps }`. `code` (optional) is the program at the chapter's start, the same in blocks and Python: a student can start a chapter over from it, from the drawer. |
+| `solution` | no | The capstone: the program at the end. The answer key, never shown. |
+| `complete` | no | Markdown on the finish card. |
+| `xp`, `board`, `sim` | no | As for an objective. |
+
+Each step is either something to do or a question:
+
+| Field | What it is |
+|---|---|
+| `id` | Unique, like every id in a pack. Progress is kept by it. |
+| `say` | Markdown, a sentence or two, with `--Blocks--`/`--Python--` where the modes differ. |
+| `point` | Where the coach points: a place (below). Left out, the bubble sits over the simulator. |
+| `palette` | For a `palette-item`: its category's id, opened for the student when the step starts. |
+| `to` | For a block to drag: where it goes, as a place (`after:display.show(...)`). |
+| `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera) and `palette` (opened a category; `"name"` its id). |
+| `ask`, `answers` | Instead of `say`, `point` and `do`: a question in the bubble, as in a quiz. |
+| `cheer` | Markdown: a few words when it is met. |
+| `hints` | Up to three, Markdown, one at a time on request. |
+| `more` | Markdown: more to read, folded. |
+| `skippable` | `true`: the student may skip it (any step that needs sight, such as turning the camera). |
+| `show` | A card beside the simulator once met: `{ "card": "picture", "asset": "...", "caption": "..." }`, `compare` (the program as Python) or `callout`. |
+| `fx` | Effects, by name: `ghost`, `beam`, `zoom`, `pulse`, `morph`. |
+| `mode` | `blocks` or `python`: a step only that mode plays. |
+
+**Places** name things on screen, never selectors: `run`, `stop`, `step`, `switch` (Blocks or
+Python), `sim`, `terminal`; `palette:lights`, a category by its id (`basics`, `screen`,
+`lights`, `sound`, `sensors`, `radio`, `move`, `logic`, `loops`, `math`, `text`, `lists`,
+`variables`, `functions`, `python`); `palette-item:` and a pattern, the block in the open
+category whose code matches; `block:` and a pattern, the student's block whose statement
+matches, `field:` its text field and `after:` the place just under it; `part:` and a regular
+expression, the simulated board's parts by the names `pick` uses.
+
+A journey plays in the mode the student starts it in. The program is the same in both, but
+each step's words and places belong to its mode, so switching mid-journey pauses the coach
+until the student switches back.
 
 ## Quizzes
 

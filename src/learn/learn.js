@@ -15,6 +15,8 @@ import { RegexTester } from './regex.js'
 import { offersBlocks } from './offer.js'
 import { BRAND } from '../brand.js'
 import { Rail } from './rail.js'
+import { Journey } from './journey/journey.js'
+import { Places } from './journey/places.js'
 
 const OPEN = 'opencodebot.learn.v1' // { id, drawer: false when the student closed it }
 
@@ -27,8 +29,11 @@ export class Learn {
    * on show (null when none is), for the palettes; `blocksFromPython(python,
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
+   * For journeys: `blocks`, the BlockWorkspace; `simView()`, the simulator's
+   * view while it is open; `loadProgram(python)`, to start a chapter over;
+   * `switchMode(mode)`, back to the mode a paused journey is in.
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, loadProgram, switchMode }) {
     this.pane = pane
     this.railEl = rail
     this.workarea = workarea
@@ -61,8 +66,53 @@ export class Learn {
       e.preventDefault()
       this.collapse()
     })
-    this.watcher = new GoalWatcher({ device, program, tester: new RegexTester() })
+    const tester = new RegexTester()
+    this.watcher = new GoalWatcher({ device, program, tester })
     this.watcher.addEventListener('goals', (e) => this._goalsMet(e.detail))
+
+    const box = (sel) => {
+      const r = document.querySelector(sel)?.getBoundingClientRect()
+      return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
+    }
+    this.journey = new Journey({
+      places: new Places({ blocks, sim: simView }),
+      md: (text, mode) => this.tutorial.mdFor(text, mode),
+      watcher: new GoalWatcher({ device, program, tester }),
+      library: this.library,
+      side: () => ({ sim: box('#panel-sim'), terminal: box('#panel-terminal') }),
+      loadProgram,
+    })
+    this.tutorial.addEventListener('journey', (e) => this._startJourney(e.detail.chapter))
+    this.journey.addEventListener('progress', () => this._journeyProgress())
+    this.journey.addEventListener('exit', () => {
+      this._save({ journey: false })
+      this.expand()
+    })
+    this.journey.addEventListener('switch-mode', (e) => switchMode(e.detail))
+    this.journey.addEventListener('finished', () => {
+      this._save({ journey: false })
+      this.tutorial.go({ ...this.tutorial.place, step: this.tutorial.place.step + 1 })
+      this.expand()
+    })
+  }
+
+  /** Hand the journey on show over to the coach: the drawer goes, the coach comes. */
+  _startJourney(chapter) {
+    const item = this.tutorial.objective
+    if (item?.type !== 'journey') return
+    this.collapse()
+    this._save({ journey: true })
+    this.journey.start(this.tutorial.pack, item, this.tutorial.mode, { chapter })
+  }
+
+  async _journeyProgress() {
+    const pack = this.tutorial.pack
+    const item = this.tutorial.objective
+    if (!pack || item?.type !== 'journey') return
+    this.tutorial.journeyProgress = await this.library.goals(pack.id, item.id)
+    this.tutorial.finished = await this.library.finished(pack)
+    this.tutorial.refresh()
+    this._drawRail()
   }
 
   /** Whether the drawer is out (a pack is open and the student has not put it away). */
@@ -101,16 +151,19 @@ export class Learn {
   /** The student's program changed. */
   programChanged() {
     this.watcher.programChanged()
+    this.journey.watcher.programChanged()
   }
 
   /** The student clicked a part of the simulated board (docs/mission-packs.md, `pick`). */
   pick(part) {
     this.watcher.pick(part)
+    this.journey.watcher.pick(part)
   }
 
   /** Something the student did that a goal can ask for (docs/mission-packs.md, `event`). */
   event(name, detail) {
     this.watcher.event(name, detail)
+    this.journey.watcher.event(name, detail)
   }
 
   /** Watch the objective on show, if one is, starting from the goals met before. */
@@ -120,6 +173,12 @@ export class Learn {
     this.watcher.stop()
     this.watching = null
     this.onTrek(objective?.trek ?? null)
+    if (this.journey.running && this.journey.item !== objective) this.journey.stop()
+    if (objective?.type === 'journey') {
+      this.tutorial.journeyProgress = await this.library.goals(pack.id, objective.id)
+      if (this.tutorial.objective === objective) this.tutorial.refresh()
+      return
+    }
     if (!objective) return
     const before = await this.library.goals(pack.id, objective.id)
     if (this.tutorial.objective !== objective) return
@@ -180,6 +239,8 @@ export class Learn {
   async restore() {
     const saved = this._saved()
     if (saved.id) await this.open(saved.id, { quiet: true, drawer: saved.drawer !== false })
+    // A journey under way when the page went: its coach comes back at the step the student was on.
+    if (saved.id && saved.journey && this.tutorial.objective?.type === 'journey') this._startJourney(null)
   }
 
   /** Open a kept pack where the student left it, with the drawer out unless `drawer` is false. */
@@ -216,6 +277,8 @@ export class Learn {
   }
 
   close() {
+    this.journey.stop()
+    this._save({ journey: false })
     this._save({ id: null })
     this._setOpen(false)
     this._watch()
@@ -225,6 +288,7 @@ export class Learn {
   setMode(mode) {
     if (this.tutorial.mode !== mode) this.event('switched')
     this.tutorial.setMode(mode)
+    this.journey.setMode(mode)
   }
 
   get isOpen() {
