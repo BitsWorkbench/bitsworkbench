@@ -46,8 +46,8 @@ Settings only an owner of the repository can change, done before the first tag:
   SECURITY.md sends reports there.
 - **About** (the repository's description, website and topics) filled in, with
   the site's address as the website.
-- The site served from its own address (see the README, "Hosting on Firebase"),
-  with the old address sending people on to it.
+- The site served from its own address (see the README, "How Firia deploys"),
+  and no other copy published: GitHub Pages is off.
 
 ## What is public, and what is not
 

@@ -14,7 +14,8 @@ test and extend it is in [README.md](README.md).
 The student's Python and the whole world simulation run together in one Web Worker, on
 simulated time. Python is a custom MicroPython WebAssembly build that suspends through
 JavaScript Promise Integration (JSPI), so a `while True:` loop never blocks the page and
-needs no SharedArrayBuffer (GitHub Pages cannot send the cross-origin isolation headers).
+needs no SharedArrayBuffer (a plain static host such as GitHub Pages cannot send the
+cross-origin isolation headers, and the app runs on any static host).
 The world is a purpose-built 2D model per device, not a physics engine: 0.3 microseconds
 a step, deterministic, every behaviour a named parameter. Sensors are read from the model
 directly (the line sensors from a floor reflectance map, proximity from 2D geometry). The
@@ -93,8 +94,8 @@ cached.
 
 Every alternative was weighed:
 
-- **Worker plus SharedArrayBuffer** (the old design): needs COOP/COEP headers. GitHub Pages
-  cannot send them; coi-serviceworker can fake them at the cost of a forced reload on first
+- **Worker plus SharedArrayBuffer** (the old design): needs COOP/COEP headers. A plain static
+  host such as GitHub Pages cannot send them; coi-serviceworker can fake them at the cost of a forced reload on first
   visit, reload loops in some layouts, and blocked cross-origin assets. Rejected.
 - **Main thread with cooperative yielding**: any slow frame stutters the editor and the
   renderer. Rejected.

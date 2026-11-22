@@ -6,8 +6,10 @@ dev-dist/
 tests/screenshots/
 .vite/
 
-# Firebase's command line: its deploy cache and logs
+# Firebase's command line: its deploy cache and logs, and the project it
+# deploys to (`firebase use --add`), which is each deployer's own choice
 .firebase/
+.firebaserc
 firebase-debug.log
 
 # Simulator: the MicroPython checkout and other build trees

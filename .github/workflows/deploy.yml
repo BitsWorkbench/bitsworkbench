@@ -1,21 +1,12 @@
-# Publishes the built site to GitHub Pages at
-# https://firialabs.github.io/opencodebot/, and, once it is set up, the same
-# tested bundle to Firebase Hosting (the `firebase` job at the end).
+# Publishes the site to Firebase Hosting, the live channel of Firia's project,
+# on every merge to main: build, test the exact bundle, then deploy it.
 #
-# Two one-time prerequisites:
-#
-#   1. The repository must be PUBLIC. GitHub Pages cannot publish from a
-#      private repository except on GitHub Enterprise Cloud. Until it is, the
-#      job skips quietly (grey, not red) rather than failing on every push.
-#   2. Pages must be switched on once, by hand, under
-#      Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
-#      The workflow cannot do this for itself: creating a Pages site needs
-#      admin access, and GITHUB_TOKEN only reaches write, so
-#      `configure-pages` with `enablement: true` fails on an org repository
-#      with "Resource not accessible by integration".
-#
-# If the default branch is ever renamed, update the branch filter below.
-name: Deploy to GitHub Pages
+# This is Firia's own deploy. It runs only in firialabs/opencodebot, and only
+# once the repository has the variable FIREBASE_PROJECT_ID and the secret
+# FIREBASE_SERVICE_ACCOUNT (README, "Deploying"). The credential lives only in
+# that secret, never in a file. A fork skips this workflow quietly; to publish
+# your own copy, see the README, "Deploying your own copy".
+name: Deploy
 
 on:
   push:
@@ -24,23 +15,21 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deploy at a time, and never cancel one that is already running: a
-# half-deployed Pages site is worse than a slightly stale one.
+# half-deployed site is worse than a slightly stale one.
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
-    if: github.event.repository.private == false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    if: github.repository == 'firialabs/opencodebot' && vars.FIREBASE_PROJECT_ID != ''
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
+    environment:
+      name: firebase
+      url: ${{ steps.publish.outputs.details_url }}
     # CodeAIR flight: the build fetches the flight library (sim/flight-library.json)
     # and the tests fly it.
     env:
@@ -75,59 +64,18 @@ jobs:
 
       - run: npm run build
 
-      # Teachers will be pointed at this URL, so test the exact bundle we are
-      # about to publish — including that it works from a sub-path and offline.
-      # The same suite passed in the pull request's CI. The browser and simulator
-      # tests run against real time, and this runner is sometimes slower: a
-      # check that fails once is run again with the whole suite, and the first
-      # failure stays on the run as a warning, so a flake is seen rather than
-      # hidden. A real failure fails twice, and nothing is published.
+      # Teachers are pointed at this site, so test the exact bundle we are
+      # about to publish. The same suite passed in the pull request's CI. The
+      # browser and simulator tests run against real time, and this runner is
+      # sometimes slower: a check that fails once is run again with the whole
+      # suite, and the first failure stays on the run as a warning, so a flake
+      # is seen rather than hidden. A real failure fails twice, and nothing is
+      # published.
       - name: Test the build we are about to publish
         run: |
           if npm test; then exit 0; fi
           echo "::warning title=Flaky test::The test suite failed once on the deploy runner and is being run again. See the log above for the check that failed."
           npm test
-
-      # The tested bundle, for the Firebase job below to publish as it is.
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist
-          retention-days: 7
-
-      # Reads the Pages config; it cannot create it (see the note at the top).
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  # The same tested bundle on Firebase Hosting, the site's own address
-  # (firebase.json: its headers). Off until the project is set up: it runs
-  # only once the repository has the variable FIREBASE_PROJECT_ID and the
-  # secret FIREBASE_SERVICE_ACCOUNT (README, "Hosting on Firebase"). When
-  # Firebase becomes the only home, the Pages steps above go and this job
-  # takes their place.
-  firebase:
-    needs: deploy
-    if: vars.FIREBASE_PROJECT_ID != ''
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    environment:
-      name: firebase
-      url: ${{ steps.publish.outputs.details_url }}
-    steps:
-      - uses: actions/checkout@v4      # firebase.json
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
 
       - id: publish
         uses: FirebaseExtended/action-hosting-deploy@v0

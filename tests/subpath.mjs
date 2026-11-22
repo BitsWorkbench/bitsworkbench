@@ -1,6 +1,6 @@
 /**
- * GitHub Pages serves this project from a sub-path (/opencodebot/), not from
- * the root of a domain, and the whole point of the app is that it keeps
+ * A static host may serve the app from a sub-path (/opencodebot/), not from
+ * the root of a domain (README, "Deploying your own copy"), and the whole point of the app is that it keeps
  * working with the internet unplugged. Both claims are easy to break with a
  * one-line config change, so check them for real: serve `dist/` under a
  * sub-path, load it, let the service worker install, then go offline and
