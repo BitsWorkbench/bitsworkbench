@@ -220,6 +220,11 @@ for (const [name, width, height, touch, motion = 'no-preference'] of SIZES) {
   check(await page.locator('.journey-fx-glow').count() === 4, 'each NeoPixel glows')
   check(await page.locator('.journey-fx-morph').count() === 2, 'each block lights in turn')
   check((await page.locator('.journey-card .journey-code').innerText()).includes('pixels.fill(RED)'), 'the compare card shows the program as Python')
+  await page.waitForTimeout(300)
+  check(await page.evaluate(() => {
+    const next = document.querySelector('.journey-bubble [data-journey="next"]').getBoundingClientRect()
+    return document.elementFromPoint(next.x + next.width / 2, next.y + next.height / 2)?.closest('[data-journey="next"]') !== null
+  }), 'the card leaves the bubble\'s Next uncovered')
   await next()
 
   // Switching mode pauses; switching back carries on.
