@@ -8,6 +8,7 @@ export default {
   'app.tagline': 'Suéñalo, constrúyelo',
   'app.beta': 'Beta',
   'app.betaTitle': 'Una primera versión pública: consulta Acerca de',
+  'app.title': '{app} Beta',
   // El nombre de este idioma en su propio idioma, en el menú de idiomas.
   'lang.name': 'Español',
 
@@ -25,7 +26,7 @@ export default {
   'run.controlsLabel': 'Ejecutar tu programa',
   'btn.more': 'Más',
   'project.default': 'Mi proyecto',
-  'project.pageTitle': '{name} · {app}',
+  'project.pageTitle': '{name} · {app} Beta',
   'menu.examples': '📚 Ejemplos… (en Aprender)',
   'menu.import': '📂 Abrir un archivo de tu computadora…',
   'menu.exportPy': '🐍 Descargar Python',

@@ -1,16 +1,19 @@
-# OpenCodeBot
+# BitsWorkbench
 
 **Firia Labs' open-source editor and simulator for CodeBot, CodeX and CodeAIR: blocks and Python.**
 
-(For a while called LabBlocks.)
+(Earlier called OpenCodeBot, the repository's name, and for a while LabBlocks.)
 
-OpenCodeBot lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
+BitsWorkbench lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No board yet? Press Simulate and the
 program runs on a simulated one. No install, no accounts, no setup: just a
 web page, and a USB cable when there is a board.
 
-**▶ [Open OpenCodeBot](https://firialabs-open-editor.web.app/)**: nothing to
+**▶ [Open BitsWorkbench](https://bitsworkbench.org/)**: nothing to
 install. Chrome or Edge on a computer or Chromebook.
+
+**BitsWorkbench is in Beta:** an early public release. It works, and it is still
+changing; tell us what breaks ([issues](https://github.com/firialabs/opencodebot/issues)).
 
 Everything it makes is real CircuitPython, and the Python is one click away,
 in place of the blocks, for the class that is ready to type. Learn has short
@@ -60,7 +63,7 @@ not one a browser can open.
 
 ## Browser support
 
-OpenCodeBot talks to hardware through the
+BitsWorkbench talks to hardware through the
 [Web Serial API](https://developer.mozilla.org/docs/Web/API/Web_Serial_API), so
 you need **Chrome, Edge or another Chromium browser on a desktop or
 Chromebook**, served over `https://` (or `http://localhost` while developing).
@@ -163,8 +166,9 @@ git ignores) and `npx firebase-tools deploy --only hosting`.
 
 ### How Firia deploys
 
-Firia's copy is at **https://firialabs-open-editor.web.app/**, on Firebase
-Hosting. `.github/workflows/deploy.yml` builds, tests and publishes the tested
+Firia's copy is at **https://bitsworkbench.org/**, on Firebase Hosting (a
+custom domain on the site that also answers at
+https://firialabs-open-editor.web.app/). `.github/workflows/deploy.yml` builds, tests and publishes the tested
 bundle there on every merge to `main`, and CI gives each pull request from a
 branch of this repository a preview address, posted on the pull request and
 kept a week. Both run only in `firialabs/opencodebot`, so a fork never tries to

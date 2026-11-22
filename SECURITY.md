@@ -1,6 +1,6 @@
 # Security
 
-OpenCodeBot runs in the browser, keeps students' work there, and talks to boards
+BitsWorkbench runs in the browser, keeps students' work there, and talks to boards
 over USB. If you find a way for a page, a pack file or a program to reach
 something it should not (another site, a student's files, a board it was not
 given), please tell us privately before telling anyone else.
