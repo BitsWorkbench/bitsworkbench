@@ -19,25 +19,32 @@ export class Journey extends EventTarget {
    * `places`: a Places; `md(text, mode)`: Markdown to HTML; `watcher`: a
    * GoalWatcher of its own; `library`: where progress is kept; `side()`:
    * { sim, terminal } boxes on the page (either may be null);
-   * `loadProgram(python)`: replace the student's program (a chapter started over).
+   * `startOver(python)`: put a chapter's program in place of the student's,
+   * theirs kept (it may ask them first); true once done, false if they kept working.
    * Fires `finished` when the student leaves the finish card, `exit` when they stop.
    */
-  constructor({ places, md, watcher, library, side, loadProgram, effects = null }) {
+  constructor({ places, md, watcher, library, side, startOver, effects = null }) {
     super()
     this.places = places
     this.md = md
     this.watcher = watcher
     this.library = library
     this.side = side
-    this.loadProgram = loadProgram
+    this.startOver = startOver
     this.effects = effects
     this.coach = null
     this.running = false
     watcher.addEventListener('goals', (e) => e.detail[0] && this._met())
   }
 
-  /** Begin, or carry on, `item` of `pack` in `mode`; `chapter` (an index) starts that chapter over. */
+  /**
+   * Begin, or carry on, `item` of `pack` in `mode`; `chapter` (an index)
+   * starts that chapter over. False when the student, asked whether to
+   * replace their program with the chapter's, kept working: nothing changed.
+   */
   async start(pack, item, mode, { chapter = null } = {}) {
+    const code = chapter !== null && item.chapters[chapter]?.code
+    if (code && !(await this.startOver(code))) return false
     this.stop()
     this.pack = pack
     this.item = item
@@ -49,18 +56,18 @@ export class Journey extends EventTarget {
     this.done = new Set(await this.library.goals(pack.id, item.id))
     this.running = true
     if (chapter !== null) {
-      const c = item.chapters[chapter]
-      if (c.code) this.loadProgram(c.code)
       const first = this.steps.findIndex((s) => s.chapter === chapter)
       this.steps.filter((s) => s.chapter >= chapter).forEach((s) => this.done.delete(s.id))
       this.done.delete(FINISHED)
       await this._save()
-      return this._go(first)
+      this._go(first)
+      return true
     }
     const next = this.steps.findIndex((s) => !this.done.has(s.id))
-    if (next === -1) return this._finish()
-    if (next === 0) return this._opening()
-    this._go(next)
+    if (next === -1) await this._finish()
+    else if (next === 0) this._opening()
+    else this._go(next)
+    return true
   }
 
   /** Put the coach away; progress stays. */
@@ -198,10 +205,19 @@ export class Journey extends EventTarget {
   async _action({ action, value }) {
     const s = this.steps[this.index]
     switch (action) {
-      case 'begin':
+      case 'begin': {
+        // The journey starts from its first chapter's program, the student's kept if it differs.
+        const code = this.item.chapters[0]?.code
+        if (code && !(await this.startOver(code))) return
         return this._go(0)
-      case 'next':
+      }
+      case 'next': {
+        // Into a `fresh` chapter: it starts from its own program, the student's kept if it differs.
+        const s = this.steps[this.index + 1]
+        const c = s && s.chapter !== this.steps[this.index]?.chapter && this.item.chapters[s.chapter]
+        if (c?.fresh && c.code) await this.startOver(c.code)
         return this._go(this.index + 1)
+      }
       case 'skip':
         this.done.add(s.id)
         await this._save()

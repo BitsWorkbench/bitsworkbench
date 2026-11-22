@@ -26,6 +26,8 @@ import { Learn } from '../learn/learn.js'
 import { installCodeTrek } from '../learn/trek-blocks.js'
 import { trekSnippets } from '../learn/trek.js'
 import { installPaletteSize } from './palette-size.js'
+import { esc } from '../learn/esc.js'
+import { BANNER } from '../blocks/generate.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1'
 const PICKED_DEVICE = 'opencodebot.device.v1'
@@ -41,6 +43,17 @@ const APP_BUILD = typeof __APP_BUILD__ === 'string' ? __APP_BUILD__ : 'dev'
 
 /** A path's last part: its file name. */
 const baseName = (path) => path.split('/').pop()
+/**
+ * Are two programs the same, but for the header blocks write at a program's
+ * top (the banner, the device), blank lines and spaces at line ends? Anything
+ * else, a student's comment or note included, makes them different: a
+ * program judged the same is replaced without being kept.
+ */
+const sameProgram = (a, b) => {
+  const generated = (l) => l === BANNER || l.startsWith('# Device: ')
+  const plain = (py) => py.split('\n').map((l) => l.trimEnd()).filter((l) => l && !generated(l)).join('\n')
+  return plain(a) === plain(b)
+}
 
 const $ = (id) => document.getElementById(id)
 
@@ -75,7 +88,7 @@ export class App {
       toPython: () => this.workspace.mode === 'text' || this._toText(),
       blocks: this.workspace,
       simView: () => this.device.sim.view ?? null,
-      loadProgram: (python) => this._loadProgram(python),
+      startOver: (python) => this._startOver(python),
       switchMode: (mode) => ((mode === 'python') !== (this.workspace.mode === 'text') ? this._toggleView() : null),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
@@ -828,16 +841,70 @@ export class App {
     this.pythonEditor.focus()
   }
 
-  /** Replace the program with `python`, in the mode the student is in (a journey's chapter started over). */
+  /**
+   * A journey's chapter started over: its program `python` replaces the
+   * student's, which is never lost. When theirs is already the chapter's
+   * start, it is simply loaded; otherwise the student is asked, and theirs is
+   * kept first as a file beside the open one (main_saved.py, main_saved_2.py...),
+   * which they can open again from Files. True when the program was replaced.
+   */
+  async _startOver(python) {
+    // A program blocks cannot show is not loaded in blocks: nothing is replaced.
+    if (this.workspace.mode !== 'text' && !this.blocksFromPython(python).ok) {
+      toast({ kind: 'error', title: t('journey.overFailed') })
+      return false
+    }
+    const now = this._currentPython()
+    if (sameProgram(now, python)) return this._loadProgram(python)
+    if (!this._canWrite()) return false
+    const open = this.openFile ?? { store: 'browser', path: 'main.py' }
+    // The open file's own store (its folder, reopened if it can be); none, and nothing is replaced.
+    const store = await this._storeFor(open, true)
+    if (!store) {
+      toast({ kind: 'error', title: t('journey.overFailed'), detail: t('files.reopenDetail', { folder: open.folder }) })
+      return false
+    }
+    const slash = open.path.lastIndexOf('/') + 1
+    const stem = open.path.slice(slash).replace(/\.py$/i, '')
+    let path
+    // Letters, digits and _ only: a board takes a program's other files by names Python can import.
+    for (let n = 1; !path || (await store.exists(path)); n++) path = `${open.path.slice(0, slash)}${stem}_${t('journey.keptSuffix')}${n > 1 ? `_${n}` : ''}.py`
+    const name = baseName(path)
+    const ok = await showModal({
+      title: t('journey.overTitle'),
+      bodyHtml: t('journey.overBodyHtml', { name: esc(name) }),
+      confirmText: t('journey.overConfirm'),
+      cancelText: t('journey.overCancel'),
+    })
+    if (!ok) return false
+    // In turn with saves, renames and deletes, so none of them crosses the copy being kept.
+    const kept = await this._inTurn(async () => {
+      try {
+        await store.write(path, now)
+        return true
+      } catch (err) {
+        toast({ kind: 'error', title: t('journey.keptFailed', { name }), detail: err.message })
+        return false
+      }
+    })
+    if (!kept || !this._loadProgram(python)) return false
+    await this.filesPanel.render()
+    toast({ kind: 'info', title: t('journey.keptTitle', { name }), detail: t('journey.keptBody') })
+    return true
+  }
+
+  /** Replace the program with `python`, in the mode the student is in; false when blocks cannot show it (nothing changes). */
   _loadProgram(python) {
     if (this.workspace.mode === 'text') {
       this.workspace.setPythonText(python)
       this.pythonEditor.value = python
     } else {
       const result = this.blocksFromPython(python)
-      if (result.ok) this.workspace.replaceBlocks(result.state)
+      if (!result.ok) return false
+      this.workspace.replaceBlocks(result.state)
     }
     this._fileChanged?.()
+    return true
   }
 
   /** Python as blocks for the picked board: { ok, state } or { ok: false, line }. */
