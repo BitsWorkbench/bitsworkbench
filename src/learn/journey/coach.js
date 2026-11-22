@@ -74,6 +74,7 @@ export class Coach extends EventTarget {
    */
   step({ index, count, html, locate, hints = 0, hintShown = null, skippable = false, showMe = false, fresh = true }) {
     this.locate = locate
+    this.lastBox = null
     this.good = false
     this.folded = false
     const b = this.$('.journey-bubble')
@@ -189,8 +190,10 @@ export class Coach extends EventTarget {
     const b = this.$('.journey-bubble')
     const ring = this.$('.journey-ring')
     const found = this.locate()
-    const box = found?.box
-    ring.hidden = !box || this.good || this.folded
+    // A met step's place can go (the block the student changed no longer matches): the bubble stays where it was.
+    const box = found?.box ?? (this.good ? this.lastBox : null)
+    if (found?.box) this.lastBox = found.box
+    ring.hidden = !found?.box || this.good || this.folded
     if (box) {
       Object.assign(ring.style, { left: `${box.x - 5}px`, top: `${box.y - 5}px`, width: `${box.w + 10}px`, height: `${box.h + 10}px` })
     }

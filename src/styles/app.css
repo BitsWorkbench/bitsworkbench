@@ -1060,7 +1060,8 @@ kbd {
  * only on its own bubble and cards. Motion is transform and opacity alone, and
  * none at all under reduced motion.
  */
-.journey-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+/* Over the header (80) and Blockly (70s), which a phone's narrow layout puts under the bubble; under the toasts (200) and the drawer (400). */
+.journey-layer { position: fixed; inset: 0; pointer-events: none; z-index: 150; }
 .journey-layer [hidden] { display: none !important; }
 .journey-bubble, .journey-card, .journey-centre, .journey-strip-open { pointer-events: auto; }
 .journey-ring {
@@ -1129,7 +1130,7 @@ kbd {
 
 /* A journey's effects (src/learn/journey/effects.js): moving things are
    transformed and faded only, and carry no filters. */
-.journey-fx { position: fixed; inset: 0; pointer-events: none; z-index: 59; overflow: hidden; }
+.journey-fx { position: fixed; inset: 0; pointer-events: none; z-index: 149; overflow: hidden; }
 .journey-fx > * { position: absolute; pointer-events: none; }
 .journey-fx-svg { left: 0; top: 0; }
 .journey-fx-clip { overflow: hidden; }
