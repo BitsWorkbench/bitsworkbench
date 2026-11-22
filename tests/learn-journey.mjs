@@ -122,8 +122,16 @@ for (const [name, width, height, touch] of SIZES) {
   await page.waitForTimeout(400)
   check((await page.evaluate(() => document.querySelector('.workarea').dataset.drawer)) === 'closed', 'starting it puts the drawer away')
   check(await page.locator('.journey-centre h2').isVisible(), 'an opening card over the simulator')
+  // The journey begins from its first chapter's program; the student's own, being different, is kept.
+  await page.evaluate(() => {
+    const app = window.openCodeBot
+    app.workspace.replaceBlocks(app.blocksFromPython('from codex import *\n\ndisplay.show("Mine")\n').state)
+  })
   await page.click('.journey-centre [data-journey="begin"]')
-  await page.waitForTimeout(400)
+  check(await page.waitForSelector('#modal[open]', { timeout: 3000 }).then(() => true, () => false), 'beginning asks before replacing a different program')
+  await page.click('#modal[open] button[value="ok"]')
+  await page.waitForTimeout(600)
+  check((await page.evaluate(() => window.openCodeBot._currentPython())).includes('Hi there!'), 'and begins from the first chapter\'s program')
 
   const bubble = () => page.locator('.journey-bubble')
   const ringOn = async (sel) =>

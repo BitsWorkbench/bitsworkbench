@@ -205,8 +205,12 @@ export class Journey extends EventTarget {
   async _action({ action, value }) {
     const s = this.steps[this.index]
     switch (action) {
-      case 'begin':
+      case 'begin': {
+        // The journey starts from its first chapter's program, the student's kept if it differs.
+        const code = this.item.chapters[0]?.code
+        if (code && !(await this.startOver(code))) return
         return this._go(0)
+      }
       case 'next':
         return this._go(this.index + 1)
       case 'skip':
