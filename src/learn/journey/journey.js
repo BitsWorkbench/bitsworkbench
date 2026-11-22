@@ -211,8 +211,13 @@ export class Journey extends EventTarget {
         if (code && !(await this.startOver(code))) return
         return this._go(0)
       }
-      case 'next':
+      case 'next': {
+        // Into a `fresh` chapter: it starts from its own program, the student's kept if it differs.
+        const s = this.steps[this.index + 1]
+        const c = s && s.chapter !== this.steps[this.index]?.chapter && this.item.chapters[s.chapter]
+        if (c?.fresh && c.code) await this.startOver(c.code)
         return this._go(this.index + 1)
+      }
       case 'skip':
         this.done.add(s.id)
         await this._save()

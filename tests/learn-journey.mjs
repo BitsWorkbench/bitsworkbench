@@ -70,6 +70,7 @@ export const PACK = {
               id: 'JOURNEY_C2',
               title: 'Light it',
               code: 'from codex import *\n\ndisplay.show("Hi, I\'m Sam!")\n',
+              fresh: true,
               steps: [
                 { id: 'J_palette', say: 'Open **Lights**.', point: 'palette:lights', do: { event: 'palette', name: 'lights' } },
                 { id: 'J_add', say: 'Drag **set all neopixels** under your show block.', point: 'palette-item:pixels.fill(...)', palette: 'lights', to: 'after:display.show(...)', do: { has: 'pixels.fill(...)' }, fx: ['ghost', 'pulse part:^Neo_', 'morph'], show: { card: 'compare', caption: 'Each block is a line of Python.' } },
@@ -301,6 +302,18 @@ for (const [name, width, height, touch, motion = 'no-preference'] of SIZES) {
   const loop = 'from codex import *\n\nwhile True:\n    display.show("a")\n    pixels.off()\n'
   check(await asks(loop, loop.replace('    pixels.off()', 'pixels.off()')), 'a line moved out of a loop is a different program')
   check(await asks(loop, `${loop}# my note\n`), 'so is one with a comment of its own')
+  // Next into a `fresh` chapter starts it from its program, the student's kept.
+  await page.evaluate(() => {
+    const app = window.openCodeBot
+    app.workspace.replaceBlocks(app.blocksFromPython('from codex import *\n\ndisplay.show("Mine")\n').state)
+    const j = app.learn.journey
+    j.index = j.steps.findIndex((s) => s.chapter === 1) - 1
+    j._action({ action: 'next' })
+  })
+  check(await page.waitForSelector('#modal[open]', { timeout: 3000 }).then(() => true, () => false), 'Next into a fresh chapter asks before replacing a different program')
+  await page.click('#modal[open] button[value="ok"]')
+  await page.waitForTimeout(600)
+  check((await python()).includes("Hi, I'm Sam!"), 'and starts the chapter from its program')
   await context.close()
 }
 await browser.close()

@@ -307,8 +307,10 @@ class Checker {
       id: this.id,
       title: this.text,
       code: [this.python, false],
+      fresh: [this.yes, false],
       steps: (s, where) => this.list(s, where, this.journeyStep),
     })
+    if (v?.fresh && !v.code) this.problem(`${at}.fresh`, 'needs the chapter\'s code to start from')
   }
 
   journeyStep(v, at) {
