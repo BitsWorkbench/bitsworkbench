@@ -50,7 +50,9 @@ export class Places {
     if (!place) return null
     const [kind, arg] = place.split(/:(.*)/s)
     if (CONTROLS[kind]) {
-      const el = document.querySelector(CONTROLS[kind])
+      let el = document.querySelector(CONTROLS[kind])
+      // Run is hidden while a program runs, Stop in its place: pressed first, so it is pointed at.
+      if (kind === 'run' && el?.hidden) el = document.querySelector(CONTROLS.stop)
       const box = boxOf(el)
       return box && { box, el }
     }
@@ -84,7 +86,7 @@ export class Places {
         if (kind === 'block') return { box: own, el: svg, block }
         if (kind === 'after') return { box: { x: own.x, y: own.y + own.h - 4, w: Math.max(own.w, 160), h: Math.max(own.h, 36) }, el: null, block }
         // The block's own text field, or one in a block plugged into it (a text value is a block of its own).
-        const field = block.getDescendants(false).flatMap((b) => b.inputList.flatMap((i) => i.fieldRow)).find((f) => f instanceof Blockly.FieldTextInput && f.isVisible())
+        const field = block.getDescendants(false).flatMap((b) => b.inputList.flatMap((i) => i.fieldRow)).find((f) => (f instanceof Blockly.FieldTextInput || f instanceof Blockly.FieldNumber) && f.isVisible())
         const fbox = field && boxOf(field.getSvgRoot())
         return fbox && { box: fbox, el: field.getSvgRoot(), block, field }
       }
@@ -152,10 +154,13 @@ export class Places {
   /** The student's block whose statement matches a pattern: the first one, in program order. */
   programBlock(pattern) {
     const { code, blockAt } = generateWithLines(this.workspace, this.blocks.targetId)
-    const node = find(code, pattern)[0]
-    if (!node) return null
-    const id = blockAt[lineAt(code, node.from)]
-    return (id && this.workspace.getBlockById(id)) || null
+    // The first match a block made: blocks declare their variables first (`delay = None`), on lines no block owns.
+    for (const node of find(code, pattern)) {
+      const id = blockAt[lineAt(code, node.from)]
+      const block = id && this.workspace.getBlockById(id)
+      if (block) return block
+    }
+    return null
   }
 }
 
