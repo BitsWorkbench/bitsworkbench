@@ -16,6 +16,7 @@ import { offersBlocks } from './offer.js'
 import { BRAND } from '../brand.js'
 import { Rail } from './rail.js'
 import { Journey } from './journey/journey.js'
+import { Effects } from './journey/effects.js'
 import { Places } from './journey/places.js'
 
 const OPEN = 'opencodebot.learn.v1' // { id, drawer: false when the student closed it }
@@ -74,8 +75,10 @@ export class Learn {
       const r = document.querySelector(sel)?.getBoundingClientRect()
       return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
     }
+    const places = new Places({ blocks, sim: simView })
     this.journey = new Journey({
-      places: new Places({ blocks, sim: simView }),
+      places,
+      effects: new Effects({ places }),
       md: (text, mode) => this.tutorial.mdFor(text, mode),
       watcher: new GoalWatcher({ device, program, tester }),
       library: this.library,

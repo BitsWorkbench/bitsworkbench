@@ -254,6 +254,14 @@ export class CodeXFigure {
     this.screenTex.needsUpdate = true
   }
 
+  // The screen as drawn, top row first, before the backlight: an ImageData.
+  screenImage() {
+    const img = new ImageData(PIXELS, PIXELS)
+    const row = PIXELS * 4
+    for (let y = 0; y < PIXELS; y++) img.data.set(this.screenData.subarray((PIXELS - 1 - y) * row, (PIXELS - y) * row), y * row)
+    return img
+  }
+
   // The screen's colour at (x, y) as drawn, before the backlight: [r, g, b].
   screenRGB(x, y) {
     const o = ((PIXELS - 1 - y) * PIXELS + x) * 4
