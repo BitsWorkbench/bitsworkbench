@@ -206,7 +206,11 @@ export class Coach extends EventTarget {
       ['left', at.x - W - 14, at.y + at.h / 2 - H / 2],
     ]
     const fits = ([, l, tp]) => l >= 6 && tp >= 6 && l + W <= innerWidth - 6 && tp + H <= innerHeight - 6
-    let [side, l, tp] = sides.find(fits) || sides[0]
+    // Clear of the card beside the simulator when it can be: the card must not cover the bubble's Next.
+    const card = this.$('.journey-card')
+    const c = card.hidden ? null : card.getBoundingClientRect()
+    const clear = ([, l, tp]) => !c || l + W <= c.left || l >= c.right || tp + H <= c.top || tp >= c.bottom
+    let [side, l, tp] = sides.find((s) => fits(s) && clear(s)) || sides.find(fits) || sides[0]
     l = Math.max(6, Math.min(l, innerWidth - W - 6))
     tp = Math.max(6, Math.min(tp, innerHeight - H - 6))
     Object.assign(b.style, { left: `${l}px`, top: `${tp}px` })
