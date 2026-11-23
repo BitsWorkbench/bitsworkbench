@@ -4,6 +4,7 @@
  */
 
 import { t } from '../i18n/index.js'
+import { flavorOf } from '../device/flavor.js'
 
 const num = (value) => ({ shadow: { type: 'math_number', fields: { NUM: value } } })
 const str = (text) => ({ shadow: { type: 'text', fields: { TEXT: text } } })
@@ -223,10 +224,27 @@ const codeairCategories = [
   ]),
 ]
 
+// ------------------------------------- a MicroPython / CircuitPython board
+
+/**
+ * Pins (blocks/pins.js). The pins each starts on are a Raspberry Pi Pico's,
+ * by the names its Python knows them by: the board most students will have.
+ */
+const pin = (type, name) => ({ kind: 'block', type, fields: { PIN: name } })
+const genericCategories = (flavor) => [
+  category(t('cat.pins'), 'pins_category', [
+    { ...pin('pins_write', 'LED'), inputs: { ON: bool(true) } },
+    pin('pins_read', 'GP14'),
+    pin('pins_analog', flavor === 'micropython' ? 'GP26' : 'A0'),
+    block('pins_ms'),
+  ]),
+]
+
 const DEVICE_CATEGORIES = {
   codex: codexCategories,
   codebot: codebotCategories,
   codeair: codeairCategories,
+  generic: genericCategories,
 }
 
 /** The CodeTrek category's toolbox id, for showing and hiding it. */
@@ -234,7 +252,8 @@ export const CODETREK_ID = 'codetrek'
 
 /** Build the toolbox for a board. Pass null for the "nothing picked" view. */
 export function toolboxFor(targetId) {
-  const deviceCats = DEVICE_CATEGORIES[targetId] || []
+  const cats = DEVICE_CATEGORIES[targetId] || []
+  const deviceCats = typeof cats === 'function' ? cats(flavorOf(targetId)) : cats
   return {
     kind: 'categoryToolbox',
     contents: [
@@ -249,4 +268,4 @@ export function toolboxFor(targetId) {
 }
 
 /** Every block type that belongs to a specific board. */
-export const DEVICE_BLOCK_PREFIX = { codex: 'codex_', codebot: 'codebot_', codeair: 'codeair_' }
+export const DEVICE_BLOCK_PREFIX = { codex: 'codex_', codebot: 'codebot_', codeair: 'codeair_', generic: 'pins_' }

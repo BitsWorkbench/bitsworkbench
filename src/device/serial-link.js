@@ -1,5 +1,6 @@
 /**
- * Thin Web Serial wrapper: open a paired Firia Labs board, stream bytes in
+ * Thin Web Serial wrapper: open a paired Firia Labs board (or, with
+ * `anyPort`, any serial port), stream bytes in
  * and out, and notice when it is unplugged.
  *
  * Adapted from the WebSerialControl used by Firia Labs CodeSpace, trimmed to
@@ -23,6 +24,12 @@ export class SerialLink {
     /** @type {() => void} */
     this.onDisconnect = null
 
+    /**
+     * Any serial port, not only Firia Labs boards: set while the MicroPython /
+     * CircuitPython board is picked. Every port it opens is that board.
+     */
+    this.anyPort = false
+
     this._opening = false
     this._closed = Promise.resolve()
     this._resolveClosed = () => {}
@@ -33,7 +40,7 @@ export class SerialLink {
       // come back on its own without another click.
       navigator.serial.addEventListener('connect', (event) => {
         if (this.port || !this._autoReconnect) return
-        if (targetIdForPort(event.target)) this.openPaired()
+        if (this.anyPort || targetIdForPort(event.target)) this.openPaired()
       })
     }
     this._autoReconnect = false
@@ -46,7 +53,7 @@ export class SerialLink {
   /** Show the browser's port picker. Must be called from a user gesture. */
   async requestPort() {
     if (!this.supported) throw new Error('web-serial-unsupported')
-    const port = await navigator.serial.requestPort({ filters: ALL_USB_FILTERS })
+    const port = await navigator.serial.requestPort(this.anyPort ? {} : { filters: ALL_USB_FILTERS })
     if (this.port) return true // an auto-reconnect beat the picker; keep it
     this.port = port
     this._autoReconnect = true
@@ -57,7 +64,7 @@ export class SerialLink {
   async openPaired() {
     if (!this.supported || this.port) return false
     const ports = await navigator.serial.getPorts()
-    const match = ports.find((p) => targetIdForPort(p))
+    const match = this.anyPort ? ports[0] : ports.find((p) => targetIdForPort(p))
     if (!match) return false
     this.port = match
     this._autoReconnect = true
@@ -77,7 +84,7 @@ export class SerialLink {
         }
       }
       this._startReading()
-      this.onConnect?.(targetIdForPort(this.port), this.port)
+      this.onConnect?.(this.anyPort ? 'generic' : targetIdForPort(this.port), this.port)
       return true
     } finally {
       this._opening = false

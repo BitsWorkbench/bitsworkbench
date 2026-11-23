@@ -4,6 +4,7 @@ import { State, createDevice, deviceKindFromUrl } from '../device/device-target.
 import '../device/device-manager.js'
 import '../device/loopback-device.js'
 import { SUPPORTED_TARGETS, getTarget } from '../device/targets.js'
+import { FLAVORS, flavorEvents, genericFlavor, setGenericFlavor } from '../device/flavor.js'
 import * as Blockly from 'blockly/core'
 import { BlockWorkspace, STARTER_PROJECTS, fileNameFor } from '../workspace/workspace.js'
 import { generatePython, generateWithLines, devicesUsed, boardOfPython } from '../blocks/index.js'
@@ -114,6 +115,7 @@ export class App {
     })
 
     this._bindDevice()
+    this._bindFlavor()
     this._bindChrome()
     // A paused program's line, on its block and in the Python view.
     this.device.sim.addEventListener('line', (e) => this._showLine(e.detail.line))
@@ -211,6 +213,25 @@ export class App {
     device.addEventListener('progress', (e) => {
       const pct = Math.round(e.detail * 100)
       this._setStatus(State.LOADING, t('status.sendingPct', { pct }))
+    })
+  }
+
+  /**
+   * The MicroPython / CircuitPython board's flavor changed (its banner said, or
+   * the student chose in the device menu): its Pins blocks, both palettes and
+   * its name in the chip follow.
+   */
+  _bindFlavor() {
+    flavorEvents.addEventListener('change', (e) => {
+      if (this.workspace.targetId !== 'generic') return
+      this.workspace.refreshToolbox()
+      this.palette?.refresh()
+      this._renderDevicePicker()
+      this._refreshDeviceChip()
+      if (e.detail.from === 'board') {
+        const name = getTarget('generic').name
+        toast({ kind: 'info', title: t('flavor.followTitle', { flavor: name }), detail: t('flavor.followDetail', { flavor: name }) })
+      }
     })
   }
 
@@ -742,7 +763,30 @@ export class App {
         this._togglePopover($('device-chip'), menu, false)
       })
       menu.appendChild(item)
+      if (target.id === 'generic' && this.workspace.targetId === 'generic') menu.appendChild(this._flavorSwitch())
     }
+  }
+
+  /**
+   * MicroPython or CircuitPython, for the board picked: set by hand before a
+   * board is connected (a connected board's banner sets it, flavor.js).
+   */
+  _flavorSwitch() {
+    const row = document.createElement('div')
+    row.className = 'dm-flavor'
+    row.setAttribute('role', 'group')
+    row.setAttribute('aria-label', t('flavor.label'))
+    row.innerHTML = '<span class="dm-flavor-label"></span>'
+    row.firstChild.textContent = t('flavor.label')
+    for (const flavor of FLAVORS) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.textContent = t(`flavor.${flavor}`)
+      b.setAttribute('aria-pressed', String(genericFlavor() === flavor))
+      b.addEventListener('click', () => setGenericFlavor(flavor, 'student'))
+      row.appendChild(b)
+    }
+    return row
   }
 
   async _pickTarget(targetId) {
@@ -860,7 +904,10 @@ export class App {
 
   _bindWorkspace() {
     let timer
+    // The MicroPython / CircuitPython board opens any serial port; the others only theirs.
+    this.device.board.setPick?.(this.workspace.targetId)
     this.workspace.addEventListener('change', () => {
+      this.device.board.setPick?.(this.workspace.targetId)
       this._refreshHint()
       // Another board, another palette (rebuilt only when the board changed).
       if (this.view === 'python') this.palette.render(this.workspace.targetId)

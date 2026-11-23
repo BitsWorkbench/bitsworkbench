@@ -1,11 +1,13 @@
 /**
- * What the app knows about each Firia Labs board.
+ * What the app knows about each Firia Labs board, and about any other board
+ * with a Python prompt (`generic`).
  *
  * USB IDs match the CodeSpace device filters. Only boards that expose a
  * USB CDC serial port that Web Serial can open are listed as supported.
  */
 
 import { t } from '../i18n/index.js'
+import { genericFlavor } from './flavor.js'
 
 export const TARGETS = {
   codebot: {
@@ -49,6 +51,26 @@ export const TARGETS = {
     docsUrl: 'https://docs.firialabs.com/codeair/',
   },
 
+  // Any MicroPython or CircuitPython board: no USB filter (Connect lists every
+  // serial port), no firmware of ours, no files and no simulator. It speaks
+  // whichever Python its banner names (flavor.js); its name follows.
+  generic: {
+    id: 'generic',
+    get name() {
+      return genericFlavor() === 'circuitpython' ? 'CircuitPython' : 'MicroPython'
+    },
+    fullName: t('device.generic.fullName'),
+    tagline: t('device.generic.tagline'),
+    icon: 'dev-any.svg',
+    accent: '#a0785a',
+    supported: true,
+    anyPort: true,
+    usbFilter: null,
+    // "MicroPython v1.24.1 on 2024-11-29; ..." or "Adafruit CircuitPython 9.2.1 on 2024-11-20; ..."
+    bootRegex: /(?:MicroPython|CircuitPython) v?(\S+) on ([\d-]+)/,
+    docsUrl: 'https://docs.micropython.org/',
+  },
+
   // Recognised so we can explain ourselves, but not offered in the picker:
   // the original CodeBot speaks a USB protocol Web Serial cannot open.
   codebot_cb2: {
@@ -69,7 +91,7 @@ export const TARGETS = {
 export const SUPPORTED_TARGETS = Object.values(TARGETS).filter((t) => t.supported)
 
 /** Filters handed to navigator.serial.requestPort(). */
-export const ALL_USB_FILTERS = SUPPORTED_TARGETS.map((t) => t.usbFilter)
+export const ALL_USB_FILTERS = SUPPORTED_TARGETS.filter((t) => t.usbFilter).map((t) => t.usbFilter)
 
 /** Map a SerialPort's USB product id back to a target id, or null. */
 export function targetIdForPort(port) {
@@ -77,6 +99,7 @@ export function targetIdForPort(port) {
   const { usbVendorId, usbProductId } = port.getInfo()
   for (const target of Object.values(TARGETS)) {
     if (
+      target.usbFilter &&
       target.usbFilter.usbProductId === usbProductId &&
       target.usbFilter.usbVendorId === usbVendorId
     ) {

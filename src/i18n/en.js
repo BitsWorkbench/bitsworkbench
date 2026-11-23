@@ -333,6 +333,14 @@ export default {
   'device.codeair.tagline': 'Flying drone: take off, fly, light up the sky',
   'device.codebot_cb2.fullName': 'CodeBot CB2 (older model)',
   'device.codebot_cb2.tagline': 'Older CodeBot, not supported by {app} yet',
+  'device.generic.fullName': 'MicroPython / CircuitPython board',
+  'device.generic.tagline': 'Any board with a Python prompt over USB, such as a Raspberry Pi Pico',
+  // The device menu's switch for that board, and the toast when a board sets it.
+  'flavor.label': 'Speaks',
+  'flavor.micropython': 'MicroPython',
+  'flavor.circuitpython': 'CircuitPython',
+  'flavor.followTitle': 'A {flavor} board',
+  'flavor.followDetail': 'The Pins blocks now write {flavor}.',
   'kind.serial': 'USB cable',
   'kind.loopback': 'Pretend device (for testing)',
 
@@ -363,6 +371,7 @@ export default {
   'usb.tryAgain': 'Please try again.',
   'usb.saved': 'Saved {file}.',
   'usb.saveFailedTitle': 'Could not save {file}',
+  'usb.readOnlyDetail': "This board's drive is read-only to programs while your computer has it. Copy the file onto the board's drive from your computer, then press Run again.",
   'usb.stopping': 'Stopping…',
   'usb.stoppedReady': 'Stopped. Ready when you are!',
   'usb.noAnswer': 'Device did not answer.',
@@ -395,6 +404,7 @@ export default {
   'cat.radio': '🛜 Radio',
   'cat.drive': '🚗 Drive',
   'cat.fly': '🚁 Fly',
+  'cat.pins': '📌 Pins',
   'cat.basics': '🧩 Basics',
 
   // Starter programs
@@ -562,6 +572,10 @@ export default {
   'example.codeair.battery.goal': 'Light up green if the battery is ready to fly, red if it needs charging.',
   'example.codeair.button.title': 'Press to fly',
   'example.codeair.button.goal': 'Wait for button 0, count down with beeps, then fly a circle.',
+  'example.generic.blink.title': 'Blink',
+  'example.generic.blink.goal': 'Blink the board\'s LED, on and off every half second.',
+  'example.generic.button.title': 'Button light',
+  'example.generic.button.goal': 'Light the LED while a button wired from pin GP14 to ground is pressed.',
 
   // The simulator, in the app
   'btn.simulate': 'Simulate',
@@ -955,6 +969,16 @@ export default {
   'block.radio_on_message.tooltip': 'Checks for a message. The blocks inside only run when one arrived.',
   'block.radio_receive.message0': '🛜 radio message (or nothing)',
   'block.radio_receive.tooltip': 'Takes the next waiting message, or gives back nothing.',
+
+  // Pins, on a MicroPython / CircuitPython board
+  'block.pins_write.message0': '📌 set pin %1 to %2',
+  'block.pins_write.tooltip': 'Turn a pin on (true) or off (false): an LED on it lights up. Type the pin by the name your board knows it by, such as LED, GP15 or D5.',
+  'block.pins_read.message0': '📌 pin %1 is on',
+  'block.pins_read.tooltip': 'Is the pin on? The pin is pulled up, so a button wired from it to ground is off while it is pressed.',
+  'block.pins_analog.message0': '📌 analog pin %1',
+  'block.pins_analog.tooltip': 'The voltage on an analog pin, from 0 (none) to 65535 (all of it).',
+  'block.pins_ms.message0': '⏱️ milliseconds since start',
+  'block.pins_ms.tooltip': 'How many milliseconds the board has been running: good for timing things.',
 
   // Example values already filled in on blocks in the palette, for the
   // student to change. sample.radioVar names a variable, so keep it one word.

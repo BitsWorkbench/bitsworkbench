@@ -5,6 +5,22 @@
  */
 let needs = new Set()
 
+/**
+ * The Python the blocks are writing for, while they write: 'circuitpython'
+ * (every Firia Labs board) or 'micropython' (device/flavor.js). Set by
+ * whatever generates (generate.js, convert/patterns.js, editor/snippets.js)
+ * before it walks the blocks.
+ */
+let flavor = 'circuitpython'
+
+export function setFlavor(f) {
+  flavor = f
+}
+
+export function currentFlavor() {
+  return flavor
+}
+
 export function need(...keys) {
   for (const key of keys) needs.add(key)
 }

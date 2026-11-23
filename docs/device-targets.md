@@ -35,7 +35,7 @@ simulating takes over. `?device=sim` opens the page in the simulator.
 | `supported`   | boolean                                | False if this browser cannot use this kind at all. The UI then disables Connect. |
 | `isConnected` | boolean                                | True between a successful `connect()` and a disconnect. |
 | `state`       | `'offline' \| 'connecting' \| 'ready' \| 'loading' \| 'running'` | Current state. Always change it through a `state` event. |
-| `targetId`    | `'codebot' \| 'codex' \| 'codeair' \| null` | Which board this is (device identity). Keys of `TARGETS` in `targets.js`. |
+| `targetId`    | `'codebot' \| 'codex' \| 'codeair' \| 'generic' \| null` | Which board this is (device identity). Keys of `TARGETS` in `targets.js`. `'generic'` is any MicroPython or CircuitPython board; which of the two it speaks is `device/flavor.js`. |
 | `firmware`    | `{ version, date } \| null`            | Optional, shown in the terminal when known. |
 
 ### Methods

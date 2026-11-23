@@ -99,6 +99,12 @@ export class BlockWorkspace extends EventTarget {
     this.dispatchEvent(new CustomEvent('change'))
   }
 
+  /** Build the toolbox again for the same board (its flavor changed: device/flavor.js). */
+  refreshToolbox() {
+    this.workspace.updateToolbox(toolboxFor(this.targetId))
+    this.dispatchEvent(new CustomEvent('change'))
+  }
+
   clear() {
     this.workspace.clear()
     this.setMode('blocks')

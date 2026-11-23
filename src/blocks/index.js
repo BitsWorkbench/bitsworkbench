@@ -21,6 +21,7 @@ import './codex.js'
 import './codebot.js'
 import './codeair.js'
 import './radio.js'
+import './pins.js'
 
 export { toolboxFor } from './toolbox.js'
 export { cuteTheme } from './theme.js'

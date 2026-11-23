@@ -10,7 +10,7 @@
 import { t } from '../i18n/index.js'
 import {
   b, color, program, repeat, until, ifElse, compare, or, math, random, round, join,
-  getVar, setVar, countWith,
+  getVar, setVar, countWith, not,
 } from './build.js'
 
 // ----------------------------------------------------------------- CodeBot
@@ -278,7 +278,25 @@ const codeair = [
   },
 ]
 
-const SETS = { codebot, codex, codeair }
+// ---------------------------------- a MicroPython / CircuitPython board
+// One program for both: the Pins blocks write the Python the board speaks.
+
+const pinOut = (name, on) => b('pins_write', { PIN: name }, { ON: on })
+const truth = (on) => b('logic_boolean', { BOOL: on ? 'TRUE' : 'FALSE' })
+
+const generic = [
+  {
+    id: 'blink',
+    blocks: () => program({ forever: [pinOut('LED', truth(true)), wait(0.5), pinOut('LED', truth(false)), wait(0.5)] }),
+  },
+  {
+    id: 'button',
+    // The pin is pulled up: a button from it to ground is off while pressed.
+    blocks: () => program({ forever: [pinOut('LED', not(b('pins_read', { PIN: 'GP14' }))), wait(0.02)] }),
+  },
+]
+
+const SETS = { codebot, codex, codeair, generic }
 
 /** The starter projects for a board, easiest first: { id, title, goal }. */
 export function examplesFor(device) {
