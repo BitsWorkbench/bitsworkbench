@@ -6,7 +6,7 @@
   "board": "codebot",
   "runs": "sim",
   "licence": "Part of {app}, MIT licensed.",
-  "complete": "**You coded a robot!** Every block you used is a line of Python, and the Python is what CodeBot runs. Want to see it?",
+  "complete": "--Blocks--**You coded a robot!** Every block you used is a line of Python, and the Python is what CodeBot runs. Want to try the same thing in Python?--/Blocks----Python--**You coded a robot in Python!** It is the same Python a real CodeBot runs. Pick a mission pack from **Learn** to keep going.--/Python--",
   "missions": [
     {
       "id": "DEMO_Drive",
@@ -26,13 +26,13 @@
               "code": "from botcore import *\nimport time\n\nmotors.enable(True)\n\nmotors.run(LEFT, 50)\nmotors.run(RIGHT, 50)\ntime.sleep(1)\nmotors.run(LEFT, 0)\nmotors.run(RIGHT, 0)\n",
               "steps": [
                 { "id": "DEMO_look", "say": "This is **CodeBot**, in the simulator. Drag it to look around.", "point": "sim", "do": { "event": "orbit" }, "skippable": true, "cheer": "Nice view!" },
-                { "id": "DEMO_run", "say": "These blocks are your program: they drive CodeBot forward for one second. Press **▶ Run**.", "point": "run", "do": { "runs": true }, "cheer": "It drove!" },
+                { "id": "DEMO_run", "say": "--Blocks--These blocks are your program: they--/Blocks----Python--This Python is your program: it--/Python-- drive CodeBot forward for one second. Press **▶ Run**.", "point": "run", "do": { "runs": true }, "cheer": "It drove!" },
                 {
                   "id": "DEMO_power",
-                  "say": "Click the **50** and make it **100**: full power.",
-                  "point": "field:time.sleep(...)",
-                  "do": { "has": "motors.run(LEFT, 100)" },
-                  "hints": ["The 50 is in the orange **drive** block. Click it, type 100, then click away."],
+                  "say": "--Blocks--Click the **50** and make it **100**: full power.--/Blocks----Python--Change **both** 50s to **100**: full power for each wheel.--/Python--",
+                  "point": "field:motors.run(LEFT, ...)",
+                  "do": { "all": [{ "has": "motors.run(LEFT, 100)" }, { "has": "motors.run(RIGHT, 100)" }] },
+                  "hints": ["--Blocks--The 50 is in the orange **drive** block. Click it, type 100, then click away.--/Blocks----Python--`motors.run(LEFT, 50)` and `motors.run(RIGHT, 50)`: click just after each 50, delete it, type 100.--/Python--"],
                   "cheer": "Full power!"
                 },
                 { "id": "DEMO_run2", "say": "Press **▶ Run** again.", "point": "run", "do": { "runs": true }, "cheer": "Faster and further!" }
@@ -42,10 +42,10 @@
               "id": "DEMO_C2",
               "title": "Lights",
               "steps": [
-                { "id": "DEMO_palette", "say": "Blocks live in the palette. Open **Lights**.", "point": "palette:lights", "do": { "event": "palette", "name": "lights" } },
+                { "id": "DEMO_palette", "say": "--Blocks--Blocks live in the palette.--/Blocks----Python--The palette has Python too.--/Python-- Open **Lights**.", "point": "palette:lights", "do": { "event": "palette", "name": "lights" } },
                 {
                   "id": "DEMO_leds",
-                  "say": "Drag **turn all top LEDs on** under your drive block.",
+                  "say": "--Blocks--Drag **turn all top LEDs on** under your drive block.--/Blocks----Python--Click the last line of your program, open **Lights**, and click the **leds.user** card: it goes in under that line.--/Python--",
                   "point": "palette-item:leds.user(...)",
                   "palette": "lights",
                   "to": "after:time.sleep(...)",
@@ -56,7 +56,7 @@
                 { "id": "DEMO_run3", "say": "Run it: motion, then lights.", "point": "run", "do": { "runs": true }, "cheer": "Lights on!" },
                 {
                   "id": "DEMO_ask",
-                  "ask": "Your blocks are a Python program underneath. Which line drives CodeBot?",
+                  "ask": "--Blocks--Your blocks are a Python program underneath.--/Blocks-- Which line drives CodeBot?",
                   "answers": [{ "a": "`leds.user(0xFF)`" }, { "a": "`motors.run(LEFT, 100)`", "correct": true }, { "a": "`import time`" }],
                   "cheer": "Right: blocks in, Python out."
                 }

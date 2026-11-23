@@ -68,7 +68,7 @@ export function snippetsFor(targetId, myBlocks = [], trek = []) {
           ? CUSTOM[entry.custom].map(complete)
           : entry.contents.filter((item) => item.kind === 'block').map((item) => snippetOf(item, scratch)).filter(Boolean)
       const colour = HUE[entry.categorystyle.replace(/_category$/, '')]
-      const category = { kind: 'category', name: entry.name, colour, snippets: snippets.map((s) => ({ ...s, colour })) }
+      const category = { kind: 'category', id: entry.toolboxitemid, name: entry.name, colour, snippets: snippets.map((s) => ({ ...s, colour })) }
       if (mine && !snippets.length) category.hint = t('myBlocks.emptyPython')
       if (entry.custom === 'CODETREK') category.hidden = !snippets.length
       return category

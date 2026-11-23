@@ -197,6 +197,19 @@ A journey plays in the mode the student starts it in. The program is the same in
 each step's words and places belong to its mode, so switching mid-journey pauses the coach
 until the student switches back.
 
+**In Python** the same places point into the Python view, so a step is written once:
+`palette:` is the Python palette's category and `palette-item:` its card; `block:` is the
+editor's line whose statement matches, `field:` the first string or number in it, and `after:`
+the line under it. The bubble sits to the right of the code it points at, and the Python
+palette is not opened for the student (its cards would cover the code a step may ask them to
+click first): the ring is on the category until they open it. Effects made of blocks
+(`ghost`, `morph`) are left out. Write the words for each mode with `--Blocks--` and
+`--Python--` where they differ: in Python a card goes in under the line the cursor is on, and a
+value card replaces what is selected ("click the red line, then the **time.sleep** card"). A
+step that only one mode can do (pressing **Create variable**, dragging a block into a loop)
+gets `"mode": "blocks"`, with a `"mode": "python"` step beside it that does the same in Python
+("type **delay = 0**", "type **while True:** and indent the lines with Tab").
+
 ## Guided packs
 
 A pack whose every mission is one journey is **guided**: it opens with no drawer, and the
@@ -217,8 +230,9 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   the simulator back if the student stopped it, the side panel wide enough to see it, the
   terminal open for a step about the terminal, a block scrolled into view, menus and the
   files panel shut. A coach's ring never sits on something off the screen.
-- Finishing a mission opens the next one's card; after the last, the pack's `complete` words,
-  with a button to see the program in Python when the pack was played in blocks.
+- Finishing a mission opens the next one's card; after the last, the pack's `complete` words.
+  Played in blocks, it offers the pack again in Python when the pack has words for Python
+  (`--Python--` sections, or Python-only steps), and else to see the program in Python.
 
 **The demo.** The welcome's Try a Demo! opens `public/learn/demo/DEMO.json`, a guided pack of
 one CodeBot mission in blocks (`runs: sim`), always from its start. It is the app's own, under

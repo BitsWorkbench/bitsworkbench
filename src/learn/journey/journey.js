@@ -192,7 +192,8 @@ export class Journey extends EventTarget {
     })
     if (fresh) this.coach.announce(`${t('journey.stepOf', { n: i + 1, m: this.steps.length })}. ${this._plain(s.say)}`)
     // A block in a category: open it, so the ring lands on the block itself.
-    if (s.palette && !this.places.resolve(s.point)) this.places.openPalette(s.palette)
+    // (Not in Python: its palette's cards cover the code a step may ask to click first; the ring is on the category instead.)
+    if (s.palette && !this.places.resolve(s.point) && !this.places.python?.()) this.places.openPalette(s.palette)
     this.effects?.waiting?.(s)
     this.watcher.start([{ md: '', check: s.do }])
   }

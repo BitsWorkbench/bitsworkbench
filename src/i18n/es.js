@@ -485,6 +485,7 @@ export default {
   'guide.packDoneTitle': "¡Terminaste {title}!",
   'guide.packDone': "Todas las misiones están hechas. ¡Bien hecho!",
   'guide.seePython': "🐍 Verlo en Python",
+  'guide.againPython': "🐍 Pruébalo en Python",
   'learn.goals': 'Metas',
   'learn.goalMet': 'Hecho:',
   'learn.goalOpen': 'Por hacer:',

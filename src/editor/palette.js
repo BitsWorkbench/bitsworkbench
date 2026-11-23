@@ -22,8 +22,11 @@ export class SnippetPalette {
    *   myBlocks gives the student's saved blocks, for the My blocks category;
    *   trek the open objective's CodeTrek snippets; used runs after a snippet goes in
    */
-  constructor(host, { editor, beforeUse, myBlocks, trek, used }) {
+  constructor(host, { editor, beforeUse, myBlocks, trek, used, opened }) {
     this.host = host
+    this.root = host
+    // A category opened, by its id (lights): the journey's `palette` event, as Blockly's toolbox gives it.
+    this.opened = opened || (() => {})
     this.myBlocks = myBlocks || (() => [])
     this.trek = trek || (() => [])
     this.used = used || (() => {})
@@ -50,6 +53,7 @@ export class SnippetPalette {
       const i = Number(button.dataset.i)
       // From the keyboard, go straight to the first snippet, as Blockly does.
       this.show(this.open === i ? -1 : i, { focus: e.detail === 0 })
+      if (this.open === i) this.opened(this.categories[i]?.id)
     })
     this.list.addEventListener('click', (e) => {
       const card = e.target.closest('.snippet')
@@ -85,7 +89,7 @@ export class SnippetPalette {
           ? '<div class="py-sep" role="separator"></div>'
           : c.hidden
             ? ''
-            : `<button type="button" class="py-cat" data-i="${i}" style="--c: ${c.colour}" aria-expanded="false" aria-controls="py-flyout">${esc(c.name)}</button>`,
+            : `<button type="button" class="py-cat" data-i="${i}" data-id="${esc(c.id ?? '')}" style="--c: ${c.colour}" aria-expanded="false" aria-controls="py-flyout">${esc(c.name)}</button>`,
       )
       .join('')
     this.show(-1)

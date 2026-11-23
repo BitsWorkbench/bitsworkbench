@@ -98,6 +98,23 @@ showed when it went wrong: that terminal output is usually the whole story.
 Report it as a [GitHub issue](https://github.com/firialabs/opencodebot/issues). A
 security problem goes privately instead: see [SECURITY.md](SECURITY.md).
 
+## Writing a test
+
+The browser tests in `tests/` run against the built site in a real browser, and
+CI's machines are slower than a developer's. So that a test passes there too:
+
+- **Wait for the state you check.** Poll for it with a deadline
+  (`page.waitForFunction(..., { timeout })`, `waitForSelector`), then check it.
+  Never a fixed delay (`waitForTimeout`) as the only thing between an action and
+  its check, and never a single read straight after the action.
+- **A program may have finished already.** The starter program ends by itself in
+  about two seconds, so a test never assumes it is still running when it looks:
+  wait for the state you need (running, or back at Run) instead.
+- **Start from what you need.** A page in the same browser context keeps what
+  the page before it saved (the open file, the simulator on, the panels), so set
+  or clear that first. `localStorage['opencodebot.welcome.v1'] = 'off'` leaves out
+  the welcome, which otherwise shows on every visit.
+
 ## What a pull request needs
 
 - `npm test` passes (CI runs it on every pull request, against a site built with

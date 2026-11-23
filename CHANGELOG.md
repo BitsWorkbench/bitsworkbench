@@ -47,7 +47,7 @@ The first public release, planned for December 1, 2026. Everything it holds:
 ### Learn
 - A welcome on every visit (Welcome back, with Resume, after the first), with
   **Try a Demo!**: a few guided steps that drive CodeBot in the simulator, then
-  show the same program in Python.
+  the same again in Python.
 - Short examples for each board, easiest first, two of them as quick starts.
 - Mission packs open in a tutorial pane: steps, goals that tick as they are met,
   quizzes, CodeTrek in the palette, and each step taught in blocks or in Python.
@@ -60,6 +60,10 @@ The first public release, planned for December 1, 2026. Everything it holds:
   shows the mission's objectives, done, open or locked, and a locked one can be
   unlocked, with a warning. The guide puts the simulator and panels back where its
   steps need them.
+- The guided missions in Python too: the guide points at lines in the Python
+  editor and cards in its palette, in Python's own words. Start a mission in the
+  Python view to play it in Python, or finish the pack in blocks and try it again
+  in Python.
 - Each mission works in its own file, in a folder named for it: nothing of yours
   is replaced unless you choose to save yours under another name or replace it.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with

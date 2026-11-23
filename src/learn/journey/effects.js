@@ -21,6 +21,7 @@
  * still line, the parts glow without rings, the confetti stays away.
  */
 const WAITING = ['ghost'] // the effects shown while a step waits; the rest answer it
+const BLOCKS_ONLY = ['ghost', 'morph'] // made of blocks: none in Python, where the coach's ring does the pointing
 const name = (fx) => fx.split(' ')[0]
 const arg = (fx) => fx.slice(fx.indexOf(' ') + 1).trim()
 const centre = (b) => [b.x + b.w / 2, b.y + b.h / 2]
@@ -49,7 +50,16 @@ export class Effects {
 
   /** Does a step have a "Show me" (a ghost to play again)? */
   hasHelp(step) {
-    return !!step?.fx?.some((f) => name(f) === 'ghost') && !!step.point && !!step.to
+    return !this._python() && !!step?.fx?.some((f) => name(f) === 'ghost') && !!step.point && !!step.to
+  }
+
+  /** In Python, only the effects that are not made of blocks. */
+  _python() {
+    return !!this.places.python?.()
+  }
+
+  _plays(fx) {
+    return !(this._python() && BLOCKS_ONLY.includes(name(fx)))
   }
 
   /** The student's program as Python, for the `compare` card. */
@@ -60,7 +70,7 @@ export class Effects {
   /** A step waits for the student: its waiting effects; `again`, played on request. */
   waiting(step, { again = false } = {}) {
     if (again) this.clear()
-    for (const fx of step.fx || []) if (WAITING.includes(name(fx))) this._later(() => this[name(fx)](step), again ? 0 : 450)
+    for (const fx of step.fx || []) if (WAITING.includes(name(fx)) && this._plays(fx)) this._later(() => this[name(fx)](step), again ? 0 : 450)
   }
 
   /** A step is met: the effects that answer it. */
@@ -68,7 +78,7 @@ export class Effects {
     this.clear()
     for (const fx of step.fx || []) {
       const n = name(fx)
-      if (!WAITING.includes(n) && this[n]) this._later(() => this[n](arg(fx)), 120)
+      if (!WAITING.includes(n) && this[n] && this._plays(fx)) this._later(() => this[n](arg(fx)), 120)
     }
   }
 

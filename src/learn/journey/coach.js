@@ -206,12 +206,17 @@ export class Coach extends EventTarget {
     b.style.width = `${W}px`
     const H = b.offsetHeight || 140
     const at = box || { x: innerWidth / 2, y: 70, w: 0, h: 0 }
+    // A place may ask for a side (a line of code: to its right, past the line's end, so the code stays in sight).
+    if (found) this.lastSide = found.side ? { side: found.side, beside: found.beside ?? found.box } : null
+    const prefer = box && this.lastSide
+    const by = prefer?.beside ?? at
     const sides = [
       ['below', at.x + at.w / 2 - W / 2, at.y + at.h + 14],
       ['above', at.x + at.w / 2 - W / 2, at.y - H - 14],
-      ['right', at.x + at.w + 14, at.y + at.h / 2 - H / 2],
+      ['right', by.x + by.w + 14, at.y + at.h / 2 - H / 2],
       ['left', at.x - W - 14, at.y + at.h / 2 - H / 2],
     ]
+    if (prefer) sides.sort((a, b) => (b[0] === prefer.side) - (a[0] === prefer.side))
     const fits = ([, l, tp]) => l >= 6 && tp >= 6 && l + W <= innerWidth - 6 && tp + H <= innerHeight - 6
     // Clear of the card beside the simulator when it can be: the card must not cover the bubble's Next.
     const card = this.$('.journey-card')
