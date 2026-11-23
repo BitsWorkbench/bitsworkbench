@@ -356,7 +356,10 @@ export class Engine {
       this._replStarting ??= (async () => {
         const mp = await this._newVM()
         mp.runPython(`import random\nrandom.seed(${Date.now() >>> 0})\ndel random`)
+        // The prompt alone: MicroPython's banner names its build, not the board.
+        this._flushOutput()
         mp.replInit()
+        this._outBuf = [new TextEncoder().encode('>>> ')]
         this.replVM = this.mp = mp
         this._flushOutput()
       })()

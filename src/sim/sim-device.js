@@ -112,6 +112,7 @@ export class SimDevice extends EventTarget {
     const hello = kind.view === '3d' ? t('sim.helloInRoom', { device: this.target?.name, room: this._roomName() }) : t('sim.hello', { device: this.target?.name })
     this._emitText(`\x1b[32m${hello}\x1b[0m\r\n`)
     this._setState(State.READY, t('sim.ready'))
+    this._prompt()
     return true
   }
 
@@ -268,6 +269,11 @@ export class SimDevice extends EventTarget {
     this._post({ t: 'stdin', text })
   }
 
+  /** The REPL ready at its `>>>` prompt, as a board's is: the terminal ends where typing starts. */
+  _prompt() {
+    this._post({ t: 'stdin', text: '' })
+  }
+
   _post(m) {
     this.worker?.postMessage(m)
   }
@@ -317,6 +323,7 @@ export class SimDevice extends EventTarget {
           this._emitText(`\r\n\x1b[90m${t('sim.finished')}\x1b[0m\r\n`)
           this._setState(State.READY, t('sim.finished'))
         }
+        this._prompt()
         break
       }
       case 'error':
