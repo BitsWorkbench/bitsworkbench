@@ -56,7 +56,9 @@ export class DeviceManager extends EventTarget {
     // program running from its raw REPL, if any (_genericVisible).
     this._bannerBuf = ''
     this._askedBanner = false
+    this._flavorKnown = false
     this._raw = null
+    this._sending = null
 
     this.link.onData = (bytes) => this._onBytes(bytes)
     this.link.onConnect = (targetId) => this._onConnected(targetId)
@@ -82,6 +84,25 @@ export class DeviceManager extends EventTarget {
 
   get _generic() {
     return this.targetId === 'generic'
+  }
+
+  /**
+   * Before Run writes the program: a MicroPython / CircuitPython board that
+   * has not named itself yet (it was running a program when it connected, so
+   * there was no prompt to ask at) is stopped and asked, so the program is
+   * written in its Python. Run would stop its program anyway.
+   */
+  async identify() {
+    if (!this._generic || this._flavorKnown || !this.isConnected || this.busy) return
+    this.repl.resume()
+    const settle = () => new Promise((r) => setTimeout(r, 20)) // _sniff reads the same bytes just after
+    if (!(await this.repl.interrupt())) return
+    await settle()
+    // The interrupt's Ctrl-B may have brought the banner already.
+    if (this._flavorKnown) return
+    this.link.send(CTRL_B)
+    await this.repl.waitFor(/CircuitPython|MicroPython|FiriaLabs IoT Python/i, 1500).catch(() => {})
+    await settle()
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -132,6 +153,7 @@ export class DeviceManager extends EventTarget {
     this._sawPrompt = false
     this._bannerBuf = ''
     this._askedBanner = false
+    this._flavorKnown = false
     this._raw = null
     this.filter.reset()
     this.repl.resume()
@@ -249,6 +271,7 @@ export class DeviceManager extends EventTarget {
       const flavor = flavorOfBanner(this._bannerBuf)
       if (flavor) {
         this._bannerBuf = ''
+        this._flavorKnown = true
         setGenericFlavor(flavor, 'board')
       }
     }
@@ -341,13 +364,20 @@ export class DeviceManager extends EventTarget {
         // write nothing to its drive. Its own main.py or code.py stays as it
         // was, and a CircuitPython drive is read-only to code anyway while
         // the computer has it.
-        this._raw = { phase: 'quiet', eot: 0, seen: '', stopping: false }
-        await execRaw(this.repl, source, {
+        const raw = { phase: 'quiet', eot: 0, seen: '', stopping: false, cancelled: false }
+        this._raw = raw
+        this._sending = execRaw(this.repl, source, {
           onProgress: progress,
           onSubmit: () => {
-            if (this._raw) this._raw.phase = 'ok'
+            raw.phase = 'ok'
           },
+          cancelled: () => raw.cancelled,
         })
+        try {
+          await this._sending
+        } finally {
+          this._sending = null
+        }
         this.busy = false
         // A short program may be over already.
         if (this._raw) this._setState(State.RUNNING, t('usb.running'))
@@ -436,7 +466,11 @@ export class DeviceManager extends EventTarget {
   /** Stop whatever the board is doing and get back to a prompt. */
   async stop({ quiet = false } = {}) {
     if (!this.isConnected) return false
+    // A program still being sent to the raw REPL: stop sending it first, or
+    // the rest would arrive at the prompt Stop leaves the board at.
+    if (this._raw) this._raw.cancelled = true
     this.repl.cancelPending()
+    if (this._sending) await this._sending.catch(() => {})
     this.busy = false
     // A program running from the raw REPL: its end, after Ctrl-C, is Stop's.
     if (this._raw) this._raw.stopping = true

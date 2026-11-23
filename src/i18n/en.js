@@ -86,6 +86,8 @@ export default {
   'run.copyFailedDetail': 'Your program did not run. Try Run again in a moment.',
   'run.folderUnreadTitle': 'Your other files were not copied to the board',
   'run.folderUnreadDetail': '{app} could not read your program\'s folder. Your program runs, but it cannot import the files beside it.',
+  'run.genericNoCopyTitle': 'Other files stay on your computer',
+  'run.genericNoCopyDetail': 'This board keeps its own files, so {files} were not copied to it. To import them, copy them onto the board yourself.',
   'run.wrongTitle': 'Those blocks are for another device',
   'run.wrongDetail': 'Your project uses {names} blocks, but a {device} is plugged in.',
   'error.atLine': '(Python line {line})',

@@ -88,12 +88,26 @@ check(picker.chip === 'MicroPython' && (await pressed()) === 'MicroPython', 'bef
 // ----------------------------------------------------- the Python per flavor
 await load(blink)
 const mp = await python()
-check(mp.includes('from machine import ADC, Pin') && mp.includes("Pin('LED', Pin.OUT).value(True)") && mp.includes("print(ADC(Pin('A0')).read_u16())"), 'the Pins blocks write MicroPython')
+check(
+  ['from machine import ADC, Pin', "pin_LED = Pin('LED', Pin.OUT)", "adc_A0 = ADC(Pin('A0'))", 'pin_LED.value(True)', 'print(adc_A0.read_u16())'].every((l) => mp.includes(l)),
+  'the Pins blocks write MicroPython',
+)
 check(!/import board|digitalio/.test(mp), 'and none of CircuitPython')
 
 await pick('CircuitPython')
 await page.waitForFunction(() => window.openCodeBot._blocksPython().includes('import board'))
 const cp = await python()
+// One pin set and read back (a toggle) is claimed once, as an output.
+await load([{ type: 'ocb_forever', x: 40, y: 40, inputs: { DO: { block: { type: 'pins_write', fields: { PIN: 'LED' }, inputs: { ON: { block: { type: 'logic_negate', inputs: { BOOL: { block: { type: 'pins_read', fields: { PIN: 'LED' } } } } } } } } } } }])
+const toggle = await python()
+check(toggle.split('pin_LED = ').length === 2 && toggle.includes('pin_LED.switch_to_output()') && toggle.includes('pin_LED.value = not pin_LED.value'), 'a toggled pin is claimed once, as an output (CircuitPython)')
+await pick('MicroPython')
+await page.waitForFunction(() => window.openCodeBot._blocksPython().includes('machine'))
+const mpToggle = await python()
+check(mpToggle.includes("pin_LED = Pin('LED', Pin.OUT)") && mpToggle.includes('pin_LED.value(not pin_LED.value())') && !mpToggle.includes('PULL_UP'), 'and on MicroPython')
+await pick('CircuitPython')
+await page.waitForFunction(() => window.openCodeBot._blocksPython().includes('import board'))
+await load(blink)
 check(
   ['import board', 'import digitalio', 'import analogio', 'pin_LED = digitalio.DigitalInOut(board.LED)', 'pin_LED.switch_to_output()', 'adc_A0 = analogio.AnalogIn(board.A0)', 'pin_LED.value = True', 'print(adc_A0.value)'].every((l) => cp.includes(l)),
   'set to CircuitPython, they write CircuitPython',
@@ -135,8 +149,7 @@ await page.click('#btn-run')
 await page.waitForFunction(() => window.openCodeBot.device.board.runs.length === 1)
 const ran = await page.evaluate(() => ({ code: window.openCodeBot.device.board.runs[0], files: Object.keys(window.openCodeBot.device.board.files) }))
 check(ran.code.includes('pin_LED.value = True'), 'Run sends the CircuitPython program')
-// (A companion .py file beside the program is copied, as on any board; the program itself is not a file.)
-check(!ran.files.some((f) => /^(main|code|boot)\.py$/i.test(f)), `and writes no main.py or code.py on the board ${ran.files.join(', ')}`)
+check(ran.files.length === 0, `and writes no file on the board, not even the program's companions ${ran.files.join(', ')}`)
 await page.click('#btn-stop').catch(() => {})
 
 // The student's own block (a grey Python block) runs on it as typed.

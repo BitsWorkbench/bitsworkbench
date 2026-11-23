@@ -194,19 +194,27 @@ export class Repl {
  * program ("OK"); what it prints, and the end of the run (two EOTs and the
  * raw prompt), arrive on the stream like any other output.
  * @param {Repl} repl
- * @param {{onProgress?: (fraction: number) => void, onSubmit?: () => void}} [hooks]
+ * @param {{onProgress?: (fraction: number) => void, onSubmit?: () => void, cancelled?: () => boolean}} [hooks]
  *   onSubmit is called just before the program is submitted: what the board
- *   says from then on is the program's.
+ *   says from then on is the program's. cancelled is asked before every
+ *   piece: true (the student pressed Stop) ends the sending there, with
+ *   ReplAborted, before anything more reaches the board.
  */
-export async function execRaw(repl, source, { onProgress, onSubmit } = {}) {
-  const body = source.replace(/\r\n/g, '\n')
+export async function execRaw(repl, source, { onProgress, onSubmit, cancelled } = {}) {
+  // In bytes, so a character is never cut in two between pieces.
+  const body = new TextEncoder().encode(source.replace(/\r\n/g, '\n'))
+  const stop = () => {
+    if (repl.aborted || cancelled?.()) throw new ReplAborted()
+  }
+  stop()
   await repl.send(CTRL_A, { expect: /raw REPL[^\n]*\n>/, timeout: 3000 })
   for (let i = 0; i < body.length; i += EXEC_CHUNK) {
-    if (repl.aborted) throw new ReplAborted()
-    await repl.link.send(body.slice(i, i + EXEC_CHUNK))
+    stop()
+    await repl.link.send(body.subarray(i, i + EXEC_CHUNK))
     await new Promise((r) => setTimeout(r, EXEC_PAUSE_MS))
     onProgress?.(Math.min(1, (i + EXEC_CHUNK) / Math.max(1, body.length)))
   }
+  stop()
   onSubmit?.()
   await repl.send(CTRL_D, { expect: /OK/, timeout: 4000 })
   onProgress?.(1)

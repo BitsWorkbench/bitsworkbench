@@ -5,39 +5,43 @@
  * Everything else (logic, loops, maths, text, lists) is the same Python on
  * both, and so are the general blocks.
  *
- * Each block writes the Python of the flavor being generated for
- * (context.js currentFlavor):
+ * Each pin is claimed once, in the program's setup after the imports
+ * (generate.js setupLines), and the blocks use it by name, in the Python of
+ * the flavor being generated for (context.js currentFlavor):
  *
- *   MicroPython    Pin('LED', Pin.OUT).value(True)    from machine import Pin
- *                  Pin(14, Pin.IN, Pin.PULL_UP).value()
- *                  ADC(Pin(26)).read_u16()           from machine import ADC
- *                  time.ticks_ms()
- *   CircuitPython  pin_LED.value = True              made once, after the imports:
- *                  pin_GP14.value                      pin_LED = digitalio.DigitalInOut(board.LED)
- *                  adc_A0.value                        pin_LED.switch_to_output()
- *                  int(time.monotonic() * 1000)
+ *                  setup                                        blocks
+ *   MicroPython    pin_LED = Pin('LED', Pin.OUT)                pin_LED.value(True)
+ *                  pin_GP14 = Pin('GP14', Pin.IN, Pin.PULL_UP)  pin_GP14.value()
+ *                  adc_GP26 = ADC(Pin('GP26'))                  adc_GP26.read_u16()
+ *                                                               time.ticks_ms()
+ *   CircuitPython  pin_LED = digitalio.DigitalInOut(board.LED)  pin_LED.value = True
+ *                  pin_LED.switch_to_output()                   pin_GP14.value
+ *                  adc_A0 = analogio.AnalogIn(board.A0)         adc_A0.value
+ *                                                               int(time.monotonic() * 1000)
  *
- * MicroPython makes a pin object where it is used, as its examples do.
- * CircuitPython claims a pin once and keeps it, so the object is made in the
- * program's setup (generate.js setupLines) and the block uses it by name.
- * A pin read is pulled up: a button wired to ground reads 0 when pressed.
+ * CircuitPython must claim a pin once (a second claim is "in use"), and one
+ * object per pin also lets a program read back a pin it drives (a toggle:
+ * set pin LED to not pin LED is on): a pin that is ever set is an output, and
+ * reading it gives what it was set to; a pin only read is an input, pulled
+ * up, so a button wired from it to ground reads off while pressed.
  */
 import { Order } from 'blockly/python'
 import { defineBlocks, value } from './define.js'
 import { need, currentFlavor } from './context.js'
 
-/** The pin a field names, as an identifier-safe name ('GP15', 'LED', 'A0', '14'). */
+const mp = () => currentFlavor() === 'micropython'
+
+/**
+ * The pin a block names, as the name its object takes (pin_<name>): the
+ * field's letters and digits; on CircuitPython a bare number is a D pin.
+ */
 export function pinName(block) {
-  return String(block.getFieldValue('PIN') || '').replace(/\W/g, '') || 'LED'
+  const name = String(block.getFieldValue('PIN') || '').replace(/\W/g, '') || 'LED'
+  return !mp() && /^\d/.test(name) ? `D${name}` : name
 }
 
 /** A pin as MicroPython's Pin() takes it: a number, or a name in quotes. */
-const mpPin = (name, gen) => (/^\d+$/.test(name) ? name : gen.quote_(name))
-
-/** A pin as CircuitPython's `board` module names it (a bare number is a D pin). */
-const cpPin = (name) => (/^\d/.test(name) ? `D${name}` : name)
-
-const mp = () => currentFlavor() === 'micropython'
+const mpPin = (name) => (/^\d+$/.test(name) ? name : `'${name}'`)
 
 defineBlocks([
   {
@@ -55,12 +59,8 @@ defineBlocks([
     python: (block, gen) => {
       const name = pinName(block)
       const on = value(gen, block, 'ON', 'True')
-      if (mp()) {
-        need('machine_pin')
-        return `Pin(${mpPin(name, gen)}, Pin.OUT).value(${on})\n`
-      }
-      need('board', 'digitalio', `pin_out:${cpPin(name)}`)
-      return `pin_${cpPin(name)}.value = ${on}\n`
+      need(...(mp() ? ['machine_pin'] : ['board', 'digitalio']), `pin_out:${name}`)
+      return mp() ? `pin_${name}.value(${on})\n` : `pin_${name}.value = ${on}\n`
     },
   },
   {
@@ -70,14 +70,10 @@ defineBlocks([
       output: ['Boolean', 'Number'],
       style: 'pins_blocks',
     },
-    python: (block, gen) => {
+    python: (block) => {
       const name = pinName(block)
-      if (mp()) {
-        need('machine_pin')
-        return [`Pin(${mpPin(name, gen)}, Pin.IN, Pin.PULL_UP).value()`, Order.FUNCTION_CALL]
-      }
-      need('board', 'digitalio', `pin_in:${cpPin(name)}`)
-      return [`pin_${cpPin(name)}.value`, Order.MEMBER]
+      need(...(mp() ? ['machine_pin'] : ['board', 'digitalio']), `pin_in:${name}`)
+      return mp() ? [`pin_${name}.value()`, Order.FUNCTION_CALL] : [`pin_${name}.value`, Order.MEMBER]
     },
   },
   {
@@ -87,14 +83,10 @@ defineBlocks([
       output: 'Number',
       style: 'pins_blocks',
     },
-    python: (block, gen) => {
+    python: (block) => {
       const name = pinName(block)
-      if (mp()) {
-        need('machine_pin', 'machine_adc')
-        return [`ADC(Pin(${mpPin(name, gen)})).read_u16()`, Order.FUNCTION_CALL]
-      }
-      need('board', 'analogio', `adc:${cpPin(name)}`)
-      return [`adc_${cpPin(name)}.value`, Order.MEMBER]
+      need(...(mp() ? ['machine_pin', 'machine_adc'] : ['board', 'analogio']), `adc:${name}`)
+      return mp() ? [`adc_${name}.read_u16()`, Order.FUNCTION_CALL] : [`adc_${name}.value`, Order.MEMBER]
     },
   },
   {
@@ -110,22 +102,41 @@ defineBlocks([
   },
 ])
 
-/** The lines that claim CircuitPython's pins, once, after the imports: from needs like `pin_out:LED`. */
+/**
+ * The lines that claim the pins, once each, after the imports: from needs
+ * like `pin_out:LED`. A pin set anywhere is an output (reading it reads back
+ * what it was set to); a pin only read is a pulled-up input.
+ */
 export function pinSetupLines(needs) {
-  const lines = []
+  const digital = new Map() // name -> 'out' | 'in', in the order first needed
+  const analog = []
   for (const key of needs) {
     const [kind, name] = key.split(':')
-    if (kind === 'pin_out') lines.push(`pin_${name} = digitalio.DigitalInOut(board.${name})`, `pin_${name}.switch_to_output()`)
-    else if (kind === 'pin_in') lines.push(`pin_${name} = digitalio.DigitalInOut(board.${name})`, `pin_${name}.switch_to_input(pull=digitalio.Pull.UP)`)
-    else if (kind === 'adc') lines.push(`adc_${name} = analogio.AnalogIn(board.${name})`)
+    if (kind === 'pin_out') digital.set(name, 'out')
+    else if (kind === 'pin_in' && !digital.has(name)) digital.set(name, 'in')
+    else if (kind === 'adc') analog.push(name)
   }
+  const lines = []
+  for (const [name, dir] of digital) {
+    if (mp()) lines.push(`pin_${name} = Pin(${mpPin(name)}, ${dir === 'out' ? 'Pin.OUT' : 'Pin.IN, Pin.PULL_UP'})`)
+    else lines.push(`pin_${name} = digitalio.DigitalInOut(board.${name})`, `pin_${name}.${dir === 'out' ? 'switch_to_output()' : 'switch_to_input(pull=digitalio.Pull.UP)'}`)
+  }
+  for (const name of analog) lines.push(mp() ? `adc_${name} = ADC(Pin(${mpPin(name)}))` : `adc_${name} = analogio.AnalogIn(board.${name})`)
   return lines
 }
 
-/** A line pinSetupLines writes (so Python back to blocks leaves it to the blocks to write again). */
+/**
+ * A line pinSetupLines writes, for the pin it names (so Python back to blocks
+ * leaves it to the blocks to write again). A line whose object and pin
+ * differ (`pin_A = ...(board.B)`) is the student's own, not one of these.
+ */
+const SETUP = [
+  /^pin_(\w+) = digitalio\.DigitalInOut\(board\.\1\)$/,
+  /^adc_(\w+) = analogio\.AnalogIn\(board\.\1\)$/,
+  /^pin_\w+\.switch_to_(output\(\)|input\(pull=digitalio\.Pull\.UP\))$/,
+  /^pin_(\w+) = Pin\(('|"|)\1\2, Pin\.(OUT|IN, Pin\.PULL_UP)\)$/,
+  /^adc_(\w+) = ADC\(Pin\(('|"|)\1\2\)\)$/,
+]
 export function isPinSetupLine(text) {
-  return (
-    /^(pin_\w+ = digitalio\.DigitalInOut|adc_\w+ = analogio\.AnalogIn)\(board\.\w+\)$/.test(text) ||
-    /^pin_\w+\.switch_to_(output\(\)|input\(pull=digitalio\.Pull\.UP\))$/.test(text)
-  )
+  return SETUP.some((re) => re.test(text))
 }

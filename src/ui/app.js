@@ -333,6 +333,8 @@ export class App {
       return
     }
 
+    // A MicroPython / CircuitPython board says which it is before its program is written.
+    if (!this.device.simulating) await this.device.board.identify?.()
     // Typed Python runs as typed, with no blocks behind its lines (line n is
     // the editor's line n); the blocks' Python knows which block made each line.
     const { code, blockAt } = textMode
@@ -357,6 +359,19 @@ export class App {
     const store = f && this.stores[f.store]
     // With no board, Run itself says so.
     if (!store || !this.device.isConnected) return true
+    // A MicroPython / CircuitPython board's files are the student's own (a
+    // driver, a config.py), and a CircuitPython drive is read-only to code
+    // anyway: nothing is copied there. Say so once, if there was anything to copy.
+    if (this.device.targetId === 'generic') {
+      if (!this._saidNoCopy) {
+        const { files } = await companionsOf(store, f.path).catch(() => ({ files: [] }))
+        if (files.length) {
+          this._saidNoCopy = true
+          toast({ kind: 'info', title: t('run.genericNoCopyTitle'), detail: t('run.genericNoCopyDetail', { files: files.map((x) => x.name).join(', ') }) })
+        }
+      }
+      return true
+    }
     let found
     try {
       found = await companionsOf(store, f.path)

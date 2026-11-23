@@ -69,26 +69,30 @@ over USB, such as a Raspberry Pi Pico. Connect then lists every serial port.
 The app expects nothing of the board but its REPL: no firmware, files or
 modules of ours, and no simulator.
 
-- **Which Python.** The board names itself in its banner, and the Pins blocks
-  write that Python (`src/device/flavor.js`): `machine.Pin`, `ADC` and
-  `time.ticks_ms` on MicroPython; `board`, `digitalio`, `analogio` and
-  `time.monotonic` on CircuitPython, with each pin claimed once after the
-  imports. Before a board is connected it is MicroPython, or whatever was set
-  by hand in the device menu. Seconds since start and Title Case write
+- **Which Python.** The board names itself in its banner (asked for at its
+  prompt, or just before the first Run if it was busy with its own program),
+  and the Pins blocks write that Python (`src/device/flavor.js`):
+  `machine.Pin`, `ADC` and `time.ticks_ms` on MicroPython; `board`,
+  `digitalio`, `analogio` and `time.monotonic` on CircuitPython. Before a
+  board is connected it is MicroPython, or whatever was set by hand in the
+  device menu. Seconds since start and Title Case write
   MicroPython's own forms there too (it has neither `time.monotonic` nor
   `str.title`).
 - **Run** sends the program through the raw REPL and runs it there, as
   `mpremote run` does: nothing is written to `main.py` or `code.py`, so the
   board's own program stays, and a CircuitPython drive (read-only to code
-  while a computer has it) is no obstacle. Stop is Ctrl-C. The program is not
-  kept on the board once it is unplugged. The program's other `.py` files are
-  still copied to the board by name before it runs; on a read-only
-  CircuitPython drive that fails, and says why.
+  while a computer has it) is no obstacle. Stop is Ctrl-C, and stops the
+  sending too if the program is still on its way. The program is not kept on
+  the board once it is unplugged. The program's other `.py` files are not
+  copied either (the board's files are the student's own: a driver, a
+  `config.py`); a toast says so, once.
 - **Pins** are typed by the name the board knows them by (`LED`, `GP15`,
-  `D5`, `A0`). A MicroPython pin typed as a number (`Pin(2)`, as on an ESP32)
-  is written as one, but comes back from Python as a grey Python block.
-- A pin read is pulled up: a button wired from it to ground reads off while
-  pressed.
+  `D5`, `A0`, or a number such as `2` on an ESP32). Each pin is claimed once,
+  after the imports: a pin set anywhere in the program is an output, and
+  reading it gives back what it was set to (so a toggle works); a pin only
+  read is an input, pulled up, so a button wired from it to ground reads off
+  while pressed. One pin read both as digital and as analog is claimed twice,
+  which CircuitPython refuses.
 
 ## Browser support
 

@@ -46,6 +46,7 @@ class FakeBoard {
     this.received = '' // everything the app sent
     this.programs = [] // every program the raw REPL ran
     this.pendingB = false
+    this.softResets = 0 // Ctrl-D at the friendly prompt
   }
 
   say(text) {
@@ -59,6 +60,14 @@ class FakeBoard {
   }
 
   char(ch) {
+    if (this.mode === 'busy') {
+      // Its own main.py or code.py, running since it started: only Ctrl-C reaches it.
+      if (ch === '\x03') {
+        this.mode = 'friendly'
+        this.say('\r\nTraceback (most recent call last):\r\n  File "code.py", line 3, in <module>\r\nKeyboardInterrupt: \r\n>>> ')
+      }
+      return
+    }
     if (this.mode === 'running') {
       if (ch === '\x03') {
         this.say('\x04Traceback (most recent call last):\r\n  File "<stdin>", line 2, in <module>\r\nKeyboardInterrupt: \r\n\x04>')
@@ -90,6 +99,9 @@ class FakeBoard {
       this.say(`\r\n${BANNER[this.flavor]}\r\n>>> `)
     } else if (ch === '\x03' || ch === '\r') {
       this.say('\r\n>>> ')
+    } else if (ch === '\x04') {
+      this.softResets++
+      this.say('\r\nsoft reboot\r\n>>> ')
     }
   }
 
@@ -122,8 +134,8 @@ class FakeBoard {
   }
 }
 
-/** A DeviceManager on a fake board, connected and at its prompt. */
-async function connected(flavor, options) {
+/** A DeviceManager on a fake board, connected and at its prompt (or `busy` with its own program). */
+async function connected(flavor, options = {}) {
   const manager = new DeviceManager()
   const board = new FakeBoard(manager, flavor, options)
   manager.link = { supported: true, isOpen: true, anyPort: true, send: async (data) => board.receive(data) }
@@ -137,7 +149,8 @@ async function connected(flavor, options) {
   manager.addEventListener('program-error', (e) => errors.push(e.detail))
   manager.addEventListener('notice', (e) => notices.push(e.detail))
   manager._onConnected('generic')
-  board.say('>>> ')
+  if (options.busy) board.mode = 'busy'
+  else board.say('>>> ')
   return { manager, board, shown, states, errors, notices, text: () => shown.join('') }
 }
 
@@ -174,6 +187,33 @@ for (const flavor of ['micropython', 'circuitpython']) {
   await b.manager.run(long)
   check('a long program arrives whole', b.board.programs.at(-1) === long, `${b.board.programs.at(-1)?.length} of ${long.length}`)
   await until(() => b.board.mode === 'friendly')
+}
+
+console.log('Stop while a long program is still being sent')
+{
+  const b = await connected('micropython')
+  await until(() => b.manager.state === 'ready')
+  const ran = b.board.programs.length
+  const long = Array.from({ length: 300 }, (_, i) => `print("line ${i} of a long program")`).join('\n') + '\n'
+  const running = b.manager.run(long)
+  await sleep(40)
+  const stopped = await b.manager.stop()
+  const result = await running
+  await sleep(100)
+  check('Run gives way', result === false)
+  check('Stop gets back to the prompt', stopped && b.board.mode === 'friendly', `${stopped} ${b.board.mode}`)
+  check('nothing more is sent, and the board is not reset', b.board.softResets === 0 && b.board.programs.length === ran, `${b.board.softResets} resets, ${b.board.programs.length - ran} programs`)
+  check('no stray line reached its prompt', !/line 2\d\d of a long/.test(b.board.received.slice(b.board.received.lastIndexOf('\x02'))), '')
+}
+
+console.log('A CircuitPython board busy with its own program when connected')
+{
+  setGenericFlavor('micropython')
+  const b = await connected('circuitpython', { busy: true })
+  await sleep(50)
+  check('it has not said which it is', genericFlavor() === 'micropython')
+  await b.manager.identify()
+  check('asked before Run, it says CircuitPython', genericFlavor() === 'circuitpython', genericFlavor())
 }
 
 console.log('A CircuitPython drive the computer has')

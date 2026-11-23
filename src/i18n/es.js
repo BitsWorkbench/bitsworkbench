@@ -82,6 +82,8 @@ export default {
   'run.copyFailedDetail': 'Tu programa no se ejecutó. Vuelve a pulsar Ejecutar en un momento.',
   'run.folderUnreadTitle': 'Tus otros archivos no se copiaron a la placa',
   'run.folderUnreadDetail': '{app} no pudo leer la carpeta de tu programa. Tu programa se ejecuta, pero no puede importar los archivos de al lado.',
+  'run.genericNoCopyTitle': 'Los demás archivos se quedan en tu computadora',
+  'run.genericNoCopyDetail': 'Esta placa guarda sus propios archivos, así que {files} no se copiaron. Para importarlos, cópialos tú a la placa.',
   'run.wrongTitle': 'Esos bloques son para otro dispositivo',
   'run.wrongDetail': 'Tu proyecto usa bloques de {names}, pero tienes conectado un {device}.',
   'error.atLine': '(línea {line} de Python)',
