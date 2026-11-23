@@ -72,7 +72,7 @@ export class Coach extends EventTarget {
    * A step: its words in the bubble beside `locate()`'s place (a function, as
    * the place moves), the ring on it, and buttons for help.
    */
-  step({ index, count, html, locate, hints = 0, hintShown = null, skippable = false, showMe = false, fresh = true }) {
+  step({ index, count, html, locate, hints = 0, hintShown = null, skippable = false, showMe = false, fresh = true, doneBefore = false }) {
     this.locate = locate
     this.lastBox = null
     this.good = false
@@ -87,7 +87,8 @@ export class Coach extends EventTarget {
       <div class="journey-row">
         ${showMe ? `<button type="button" class="btn-plain journey-link" data-journey="show-me">${esc(t('journey.showMe'))}</button>` : ''}
         ${hints && !hintShown ? `<button type="button" class="btn-plain journey-link" data-journey="hint">${esc(t('journey.hint'))}</button>` : ''}
-        ${skippable ? `<button type="button" class="btn-plain journey-link" data-journey="skip">${esc(t('journey.skip'))}</button>` : ''}
+        ${skippable && !doneBefore ? `<button type="button" class="btn-plain journey-link" data-journey="skip">${esc(t('journey.skip'))}</button>` : ''}
+        ${doneBefore ? `<span class="journey-before">✓ ${esc(t('journey.doneBefore'))}</span><button type="button" class="btn btn-small journey-next" data-journey="next">${esc(t('journey.next'))}</button>` : ''}
       </div>`
     this.$('.journey-centre').hidden = true
     if (fresh) this.dim()
@@ -189,7 +190,10 @@ export class Coach extends EventTarget {
     if (!this.locate) return
     const b = this.$('.journey-bubble')
     const ring = this.$('.journey-ring')
-    const found = this.locate()
+    let found = this.locate()
+    // Never a ring on what is off the screen: the bubble waits, unanchored, for the controller to bring it back.
+    const b0 = found?.box
+    if (b0 && (b0.x + b0.w / 2 < 0 || b0.y + b0.h / 2 < 0 || b0.x + b0.w / 2 > innerWidth || b0.y + b0.h / 2 > innerHeight)) found = null
     // A met step's place can go (the block the student changed no longer matches): the bubble stays where it was.
     const box = found?.box ?? (this.good ? this.lastBox : null)
     if (found?.box) this.lastBox = found.box

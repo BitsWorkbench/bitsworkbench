@@ -30,6 +30,14 @@ function boxOf(el) {
   return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
 }
 
+/** Is a box's middle inside an area (none: not on screen)? */
+function within(box, area) {
+  if (!area) return false
+  const x = box.x + box.w / 2
+  const y = box.y + Math.min(box.h, 40) / 2
+  return x >= area.x && x <= area.x + area.w && y >= area.y && y <= area.y + area.h
+}
+
 export class Places {
   /**
    * `blocks`, the app's BlockWorkspace; `sim()`, the simulator's view while
@@ -83,6 +91,8 @@ export class Places {
         if (!whole) return null
         // The block's own row, not the blocks inside it or after it.
         const own = { ...whole, h: Math.min(whole.h, block.height * this.workspace.scale || whole.h) }
+        // Scrolled out of the blocks area, it is not on screen (reveal brings it back).
+        if (!within(own, boxOf(this.workspace.getParentSvg?.()))) return null
         if (kind === 'block') return { box: own, el: svg, block }
         if (kind === 'after') return { box: { x: own.x, y: own.y + own.h - 4, w: Math.max(own.w, 160), h: Math.max(own.h, 36) }, el: null, block }
         // The block's own text field, or one in a block plugged into it (a text value is a block of its own).
@@ -98,6 +108,14 @@ export class Places {
       default:
         return null
     }
+  }
+
+  /** Bring a place into view where the controller can: the student's block, scrolled to the middle of the blocks area. */
+  reveal(place) {
+    const [kind, arg] = (place || '').split(/:(.*)/s)
+    if (!['block', 'field', 'after'].includes(kind) || this.resolve(place)) return
+    const block = this.programBlock(arg)
+    if (block && boxOf(this.workspace.getParentSvg?.())) this.workspace.centerOnBlock?.(block.id)
   }
 
   /** Every box a place names: each part on its own for `part:`, else the one box (or none). */

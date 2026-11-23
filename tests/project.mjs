@@ -1,5 +1,5 @@
 /**
- * Programs from a teacher's point of view: each is a Python file (main.py at
+ * Programs from a teacher's point of view: each is a Python file (my_program.py at
  * first, in this browser), saved by itself, found again after a reload; an
  * old project file opens as a new one; picking another board never asks.
  * Run after `npm run build`.
@@ -50,18 +50,18 @@ await page.waitForFunction(() => !!window.openCodeBot)
 const fileName = () => page.textContent('#file-name')
 const stored = (path) => page.evaluate((p) => window.openCodeBot.stores.browser.read(p).catch(() => null), path)
 const python = () => page.evaluate(() => window.openCodeBot._currentPython())
-check((await fileName()) === 'main.py', 'a first program is the file main.py, kept in this browser')
+check((await fileName()) === 'my_program.py', 'a first program is the file my_program.py, kept in this browser')
 check((await blockCount()) > 0, 'the CodeBot starter program is loaded')
-check((await page.title()).startsWith('main'), 'the browser tab shows the file')
+check((await page.title()).startsWith('my_program'), 'the browser tab shows the file')
 await page.waitForFunction(() => window.openCodeBot.openFile?.saved)
-check((await stored('main.py')) === (await python()), 'main.py holds the program as Python')
+check((await stored('my_program.py')) === (await python()), 'my_program.py holds the program as Python')
 
 // Work saves itself, a moment after a change.
 await page.evaluate(() => window.openCodeBot.workspace.workspace.newBlock('ocb_print').initSvg())
 await page.waitForFunction(() => !document.getElementById('file-dirty').hidden).catch(() => {})
 check(true, 'a change shows the dot while it waits to be saved')
 await page.waitForFunction(() => document.getElementById('file-dirty').hidden, null, { timeout: 4000 }).catch(() => {})
-check((await stored('main.py')) === (await python()), 'and then is saved, with no Save pressed')
+check((await stored('my_program.py')) === (await python()), 'and then is saved, with no Save pressed')
 
 // Ctrl+S saves now, and says so; nothing downloads.
 let downloaded = false
@@ -73,20 +73,20 @@ check((await page.isVisible('.toast >> text=Saved')) && !downloaded, 'Ctrl+S sav
 // It all comes back after a reload.
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
-check((await fileName()) === 'main.py' && (await blockCount()) > 0, 'the file and its blocks come back after a reload')
+check((await fileName()) === 'my_program.py' && (await blockCount()) > 0, 'the file and its blocks come back after a reload')
 
 // An old project file opens as a new Python file, beside the open one.
 const project = { format: 'opencodebot', version: 1, name: 'Line Follower', device: 'codebot', blocks: { blocks: { languageVersion: 0, blocks: [{ type: 'ocb_on_start', x: 40, y: 40, inputs: { DO: { block: { type: 'ocb_print', inputs: { TEXT: { shadow: { type: 'text', fields: { TEXT: 'hi' } } } } } } } }] } } }
 await page.setInputFiles('#file-input', { name: 'line-follower.ocb', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) })
 await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'line-follower.py').catch(() => {})
 check((await fileName()) === 'line-follower.py', 'an old project file opens as line-follower.py')
-check((await stored('line-follower.py'))?.includes("print('hi')") && (await stored('main.py')) !== null, 'saved as Python, and main.py is kept')
+check((await stored('line-follower.py'))?.includes("print('hi')") && (await stored('my_program.py')) !== null, 'saved as Python, and my_program.py is kept')
 
-// Back to main.py, with nothing pressed but its name.
+// Back to my_program.py, with nothing pressed but its name.
 await page.click('#btn-files')
-await page.click('#files-panel .files-item[data-path="main.py"]')
-await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'main.py')
-check((await blockCount()) > 2, 'main.py opens again as its blocks')
+await page.click('#files-panel .files-item[data-path="my_program.py"]')
+await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'my_program.py')
+check((await blockCount()) > 2, 'my_program.py opens again as its blocks')
 await page.click('#btn-files')
 
 // An empty program, to start the board-switch checks from.
