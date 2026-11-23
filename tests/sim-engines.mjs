@@ -51,6 +51,8 @@ async function openBoard(context, kind, touch) {
   await page.addInitScript((k) => {
     localStorage.setItem('opencodebot.welcomed.v1', '1')
     localStorage.setItem('opencodebot.device.v1', k)
+    // A first visit: the simulator left on by the page before would come back by itself.
+    localStorage.removeItem('opencodebot.panels.v1')
   }, kind)
   await page.goto(`${BASE}?lang=en`, { waitUntil: 'networkidle' })
   const t0 = Date.now()
