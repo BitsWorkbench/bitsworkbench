@@ -10,8 +10,9 @@
  */
 import { SerialLink } from './serial-link.js'
 import { ConsoleFilter } from './console-filter.js'
-import { Repl, ReplAborted, CTRL_C, CTRL_D } from './repl.js'
+import { Repl, ReplAborted, execRaw, CTRL_B, CTRL_C, CTRL_D } from './repl.js'
 import { getTarget, targetIdForPort, TARGETS } from './targets.js'
+import { flavorOfBanner, setGenericFlavor } from './flavor.js'
 
 import { State, registerDeviceKind } from './device-target.js'
 import { t } from '../i18n/index.js'
@@ -50,6 +51,14 @@ export class DeviceManager extends EventTarget {
     this._traceBuf = ''
     this._bootTimers = []
     this._sawPrompt = false
+    // A MicroPython / CircuitPython board (the generic target): the tail of
+    // what it said, for its banner; whether it was asked for one yet; and the
+    // program running from its raw REPL, if any (_genericVisible).
+    this._bannerBuf = ''
+    this._askedBanner = false
+    this._flavorKnown = false
+    this._raw = null
+    this._sending = null
 
     this.link.onData = (bytes) => this._onBytes(bytes)
     this.link.onConnect = (targetId) => this._onConnected(targetId)
@@ -66,6 +75,34 @@ export class DeviceManager extends EventTarget {
 
   get target() {
     return getTarget(this.targetId)
+  }
+
+  /** The board the student picked: the MicroPython / CircuitPython board opens any serial port. */
+  setPick(targetId) {
+    this.link.anyPort = !!getTarget(targetId)?.anyPort
+  }
+
+  get _generic() {
+    return this.targetId === 'generic'
+  }
+
+  /**
+   * Before Run writes the program: a MicroPython / CircuitPython board that
+   * has not named itself yet (it was running a program when it connected, so
+   * there was no prompt to ask at) is stopped and asked, so the program is
+   * written in its Python. Run would stop its program anyway.
+   */
+  async identify() {
+    if (!this._generic || this._flavorKnown || !this.isConnected || this.busy) return
+    this.repl.resume()
+    const settle = () => new Promise((r) => setTimeout(r, 20)) // _sniff reads the same bytes just after
+    if (!(await this.repl.interrupt())) return
+    await settle()
+    // The interrupt's Ctrl-B may have brought the banner already.
+    if (this._flavorKnown) return
+    this.link.send(CTRL_B)
+    await this.repl.waitFor(/CircuitPython|MicroPython|FiriaLabs IoT Python/i, 1500).catch(() => {})
+    await settle()
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -114,6 +151,10 @@ export class DeviceManager extends EventTarget {
     this.targetId = targetId
     this.firmware = null
     this._sawPrompt = false
+    this._bannerBuf = ''
+    this._askedBanner = false
+    this._flavorKnown = false
+    this._raw = null
     this.filter.reset()
     this.repl.resume()
 
@@ -146,6 +187,7 @@ export class DeviceManager extends EventTarget {
     this.targetId = null
     this.firmware = null
     this.busy = false
+    this._raw = null
     this.dispatchEvent(new CustomEvent('device', { detail: { targetId: null, target: null } }))
     this._setState(State.OFFLINE, t('usb.unplugged'))
   }
@@ -162,10 +204,50 @@ export class DeviceManager extends EventTarget {
     this.repl.feed(text)
     this._sniff(text)
 
-    const visible = this.filter.push(bytes)
+    // Only Firia Labs firmware brackets its debugger's chatter; on any other
+    // board those bytes are the program's own.
+    const visible = this._generic ? this._genericVisible(bytes) : this.filter.push(bytes)
     if (visible.length) {
       this.dispatchEvent(new CustomEvent('data', { detail: visible }))
     }
+  }
+
+  /**
+   * What a MicroPython / CircuitPython board says, as the terminal shows it.
+   * While a program runs from the raw REPL: nothing until the board has taken
+   * it ("OK"), then the program's output without the raw REPL's markers (an
+   * EOT after the output, another after any error, then its `>` prompt).
+   */
+  _genericVisible(bytes) {
+    if (!this._raw) return bytes
+    const out = []
+    for (const b of bytes) {
+      const raw = this._raw
+      if (!raw) {
+        out.push(b)
+      } else if (raw.phase === 'quiet') {
+        // Entering the raw REPL and sending the program: the board's replies are ours.
+      } else if (raw.phase === 'ok') {
+        raw.seen = (raw.seen + String.fromCharCode(b)).slice(-2)
+        if (raw.seen === 'OK') raw.phase = 'running'
+      } else if (raw.phase === 'running') {
+        if (b !== 0x04) out.push(b)
+        else if (++raw.eot === 2) raw.phase = 'end'
+      } else if (b === 0x3e) {
+        // The raw prompt after the second EOT: the program is over.
+        this._raw = null
+        this._rawFinished(raw)
+      }
+    }
+    return new Uint8Array(out)
+  }
+
+  /** A program run from the raw REPL has ended: back to the friendly prompt, unless Stop is already on it. */
+  _rawFinished(raw) {
+    if (raw.stopping) return
+    this.link.send(CTRL_B)
+    // (A short program can end before Run has finished starting it: Run then leaves this state be.)
+    this._setState(State.READY, t('usb.finished'))
   }
 
   /** Watch the stream for the things that change what the UI should say. */
@@ -175,6 +257,22 @@ export class DeviceManager extends EventTarget {
       this._clearBootTimers()
       if (!this.busy && this.state !== State.READY) {
         this._setState(State.READY, t('usb.ready'))
+      }
+      // A MicroPython / CircuitPython board names itself in its banner, which
+      // Ctrl-B at the prompt prints: ask once, so the blocks write its Python.
+      if (this._generic && !this._askedBanner && !this.busy && !this._raw) {
+        this._askedBanner = true
+        this.link.send(CTRL_B)
+      }
+    }
+
+    if (this._generic && !this._raw) {
+      this._bannerBuf = (this._bannerBuf + text).slice(-200)
+      const flavor = flavorOfBanner(this._bannerBuf)
+      if (flavor) {
+        this._bannerBuf = ''
+        this._flavorKnown = true
+        setGenericFlavor(flavor, 'board')
       }
     }
 
@@ -259,9 +357,34 @@ export class DeviceManager extends EventTarget {
       const atPrompt = await this.repl.interrupt()
       if (!atPrompt) throw new DeviceUnresponsive()
 
-      await this.repl.writeFile(PROGRAM_FILENAME, source, (fraction) => {
-        this.dispatchEvent(new CustomEvent('progress', { detail: fraction }))
-      })
+      const progress = (fraction) => this.dispatchEvent(new CustomEvent('progress', { detail: fraction }))
+
+      if (this._generic) {
+        // Any MicroPython / CircuitPython board: run from the raw REPL and
+        // write nothing to its drive. Its own main.py or code.py stays as it
+        // was, and a CircuitPython drive is read-only to code anyway while
+        // the computer has it.
+        const raw = { phase: 'quiet', eot: 0, seen: '', stopping: false, cancelled: false }
+        this._raw = raw
+        this._sending = execRaw(this.repl, source, {
+          onProgress: progress,
+          onSubmit: () => {
+            raw.phase = 'ok'
+          },
+          cancelled: () => raw.cancelled,
+        })
+        try {
+          await this._sending
+        } finally {
+          this._sending = null
+        }
+        this.busy = false
+        // A short program may be over already.
+        if (this._raw) this._setState(State.RUNNING, t('usb.running'))
+        return true
+      }
+
+      await this.repl.writeFile(PROGRAM_FILENAME, source, progress)
 
       // Soft reboot: the board auto-runs main.py on the way back up.
       this.link.send(CTRL_D)
@@ -289,6 +412,7 @@ export class DeviceManager extends EventTarget {
       return true
     } catch (err) {
       this.busy = false
+      this._raw = null
       if (err instanceof ReplAborted) {
         this._setState(State.READY, t('usb.stopped'))
         return false
@@ -320,7 +444,9 @@ export class DeviceManager extends EventTarget {
       return true
     } catch (err) {
       console.error(err)
-      this._notice('error', t('usb.saveFailedTitle', { file: name }), err.message || t('usb.tryAgain'))
+      // CircuitPython's drive is read-only to code while a computer has it mounted.
+      const readOnly = /Errno 30|Read-only|EROFS/i.test(err.message || '')
+      this._notice('error', t('usb.saveFailedTitle', { file: name }), readOnly ? t('usb.readOnlyDetail') : err.message || t('usb.tryAgain'))
       return false
     } finally {
       this.busy = false
@@ -340,13 +466,21 @@ export class DeviceManager extends EventTarget {
   /** Stop whatever the board is doing and get back to a prompt. */
   async stop({ quiet = false } = {}) {
     if (!this.isConnected) return false
+    // A program still being sent to the raw REPL: stop sending it first, or
+    // the rest would arrive at the prompt Stop leaves the board at.
+    if (this._raw) this._raw.cancelled = true
     this.repl.cancelPending()
+    if (this._sending) await this._sending.catch(() => {})
     this.busy = false
+    // A program running from the raw REPL: its end, after Ctrl-C, is Stop's.
+    if (this._raw) this._raw.stopping = true
     this.filter.suppressDebug(false)
     this.filter.reset()
     this._setState(State.LOADING, t('usb.stopping'))
 
     const stopped = await this.repl.interrupt({ tries: 5, timeout: 900 })
+    // At the friendly prompt again, the raw REPL's markers are long gone.
+    if (stopped) this._raw = null
     if (stopped) {
       this.parkActuators()
       this._setState(State.READY, t('usb.stoppedReady'))

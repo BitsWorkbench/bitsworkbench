@@ -82,6 +82,8 @@ export default {
   'run.copyFailedDetail': 'Tu programa no se ejecutó. Vuelve a pulsar Ejecutar en un momento.',
   'run.folderUnreadTitle': 'Tus otros archivos no se copiaron a la placa',
   'run.folderUnreadDetail': '{app} no pudo leer la carpeta de tu programa. Tu programa se ejecuta, pero no puede importar los archivos de al lado.',
+  'run.genericNoCopyTitle': 'Los demás archivos se quedan en tu computadora',
+  'run.genericNoCopyDetail': 'Esta placa guarda sus propios archivos, así que {files} no se copiaron. Para importarlos, cópialos tú a la placa.',
   'run.wrongTitle': 'Esos bloques son para otro dispositivo',
   'run.wrongDetail': 'Tu proyecto usa bloques de {names}, pero tienes conectado un {device}.',
   'error.atLine': '(línea {line} de Python)',
@@ -330,6 +332,13 @@ export default {
   'device.codeair.tagline': 'Dron volador: despega, vuela, ilumina el cielo',
   'device.codebot_cb2.fullName': 'CodeBot CB2 (modelo anterior)',
   'device.codebot_cb2.tagline': 'CodeBot anterior, {app} todavía no lo admite',
+  'device.generic.fullName': 'Placa MicroPython / CircuitPython',
+  'device.generic.tagline': 'Cualquier placa con un intérprete de Python por USB, como una Raspberry Pi Pico',
+  'flavor.label': 'Habla',
+  'flavor.micropython': 'MicroPython',
+  'flavor.circuitpython': 'CircuitPython',
+  'flavor.followTitle': 'Una placa {flavor}',
+  'flavor.followDetail': 'Los bloques de Pines ahora escriben {flavor}.',
   'kind.serial': 'Cable USB',
   'kind.loopback': 'Dispositivo ficticio (para pruebas)',
 
@@ -360,6 +369,7 @@ export default {
   'usb.tryAgain': 'Inténtalo de nuevo.',
   'usb.saved': 'Se guardó {file}.',
   'usb.saveFailedTitle': 'No se pudo guardar {file}',
+  'usb.readOnlyDetail': 'La unidad de esta placa es de solo lectura para los programas mientras tu computadora la tiene. Copia el archivo a la unidad de la placa desde tu computadora y pulsa Ejecutar otra vez.',
   'usb.stopping': 'Deteniendo…',
   'usb.stoppedReady': 'Detenido. ¡Listo cuando tú quieras!',
   'usb.noAnswer': 'El dispositivo no respondió.',
@@ -392,6 +402,7 @@ export default {
   'cat.radio': '🛜 Radio',
   'cat.drive': '🚗 Conducir',
   'cat.fly': '🚁 Volar',
+  'cat.pins': '📌 Pines',
   'cat.basics': '🧩 Básicos',
 
   // Programas de inicio
@@ -559,6 +570,10 @@ export default {
   'example.codeair.battery.goal': 'Enciende verde si la batería está lista para volar, rojo si necesita carga.',
   'example.codeair.button.title': 'Presiona para volar',
   'example.codeair.button.goal': 'Espera el botón 0, cuenta hacia atrás con pitidos y luego vuela en círculo.',
+  'example.generic.blink.title': 'Parpadeo',
+  'example.generic.blink.goal': 'Haz parpadear el LED de la placa cada medio segundo.',
+  'example.generic.button.title': 'Luz con botón',
+  'example.generic.button.goal': 'Enciende el LED mientras se pulsa un botón conectado del pin GP14 a tierra.',
 
   // El simulador, en la app
   'btn.simulate': 'Simular',
@@ -952,6 +967,15 @@ export default {
   'block.radio_on_message.tooltip': 'Revisa si hay un mensaje. Los bloques de adentro solo se ejecutan cuando llegó uno.',
   'block.radio_receive.message0': '🛜 mensaje de radio (o nada)',
   'block.radio_receive.tooltip': 'Toma el siguiente mensaje en espera, o devuelve nada.',
+
+  'block.pins_write.message0': '📌 poner el pin %1 en %2',
+  'block.pins_write.tooltip': 'Enciende un pin (verdadero) o apágalo (falso): un LED conectado se ilumina. Escribe el pin con el nombre que tu placa le da, como LED, GP15 o D5.',
+  'block.pins_read.message0': '📌 el pin %1 está encendido',
+  'block.pins_read.tooltip': '¿Está encendido el pin? El pin tiene resistencia de pull-up, así que un botón conectado de él a tierra está apagado mientras se pulsa.',
+  'block.pins_analog.message0': '📌 pin analógico %1',
+  'block.pins_analog.tooltip': 'El voltaje en un pin analógico, de 0 (nada) a 65535 (todo).',
+  'block.pins_ms.message0': '⏱️ milisegundos desde el inicio',
+  'block.pins_ms.tooltip': 'Cuántos milisegundos lleva funcionando la placa: útil para medir tiempos.',
 
   // Valores de ejemplo que ya vienen en los bloques de la paleta, para que
   // el estudiante los cambie. sample.radioVar nombra una variable: una sola palabra.

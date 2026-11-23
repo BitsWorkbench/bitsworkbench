@@ -13,7 +13,8 @@ import { pythonGenerator } from 'blockly/python'
 import { toolboxFor } from '../blocks/index.js'
 import { HUE } from '../blocks/theme.js'
 import { importLines, setupLines } from '../blocks/generate.js'
-import { resetNeeds, allNeeds } from '../blocks/context.js'
+import { resetNeeds, allNeeds, setFlavor } from '../blocks/context.js'
+import { flavorOf } from '../device/flavor.js'
 import { t } from '../i18n/index.js'
 
 const line = (code) => ({ code, line: true })
@@ -55,6 +56,7 @@ const CUSTOM = {
  * `trek` the open objective's CodeTrek, as snippets: its category is hidden without one.
  */
 export function snippetsFor(targetId, myBlocks = [], trek = []) {
+  setFlavor(flavorOf(targetId))
   const scratch = new Blockly.Workspace()
   try {
     return toolboxFor(targetId).contents.map((entry) => {
@@ -84,7 +86,7 @@ function snippetOf(item, scratch) {
   if (item.type === 'controls_if' && item.extraState?.hasElse) return complete(IF_ELSE)
   if (item.type in BY_HAND) return BY_HAND[item.type] && complete(BY_HAND[item.type])
   scratch.clear()
-  const block = Blockly.serialization.blocks.append({ type: item.type, inputs: item.inputs, extraState: item.extraState }, scratch)
+  const block = Blockly.serialization.blocks.append({ type: item.type, inputs: item.inputs, fields: item.fields, extraState: item.extraState }, scratch)
   resetNeeds()
   pythonGenerator.init(scratch)
   const out = pythonGenerator.blockToCode(block)

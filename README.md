@@ -57,9 +57,42 @@ Chromebook (see "Browser support"). For teachers:
 | **CodeBot CB3** | USB (`544d:cb03`) | driving, LEDs, line sensors, proximity, encoders, sound |
 | **CodeX** | USB (`544d:c0de`) | 240×240 screen, neopixels, LEDs, tones and songs, buttons, tilt, light, radio |
 | **CodeAIR** | USB (`544d:ca00`) | flight, neopixels, LEDs, beeps, buttons, battery, radio |
+| **MicroPython / CircuitPython board** | USB, any serial port | pins (digital out and in, analog in) and a millisecond clock, beside all the general blocks |
 
 The original CodeBot CB2 is recognised but cannot be used: its USB interface is
 not one a browser can open.
+
+### A MicroPython / CircuitPython board
+
+Pick **MicroPython / CircuitPython board** for any board with a Python prompt
+over USB, such as a Raspberry Pi Pico. Connect then lists every serial port.
+The app expects nothing of the board but its REPL: no firmware, files or
+modules of ours, and no simulator.
+
+- **Which Python.** The board names itself in its banner (asked for at its
+  prompt, or just before the first Run if it was busy with its own program),
+  and the Pins blocks write that Python (`src/device/flavor.js`):
+  `machine.Pin`, `ADC` and `time.ticks_ms` on MicroPython; `board`,
+  `digitalio`, `analogio` and `time.monotonic` on CircuitPython. Before a
+  board is connected it is MicroPython, or whatever was set by hand in the
+  device menu. Seconds since start and Title Case write
+  MicroPython's own forms there too (it has neither `time.monotonic` nor
+  `str.title`).
+- **Run** sends the program through the raw REPL and runs it there, as
+  `mpremote run` does: nothing is written to `main.py` or `code.py`, so the
+  board's own program stays, and a CircuitPython drive (read-only to code
+  while a computer has it) is no obstacle. Stop is Ctrl-C, and stops the
+  sending too if the program is still on its way. The program is not kept on
+  the board once it is unplugged. The program's other `.py` files are not
+  copied either (the board's files are the student's own: a driver, a
+  `config.py`); a toast says so, once.
+- **Pins** are typed by the name the board knows them by (`LED`, `GP15`,
+  `D5`, `A0`, or a number such as `2` on an ESP32). Each pin is claimed once,
+  after the imports: a pin set anywhere in the program is an output, and
+  reading it gives back what it was set to (so a toggle works); a pin only
+  read is an input, pulled up, so a button wired from it to ground reads off
+  while pressed. One pin read both as digital and as analog is claimed twice,
+  which CircuitPython refuses.
 
 ## Browser support
 

@@ -6,8 +6,10 @@
  * `import radio` genuinely has to come before `from codex import *`.)
  */
 import { pythonGenerator } from 'blockly/python'
-import { resetNeeds, allNeeds } from './context.js'
+import { resetNeeds, allNeeds, setFlavor } from './context.js'
 import { getTarget } from '../device/targets.js'
+import { flavorOf } from '../device/flavor.js'
+import { pinSetupLines } from './pins.js'
 import { notesPython } from './comments.js'
 import { BRAND } from '../brand.js'
 
@@ -47,6 +49,7 @@ export const BANNER = `# Made with ${BRAND.name} 💚 Blocks in, Python out.`
 
 export function generatePython(workspace, targetId) {
   resetNeeds()
+  setFlavor(flavorOf(targetId))
   // The blocks' Python, then the notes on no block.
   const program = [pythonGenerator.workspaceToCode(workspace).trim(), notesPython(workspace)].filter(Boolean).join('\n\n')
   const needs = allNeeds()
@@ -83,13 +86,18 @@ export function importLines(needs) {
   if (needs.has('colors') && !needs.has('codex') && !needs.has('codeair')) lines.push('from colors import *')
   if (needs.has('flight')) lines.push('from flight import *')
   if (needs.has('songplayer')) lines.push('from songplayer import song_player')
+  // A MicroPython / CircuitPython board's pins (pins.js).
+  if (needs.has('machine_pin') || needs.has('machine_adc')) {
+    lines.push(`from machine import ${needs.has('machine_adc') ? 'ADC, Pin' : 'Pin'}`)
+  }
+  for (const module of ['board', 'digitalio', 'analogio']) if (needs.has(module)) lines.push(`import ${module}`)
   if (needs.has('time')) lines.push('import time')
   return lines
 }
 
 /** The one-time setup lines a set of needs calls for, after the imports. */
 export function setupLines(needs) {
-  return needs.has('motors_enable') ? ['motors.enable(True)'] : []
+  return [...(needs.has('motors_enable') ? ['motors.enable(True)'] : []), ...pinSetupLines(needs)]
 }
 
 /**
@@ -124,13 +132,14 @@ export function generateWithLines(workspace, targetId) {
   return out.join('\n') === code ? { code, blockAt } : { code, blockAt: [] }
 }
 
-/** Devices whose blocks appear in a workspace, by block-type prefix. */
+/** Devices whose blocks appear in a workspace, by block-type prefix (the Pins blocks are the MicroPython / CircuitPython board's). */
 export function devicesUsed(workspace) {
   const used = new Set()
   for (const block of workspace.getAllBlocks(false)) {
     for (const id of Object.keys(DEVICE_IMPORT)) {
       if (block.type.startsWith(`${id}_`)) used.add(id)
     }
+    if (block.type.startsWith('pins_')) used.add('generic')
   }
   return used
 }

@@ -15,7 +15,8 @@
 import * as Blockly from 'blockly/core'
 import { pythonGenerator, Order } from 'blockly/python'
 import { toolboxFor } from '../blocks/index.js'
-import { resetNeeds } from '../blocks/context.js'
+import { resetNeeds, setFlavor } from '../blocks/context.js'
+import { flavorOf } from '../device/flavor.js'
 import { omittable } from '../blocks/define.js'
 import { tree, unwrap, statementsOf } from './tree.js'
 
@@ -64,6 +65,8 @@ const NUMBER_BASE = 98765
  * its inputs' defaults.
  */
 export function patternsFor(targetId) {
+  // Each block's Python is the Python of the board's flavor (device/flavor.js).
+  setFlavor(flavorOf(targetId))
   const ws = new Blockly.Workspace()
   const statements = []
   const values = []

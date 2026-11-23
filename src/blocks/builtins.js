@@ -5,6 +5,16 @@
  */
 import { pythonGenerator, Order } from 'blockly/python'
 import { value } from './define.js'
+import { currentFlavor } from './context.js'
+
+// MicroPython's strings have no `.title()`: "Title Case" there is the words'
+// own, first letter up and the rest down.
+const changeCase = pythonGenerator.forBlock.text_changeCase
+pythonGenerator.forBlock.text_changeCase = (block, gen) => {
+  if (currentFlavor() !== 'micropython' || block.getFieldValue('CASE') !== 'TITLECASE') return changeCase(block, gen)
+  const text = value(gen, block, 'TEXT', "''", Order.MEMBER)
+  return [`' '.join(w[:1].upper() + w[1:].lower() for w in ${text}.split(' '))`, Order.FUNCTION_CALL]
+}
 
 // Blockly: `x = (x if isinstance(x, Number) else 0) + 1`.
 pythonGenerator.forBlock.math_change = (block, gen) => {

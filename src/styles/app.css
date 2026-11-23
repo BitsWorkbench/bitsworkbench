@@ -148,6 +148,15 @@ kbd {
 .device-menu button[aria-selected='true'] { background: var(--green-soft); font-weight: 800; }
 .device-menu .dm-title { font-weight: 800; }
 .device-menu .dm-sub { display: block; font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+.device-menu .dm-flavor {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 2px 10px 8px 46px; font-size: 12px; color: var(--ink-soft); font-weight: 700;
+}
+.device-menu .dm-flavor button {
+  width: auto; padding: 4px 10px; font-size: 12px; font-weight: 700;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper);
+}
+.device-menu .dm-flavor button[aria-pressed='true'] { background: var(--green-soft); border-color: var(--green); font-weight: 800; }
 .device-menu .dm-head {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--ink-soft); font-weight: 800; padding: 8px 10px 4px;

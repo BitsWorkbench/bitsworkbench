@@ -6,10 +6,19 @@
  * working example of a DeviceTarget for anyone adding a new kind, such as
  * the simulator. Open the app with `?device=loopback` to use it, and
  * `&board=codex` to choose which board it claims to be (default CodeBot).
+ * `&board=generic&flavor=circuitpython` is a CircuitPython board: it says so
+ * in its banner, as a real one does (MicroPython without `flavor`), and Run
+ * writes nothing to its files, as on a real one.
  */
 import { State, registerDeviceKind } from './device-target.js'
 import { t } from '../i18n/index.js'
 import { getTarget } from './targets.js'
+import { flavorOfBanner, setGenericFlavor } from './flavor.js'
+
+const BANNERS = {
+  micropython: 'MicroPython v1.24.1 on 2024-11-29; Raspberry Pi Pico with RP2040',
+  circuitpython: 'Adafruit CircuitPython 9.2.1 on 2024-11-20; Raspberry Pi Pico with rp2040',
+}
 
 const encoder = new TextEncoder()
 
@@ -36,6 +45,11 @@ export class LoopbackDevice extends EventTarget {
     this.targetId = this.board
     this.firmware = { version: 'loopback', date: '2026-01-01' }
     this._emit('device', { targetId: this.targetId, target: getTarget(this.targetId), firmware: this.firmware })
+    if (this.board === 'generic') {
+      const banner = BANNERS[paramFromUrl('flavor')] || BANNERS.micropython
+      this._print(`${banner}\r\n`)
+      setGenericFlavor(flavorOfBanner(banner), 'board')
+    }
     this._print('>>> ')
     this._setState(State.READY, t('usb.ready'))
     return true
@@ -52,9 +66,10 @@ export class LoopbackDevice extends EventTarget {
   async run(source) {
     if (!this.isConnected) return false
     this._setState(State.LOADING, t('usb.sending'))
-    await this.writeFile('main.py', source)
+    // A MicroPython / CircuitPython board runs it from the raw REPL: no file.
+    if (this.board !== 'generic') await this.writeFile('main.py', source)
     this.runs.push(source)
-    this._print('\r\n[loopback] running main.py\r\n')
+    this._print(this.board === 'generic' ? '\r\n[loopback] running from the raw REPL\r\n' : '\r\n[loopback] running main.py\r\n')
     this._setState(State.RUNNING, t('usb.running'))
     return true
   }
@@ -104,12 +119,14 @@ export class LoopbackDevice extends EventTarget {
   }
 }
 
-function boardFromUrl() {
+function paramFromUrl(name) {
   try {
-    return new URL(globalThis.location.href).searchParams.get('board')
+    return new URL(globalThis.location.href).searchParams.get(name)
   } catch {
     return null
   }
 }
+
+const boardFromUrl = () => paramFromUrl('board')
 
 registerDeviceKind('loopback', () => new LoopbackDevice(), { label: t('kind.loopback') })

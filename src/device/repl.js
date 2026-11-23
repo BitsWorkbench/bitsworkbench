@@ -16,6 +16,9 @@ export const REPL_PROMPT = '>>> '
 export const DEBUG_PROMPT = '<<< '
 
 const CHUNK_SIZE = 1024
+/** A program sent to the raw REPL goes in pieces this size, a breath apart: no board drops bytes. */
+const EXEC_CHUNK = 256
+const EXEC_PAUSE_MS = 8
 const DEFAULT_TIMEOUT = 4000
 /** Keep only enough tail to span a prompt split across two serial reads. */
 const MATCH_TAIL = 4096
@@ -147,7 +150,15 @@ export class Repl {
     const body = source.replace(/\r\n/g, '\n')
 
     await this.send(CTRL_A, { expect: />/, timeout: 3000 })
-    await this.send(`fd=open(${JSON.stringify(filename)}, "wb")`, { submit: true })
+    // The file may not open (a CircuitPython drive is read-only to code while
+    // a computer has it): say why, not what failed after it. The whole reply
+    // is wanted, to the raw prompt after its second EOT (a traceback's
+    // "<stdin>" has a '>' of its own).
+    const opened = await this.send(`fd=open(${JSON.stringify(filename)}, "wb")`, { submit: true, expect: /\x04>/ })
+    if (opened.includes('Traceback')) {
+      await this.send(CTRL_B, { expect: />>>|\r\n/, timeout: 3000 }).catch(() => {})
+      throw new Error(replErrorText(opened))
+    }
     await this.send('w=fd.write', { submit: true })
 
     for (let i = 0; i < body.length; i += CHUNK_SIZE) {
@@ -177,12 +188,44 @@ export class Repl {
   }
 }
 
+/**
+ * Start `source` running from the raw REPL, as `mpremote run` does: nothing
+ * is written to the board's files. Resolves once the board has accepted the
+ * program ("OK"); what it prints, and the end of the run (two EOTs and the
+ * raw prompt), arrive on the stream like any other output.
+ * @param {Repl} repl
+ * @param {{onProgress?: (fraction: number) => void, onSubmit?: () => void, cancelled?: () => boolean}} [hooks]
+ *   onSubmit is called just before the program is submitted: what the board
+ *   says from then on is the program's. cancelled is asked before every
+ *   piece: true (the student pressed Stop) ends the sending there, with
+ *   ReplAborted, before anything more reaches the board.
+ */
+export async function execRaw(repl, source, { onProgress, onSubmit, cancelled } = {}) {
+  // In bytes, so a character is never cut in two between pieces.
+  const body = new TextEncoder().encode(source.replace(/\r\n/g, '\n'))
+  const stop = () => {
+    if (repl.aborted || cancelled?.()) throw new ReplAborted()
+  }
+  stop()
+  await repl.send(CTRL_A, { expect: /raw REPL[^\n]*\n>/, timeout: 3000 })
+  for (let i = 0; i < body.length; i += EXEC_CHUNK) {
+    stop()
+    await repl.link.send(body.subarray(i, i + EXEC_CHUNK))
+    await new Promise((r) => setTimeout(r, EXEC_PAUSE_MS))
+    onProgress?.(Math.min(1, (i + EXEC_CHUNK) / Math.max(1, body.length)))
+  }
+  stop()
+  onSubmit?.()
+  await repl.send(CTRL_D, { expect: /OK/, timeout: 4000 })
+  onProgress?.(1)
+}
+
 /** Pull the useful line out of a raw-REPL traceback. */
 export function replErrorText(text) {
   const lines = text
     .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
+    .map((l) => l.replace(/\x04/g, '').trim())
+    .filter((l) => l && l !== '>')
   const last = lines[lines.length - 1]
   return last && last !== '>' ? last : 'The device reported an error.'
 }

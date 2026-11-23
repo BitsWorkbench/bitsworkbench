@@ -9,6 +9,8 @@ export const HUE = {
   sound: '#9b7bd4',
   sensors: '#52b84c',
   radio: '#4fbfa8',
+  // A board's pins: copper.
+  pins: '#a0785a',
   loops: '#3fb6a8',
   logic: '#6f9bd1',
   math: '#7a86cf',

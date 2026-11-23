@@ -23,12 +23,16 @@ import { patternsFor } from './patterns.js'
 import { pythonGenerator } from 'blockly/python'
 import { generatePython, DEVICE_IMPORT, BANNER } from '../blocks/generate.js'
 import { BRAND } from '../brand.js'
+import { flavorOf } from '../device/flavor.js'
+import { isPinSetupLine } from '../blocks/pins.js'
 import { endOfLineData } from '../blocks/comments.js'
 
 const cache = new Map()
 function patterns(targetId) {
-  if (!cache.has(targetId)) cache.set(targetId, patternsFor(targetId))
-  return cache.get(targetId)
+  // A MicroPython / CircuitPython board's blocks write the Python of its flavor.
+  const key = `${targetId}:${flavorOf(targetId)}`
+  if (!cache.has(key)) cache.set(key, patternsFor(targetId))
+  return cache.get(key)
 }
 
 /**
@@ -76,11 +80,16 @@ export function pythonToBlocks(source, targetId, { imports = '' } = {}) {
     const text = ctx.text(s)
     const isHeader =
       s.name === 'ImportStatement' ||
-      (!seenCode && (text === 'motors.enable(True)' || /^[A-Za-z_]\w* = None$/.test(text)))
+      (!seenCode && (text === 'motors.enable(True)' || /^[A-Za-z_]\w* = None$/.test(text) || isPinSetupLine(text)))
     if (isHeader) header.push(s)
     else seenCode = true
     return !isHeader
   })
+  // A CircuitPython pin the setup claims (`pin_LED = digitalio.DigitalInOut(board.LED)`) is the Pins blocks', not a variable.
+  for (const s of header) {
+    const m = /^((?:pin|adc)_\w+) = /.exec(ctx.text(s))
+    if (m && isPinSetupLine(ctx.text(s))) ctx.assigned.delete(m[1])
+  }
 
   // Functions the blocks can hold come out of the program, as Blockly puts
   // every function before the rest; any other `def` stays where it is.

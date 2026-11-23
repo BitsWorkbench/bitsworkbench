@@ -119,9 +119,19 @@ async function board(id) {
   await page.waitForFunction((b) => window.openCodeBot.workspace.targetId === b, id)
 }
 
+/** The MicroPython / CircuitPython board speaking `flavor`, set as a student does, in the device menu. */
+async function flavor(name) {
+  await page.evaluate((f) => {
+    const i = { micropython: 0, circuitpython: 1 }[f]
+    document.querySelectorAll('#device-menu .dm-flavor button')[i].click()
+  }, name)
+  await page.waitForFunction((f) => window.openCodeBot._blocksPython().includes('# Device:') && document.querySelector(`#device-menu .dm-flavor button[aria-pressed="true"]`)?.textContent === f, { micropython: 'MicroPython', circuitpython: 'CircuitPython' }[name])
+}
+
 // ------------------------------------------------- every block, every choice
-for (const id of ['codebot', 'codex', 'codeair']) {
+for (const [id, speaks] of [['codebot'], ['codex'], ['codeair'], ['generic', 'micropython'], ['generic', 'circuitpython']]) {
   await board(id)
+  if (speaks) await flavor(speaks)
   const result = await page.evaluate((FILL) => {
     const ws = window.openCodeBot.workspace.workspace
     const seen = new Set()
@@ -191,7 +201,7 @@ for (const id of ['codebot', 'codex', 'codeair']) {
     }
     return { failures, trips, blocks: items.length }
   }, FILL)
-  check(result.failures.length === 0, `${id}: ${result.blocks} blocks, ${result.trips} block and choice pairs, each back from its Python as itself`)
+  check(result.failures.length === 0, `${speaks || id}: ${result.blocks} blocks, ${result.trips} block and choice pairs, each back from its Python as itself`)
   for (const f of result.failures.slice(0, 12)) console.log(`        ${f}`)
 }
 

@@ -5,7 +5,7 @@ import { parser } from '@lezer/python'
 import { msg, defineBlocks, value, body } from './define.js'
 
 registerFieldMultilineInput()
-import { need } from './context.js'
+import { need, currentFlavor } from './context.js'
 
 export const COLOR_CHOICES = [
   [msg('block.opt.red'), 'RED'],
@@ -127,9 +127,10 @@ defineBlocks([
       output: 'Number',
       style: 'basics_blocks',
     },
+    // MicroPython has no time.monotonic(); its clock is time.ticks_ms().
     python: () => {
       need('time')
-      return ['time.monotonic()', Order.FUNCTION_CALL]
+      return currentFlavor() === 'micropython' ? ['time.ticks_ms() / 1000', Order.MULTIPLICATIVE] : ['time.monotonic()', Order.FUNCTION_CALL]
     },
   },
 
