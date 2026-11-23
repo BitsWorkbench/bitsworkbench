@@ -22,6 +22,11 @@ export const BRAND = {
    * (src/convert/to-blocks.js), so a past name need not be listed for that.
    */
   pastNames: ['OpenCodeBot', 'Codacious', 'LabBlocks', 'BotBlocks'],
+  /**
+   * Where the app is published, with no slash at the end. Link previews need
+   * an absolute address for their picture (og:image in index.html).
+   */
+  site: 'https://bitsworkbench.org',
   /** Where a person reports a problem. */
   issues: 'https://github.com/firialabs/opencodebot/issues',
 }

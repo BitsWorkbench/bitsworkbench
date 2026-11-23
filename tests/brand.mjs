@@ -50,7 +50,19 @@ if (existsSync('dist/index.html')) {
   const page = readFileSync('dist/index.html', 'utf8')
   check(page.includes(`<title data-i18n="app.title">${BRAND.name} Beta</title>`), 'the built page is titled with the name, in Beta')
   check(readFileSync('dist/boards.html', 'utf8').includes(`>${BRAND.name} boards</title>`), 'and so is the boards page')
-  check(!page.includes('%BRAND_NAME%'), 'no placeholder is left in the built page')
+  check(!/%[A-Z_]+%/.test(page), 'no placeholder is left in the built page')
+  // The link preview (Slack, social sites): crawlers read the HTML alone.
+  const meta = (attr, key) => page.match(new RegExp(`<meta ${attr}="${key}" content="([^"]*)"`))?.[1]
+  const description = (await import('../src/i18n/en.js')).default['app.description']
+  check(meta('name', 'description') === description && meta('property', 'og:description') === description &&
+    meta('name', 'twitter:description') === description, 'the description and its og: and twitter: copies are en.js\'s')
+  check(meta('property', 'og:title') === `${BRAND.name} Beta` && meta('name', 'twitter:title') === `${BRAND.name} Beta`, 'the preview is titled as the page is')
+  const image = `${BRAND.site}/social-card.png`
+  check(/^https:\/\/[^/]+$/.test(BRAND.site) && meta('property', 'og:image') === image && meta('name', 'twitter:image') === image,
+    'the preview picture is an absolute address on the site')
+  check(meta('name', 'twitter:card') === 'summary_large_image', 'and shown large')
+  const png = existsSync('dist/social-card.png') && readFileSync('dist/social-card.png')
+  check(png && png.readUInt32BE(16) === 1200 && png.readUInt32BE(20) === 630, 'the picture is published, at 1200 x 630')
   const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'))
   check(manifest.name === BRAND.name && manifest.short_name === BRAND.shortName, 'the installed app is named from brand.js')
 } else {
