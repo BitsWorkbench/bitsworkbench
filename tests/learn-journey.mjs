@@ -125,16 +125,18 @@ for (const [name, width, height, touch, motion = 'no-preference'] of SIZES) {
   await page.waitForTimeout(400)
   check((await page.evaluate(() => document.querySelector('.workarea').dataset.drawer)) === 'closed', 'starting it puts the drawer away')
   check(await page.locator('.journey-centre h2').isVisible(), 'an opening card over the simulator')
-  // The journey begins from its first chapter's program; the student's own, being different, is kept.
+  // The journey begins in a file of its own, hello/hello.py, from its first chapter's program;
+  // the student's own program stays in its file, untouched, and nothing asks.
   await page.evaluate(() => {
     const app = window.openCodeBot
     app.workspace.replaceBlocks(app.blocksFromPython('from codex import *\n\ndisplay.show("Mine")\n').state)
   })
+  const mine = await page.evaluate(() => window.openCodeBot.openFile.path)
   await page.click('.journey-centre [data-journey="begin"]')
-  check(await page.waitForSelector('#modal[open]', { timeout: 3000 }).then(() => true, () => false), 'beginning asks before replacing a different program')
-  await page.click('#modal[open] button[value="ok"]')
-  await page.waitForTimeout(600)
-  check((await page.evaluate(() => window.openCodeBot._currentPython())).includes('Hi there!'), 'and begins from the first chapter\'s program')
+  await page.waitForFunction(() => window.openCodeBot.openFile?.path === 'hello/hello.py', null, { timeout: 5000 }).catch(() => {})
+  check(!(await page.evaluate(() => document.getElementById('modal').open)), 'beginning asks nothing')
+  check((await page.evaluate(() => window.openCodeBot._currentPython())).includes('Hi there!'), 'and begins from the first chapter\'s program, in hello/hello.py')
+  check((await page.evaluate((p) => window.openCodeBot.stores.browser.read(p), mine)).includes('Mine'), `the student's own ${mine} keeps their program`)
 
   const bubble = () => page.locator('.journey-bubble')
   const ringOn = async (sel) =>
@@ -258,68 +260,101 @@ for (const [name, width, height, touch, motion = 'no-preference'] of SIZES) {
   check((await page.getAttribute('#learn-rail [data-rail-step="0"]', 'data-done')) === 'true', 'the rail shows the journey done')
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scrolling')
 
-  // A chapter started over loads its program, but never loses the student's:
-  // when theirs differs, it asks; keeping working changes nothing; starting
-  // over keeps theirs as a file beside it first.
+  // A chapter started over loads its program into the journey's file, but
+  // never loses the student's: when the file holds something else, they
+  // choose to save theirs under another name or to replace it; closing the
+  // question changes nothing.
   const python = () => page.evaluate(() => window.openCodeBot._currentPython())
   const browserFiles = () => page.evaluate(async () => {
     const store = window.openCodeBot.stores.browser
     const out = {}
-    for (const e of await store.list('')) if (e.kind === 'file') out[e.path] = await store.read(e.path)
+    const walk = async (dir) => {
+      for (const e of await store.list(dir)) {
+        if (e.kind === 'file') out[e.path] = await store.read(e.path)
+        else await walk(e.path)
+      }
+    }
+    await walk('')
     return out
   })
+  const asked = () => page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 3000 }).then(() => true, () => false)
   const filesBefore = Object.keys(await browserFiles())
+  check(!filesBefore.some((p) => /main_saved/.test(p)), 'no main_saved.py anywhere')
   await page.click('#learn-rail [data-rail-step="0"]')
   await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
-  await page.waitForTimeout(500)
-  check(await page.locator('#modal[open]').isVisible(), 'starting a chapter over asks first, the program being different')
-  await page.click('#modal[open] button[value="cancel"]')
+  check(await asked(), 'starting a chapter over asks first, the file holding something else')
+  check((await page.inputValue('#mission-save-as')) === 'hello_2.py', 'offering a name for theirs, one a board can import')
+  await page.keyboard.press('Escape')
   await page.waitForTimeout(400)
-  check((await python()).includes('pixels.fill'), 'keeping working leaves the program as it was')
+  check((await python()).includes('pixels.fill'), 'closing the question leaves the program as it was')
   check(await page.isVisible('#learn-pane [data-learn="journey"][data-chapter="1"]'), 'and the drawer where it was')
   await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
-  await page.waitForSelector('#modal[open]')
-  await page.click('#modal[open] button[value="ok"]')
-  await page.waitForTimeout(700)
+  await asked()
+  await page.fill('#mission-save-as', 'my lights')
+  await page.click('#modal[open] button[value="choice:save"]')
+  await page.waitForTimeout(800)
   const py = await python()
-  check(py.includes("Hi, I'm Sam!") && !py.includes('pixels.fill'), 'starting chapter 2 over loads its program')
+  check(py.includes("Hi, I'm Sam!") && !py.includes('pixels.fill'), 'saving theirs starts chapter 2 from its program')
+  check((await page.evaluate(() => window.openCodeBot.openFile.path)) === 'hello/hello.py', 'in the journey\'s file')
   check((await page.locator('.journey-n').first().innerText()).includes('4'), 'and points at its first step')
   const files = await browserFiles()
   const kept = Object.keys(files).filter((p) => !filesBefore.includes(p))
-  check(kept.length === 1 && files[kept[0]].includes('pixels.fill(RED)'), `the program before is kept as a file (${kept.join(', ')})`)
-  check(kept.every((p) => /^[A-Za-z_][A-Za-z0-9_]*\.py$/.test(p)), 'named so a board takes it (letters, digits and _)')
-  // The same chapter again, the program now its start: nothing to keep, nothing asked.
+  check(kept.join() === 'hello/my_lights.py' && files[kept[0]].includes('pixels.fill(RED)'), `theirs is saved under the name they gave, made one a board takes (${kept.join(', ')})`)
+  // The same chapter again, the program now its start: nothing asked, nothing saved.
   await page.click('#learn-rail [data-rail-step="0"]')
   await page.click('#learn-pane [data-learn="journey"][data-chapter="1"]')
-  await page.waitForTimeout(500)
-  check(!(await page.locator('#modal[open]').isVisible()), 'no question when the program is already the chapter\'s start')
-  check(Object.keys(await browserFiles()).length === kept.length + filesBefore.length, 'and no file kept')
+  await page.waitForTimeout(600)
+  check(!(await page.locator('#modal[open]').isVisible()), 'no question when the file already holds the chapter\'s start')
+  check(Object.keys(await browserFiles()).length === kept.length + filesBefore.length, 'and no file saved')
   // Programs that differ only by a comment, or by a line's indentation, are different: it asks.
   const asks = async (now, chapter) => {
     await page.evaluate((py) => {
       const app = window.openCodeBot
       app.workspace.replaceBlocks(app.blocksFromPython(py).state)
     }, now)
-    const answer = page.evaluate((py) => window.openCodeBot._startOver(py), chapter)
-    const asked = await page.waitForSelector('#modal[open]', { timeout: 2000 }).then(() => true, () => false)
-    if (asked) await page.click('#modal[open] button[value="cancel"]')
-    return asked && (await answer) === false
+    const answer = page.evaluate((code) => window.openCodeBot._missionFile({ folder: 'hello', file: 'hello.py', code }), chapter)
+    const was = await asked()
+    if (was) await page.keyboard.press('Escape')
+    return was && (await answer) === false
   }
   const loop = 'from codex import *\n\nwhile True:\n    display.show("a")\n    pixels.off()\n'
   check(await asks(loop, loop.replace('    pixels.off()', 'pixels.off()')), 'a line moved out of a loop is a different program')
   check(await asks(loop, `${loop}# my note\n`), 'so is one with a comment of its own')
-  // Next into a `fresh` chapter starts it from its program, the student's kept.
+  // Next into a `fresh` chapter of the same file: the student chooses; Replace puts the chapter's program in its place.
   await page.evaluate(() => {
     const app = window.openCodeBot
     app.workspace.replaceBlocks(app.blocksFromPython('from codex import *\n\ndisplay.show("Mine")\n').state)
     const j = app.learn.journey
+    j.done.clear()
     j.index = j.steps.findIndex((s) => s.chapter === 1) - 1
     j._action({ action: 'next' })
   })
-  check(await page.waitForSelector('#modal[open]', { timeout: 3000 }).then(() => true, () => false), 'Next into a fresh chapter asks before replacing a different program')
-  await page.click('#modal[open] button[value="ok"]')
-  await page.waitForTimeout(600)
-  check((await python()).includes("Hi, I'm Sam!"), 'and starts the chapter from its program')
+  check(await asked(), 'Next into a fresh chapter asks before replacing a different program')
+  const count = Object.keys(await browserFiles()).length
+  await page.click('#modal[open] button[value="choice:replace"]')
+  await page.waitForTimeout(800)
+  check((await python()).includes("Hi, I'm Sam!"), 'Replace starts the chapter from its program')
+  check(Object.keys(await browserFiles()).length === count, 'and saves no other file')
+  // Two file moves at once (a quick second click on the rail): the second waits for the
+  // first, so Replace lands on the file it named, never on the one opened meanwhile.
+  const race = page.evaluate(async () => {
+    const app = window.openCodeBot
+    const b = app.stores.browser
+    await b.mkdir('m')
+    await b.write('m/x.py', 'print("my x work")\n')
+    await b.write('m/z.py', 'print("my z work")\n')
+    await app._openRef({ store: 'browser', path: 'm/x.py' })
+    const a = app._missionFile({ folder: 'm', file: 'z.py', carry: true })
+    const second = app._missionFile({ folder: 'm', file: 'x.py', code: 'print("chapter code")\n', carry: true })
+    await a
+    return second
+  })
+  await page.waitForSelector('#modal[open] button[value="choice:replace"]', { timeout: 5000 })
+  await page.click('#modal[open] button[value="choice:replace"]')
+  await race
+  await page.waitForTimeout(1500)
+  const after = await page.evaluate(async () => ({ x: await window.openCodeBot.stores.browser.read('m/x.py'), z: await window.openCodeBot.stores.browser.read('m/z.py') }))
+  check(after.z === 'print("my z work")\n' && after.x.includes('chapter code'), `Replace while another file opened replaces only the file it named (${JSON.stringify(after)})`)
   await context.close()
 }
 await browser.close()

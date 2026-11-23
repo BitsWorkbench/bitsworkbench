@@ -6,7 +6,9 @@
  * comes back to them.
  */
 import { t } from '../i18n/index.js'
-import { toast } from '../ui/notify.js'
+import { toast, showModal, choose } from '../ui/notify.js'
+import { getTarget } from '../device/targets.js'
+import { isGuided, journeyOf, chapterStates, missionStates, firstToDo, runOn, setRunOn, runChoice, missionsHtml, unlockWarning, chapterUnlocked, MISSION_UNLOCKED } from './guide.js'
 import { Library } from './library.js'
 import { PackError, named } from './pack.js'
 import { Tutorial, loadMarkdown } from './tutorial.js'
@@ -31,11 +33,18 @@ export class Learn {
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
    * For journeys: `blocks`, the BlockWorkspace; `simView()`, the simulator's
-   * view while it is open; `startOver(python)`, to start a chapter over
-   * (true once its program is in place, the student's kept);
+   * view while it is open; `useFile(...)`, to work in a journey's file
+   * (journey.js: true once it is open, the student's work never lost);
    * `switchMode(mode)`, back to the mode a paused journey is in.
+   * For guided packs (guide.js): `prepare({ board, runOn })`, the board up in
+   * the simulator or on USB (false when the board on USB did not connect);
+   * `stage(step, { board, runOn })`, what a step points at put on screen;
+   * `onOpen(open)` when a pack opens or closes (the Learn button follows).
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, startOver, switchMode }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
+    this.prepare = prepare
+    this.onOpen = onOpen
+    this.guided = false
     this.pane = pane
     this.railEl = rail
     this.workarea = workarea
@@ -58,6 +67,8 @@ export class Learn {
     this.tutorial.addEventListener('shown', () => this._drawRail())
     this.rail = new Rail(rail, { controls: pane.id })
     this.rail.addEventListener('toggle', () => (this.drawerOpen ? this.collapse() : this.expand()))
+    this.rail.addEventListener('missions', () => this._missionsCard())
+    this.rail.addEventListener('chapter', (e) => this._goChapter(e.detail))
     this.rail.addEventListener('go', (e) => {
       this.expand()
       this.tutorial.go(e.detail)
@@ -84,20 +95,155 @@ export class Learn {
       watcher: new GoalWatcher({ device, program, tester }),
       library: this.library,
       side: () => ({ sim: box('#panel-sim'), terminal: box('#panel-terminal') }),
-      startOver,
+      useFile,
+      // In a guided pack the controller has the screen: what each step points at comes back into view.
+      stage: (step) => this.guided && stage(step, { board: this._board(), runOn: this.runOn }),
     })
     this.tutorial.addEventListener('journey', (e) => this._startJourney(e.detail.chapter))
     this.journey.addEventListener('progress', () => this._journeyProgress())
+    this.journey.addEventListener('place', () => this.guided && this._drawRail())
     this.journey.addEventListener('exit', () => {
       this._save({ journey: false })
+      // Leaving the guide of a guided pack leaves the tutorial: there is no drawer to go back to.
+      if (this.guided) return this.close()
       this.expand()
     })
     this.journey.addEventListener('switch-mode', (e) => switchMode(e.detail))
     this.journey.addEventListener('finished', () => {
       this._save({ journey: false })
+      if (this.guided) return this._nextMission()
       this.tutorial.go({ ...this.tutorial.place, step: this.tutorial.place.step + 1 })
       this.expand()
     })
+  }
+
+  // ------------------------------------------------------- guided packs
+
+  /** The board the mission on show runs on. */
+  _board() {
+    const pack = this.tutorial.pack
+    return this.tutorial.objective?.board || pack?.board
+  }
+
+  /** Every mission's journey progress, in order. */
+  _progresses(pack) {
+    return Promise.all(pack.missions.map((m) => this.library.goals(pack.id, journeyOf(m).id)))
+  }
+
+  /**
+   * Begin a guided mission (the first not done for null): the student's
+   * choice of simulator or board, asked once for the pack; the board up; then
+   * the coach, at its opening card or where the student left off.
+   */
+  async _beginMission(mi) {
+    const pack = this.tutorial.pack
+    if (mi === null || !pack.missions[mi]) mi = firstToDo(missionStates(await this._progresses(pack)))
+    this.journey.stop()
+    this.tutorial.go({ mission: mi, step: 0 })
+    const device = getTarget(this._board())?.name || this._board()
+    let how = runOn(pack.id)
+    if (!how) {
+      how = await choose(runChoice(device))
+      // Closed without a choice: nothing starts, and the student is out of the tutorial.
+      if (!how) return this.close()
+      setRunOn(pack.id, how)
+    }
+    this.runOn = how
+    if (!(await this._prepare(device))) return
+    if (this.tutorial.pack !== pack || this.tutorial.place?.mission !== mi) return
+    if (!(await this.journey.start(pack, this.tutorial.objective, this.tutorial.mode))) return
+    this._save({ journey: true })
+    this._drawRail()
+  }
+
+  /** The board up as the student chose; a board that would not connect offers the simulator. False if they gave up. */
+  async _prepare(device) {
+    while (!(await this.prepare({ board: this._board(), runOn: this.runOn }))) {
+      const how = await choose({ ...runChoice(device), title: t('guide.noBoardTitle', { device }), bodyHtml: `<p>${t('guide.noBoardBody', { device })}</p>` })
+      if (!how) {
+        this.close()
+        return false
+      }
+      this.runOn = how
+      setRunOn(this.tutorial.pack.id, how)
+    }
+    return true
+  }
+
+  /** The pack's missions, from the rail: go to one (a locked one asks first), or change how they run. */
+  async _missionsCard() {
+    const pack = this.tutorial.pack
+    if (!pack) return
+    const states = missionStates(await this._progresses(pack))
+    const current = this.tutorial.place?.mission ?? -1
+    const device = getTarget(this._board())?.name || this._board()
+    let picked = null
+    let change = false
+    const closed = showModal({ title: pack.title, bodyHtml: missionsHtml(pack, states, current, this.runOn, device), confirmText: t('examples.close') })
+    const dialog = document.getElementById('modal')
+    const onClick = (e) => {
+      const m = e.target.closest('[data-guide-mission]')
+      if (m) {
+        picked = Number(m.dataset.guideMission)
+        dialog.close('pick')
+      } else if (e.target.closest('[data-guide-run]')) {
+        change = true
+        dialog.close('run')
+      }
+    }
+    dialog.addEventListener('click', onClick)
+    await closed
+    dialog.removeEventListener('click', onClick)
+    if (change) {
+      const how = await choose(runChoice(device))
+      if (!how || how === this.runOn) return
+      setRunOn(pack.id, how)
+      this.runOn = how
+      if (await this._prepare(device)) this.journey.stage?.(null)
+      return
+    }
+    if (picked === null) return
+    if (states[picked] === 'locked') {
+      // Only the next one unlocks, whichever locked one was picked.
+      const k = states.indexOf('locked')
+      const mission = pack.missions[k]
+      if ((await choose(unlockWarning('mission', mission.title))) !== 'unlock') return
+      const j = journeyOf(mission)
+      await this.library.setGoals(pack.id, j.id, [...(await this.library.goals(pack.id, j.id)), MISSION_UNLOCKED])
+      picked = k
+    }
+    if (picked === current && this.journey.running) return
+    await this._beginMission(picked)
+  }
+
+  /** A chapter from the rail: played from its start, progress kept; a locked one asks first, then only the next one unlocks. */
+  async _goChapter(i) {
+    const item = this.tutorial.objective
+    if (!this.guided || item?.type !== 'journey') return
+    if (!this.journey.running || this.journey.item !== item) await this._beginMission(this.tutorial.place.mission)
+    if (!this.journey.running) return
+    const states = chapterStates(item, [...this.journey.done], this.tutorial.mode)
+    if (states[i] === 'locked') {
+      const k = states.indexOf('locked')
+      const chapter = item.chapters[k]
+      if ((await choose(unlockWarning('chapter', chapter.title))) !== 'unlock') return
+      await this.journey.mark(chapterUnlocked(chapter))
+      i = k
+    }
+    await this.journey.goChapter(i)
+  }
+
+  /** A guided mission finished: the next one begins; after the last, the pack's own words, then out of the tutorial. */
+  async _nextMission() {
+    const pack = this.tutorial.pack
+    const next = this.tutorial.place.mission + 1
+    if (next < pack.missions.length) return this._beginMission(next)
+    await showModal({
+      title: t('guide.packDoneTitle', { title: pack.title }),
+      bodyHtml: this.tutorial.mdFor(pack.complete, this.tutorial.mode) || `<p>${t('guide.packDone')}</p>`,
+      confirmText: t('btn.exitTutorial'),
+    })
+    this.close()
   }
 
   /** Hand the journey on show over to the coach: the drawer goes, the coach comes. */
@@ -127,7 +273,7 @@ export class Learn {
 
   /** Slide the drawer out, and take the student into it. */
   expand() {
-    if (!this.isOpen) return
+    if (!this.isOpen || this.guided) return
     this._setDrawer(true)
     this.pane.querySelector('.learn-body')?.focus({ preventScroll: true })
   }
@@ -150,6 +296,19 @@ export class Learn {
 
   _drawRail() {
     if (!this.isOpen || !this.tutorial.pack) return
+    if (this.guided) {
+      const item = this.tutorial.objective
+      if (item?.type !== 'journey') return
+      const playing = this.journey.item === item && this.journey.running
+      const progress = playing ? [...this.journey.done] : this.tutorial.journeyProgress || []
+      return this.rail.renderGuided({
+        pack: this.tutorial.pack,
+        mission: this.tutorial.place.mission,
+        chapters: item.chapters,
+        states: chapterStates(item, progress, this.tutorial.mode),
+        current: playing && this.journey.index >= 0 ? this.journey.chapter : -1,
+      })
+    }
     this.rail.render({ pack: this.tutorial.pack, place: this.tutorial.place, finished: this.tutorial.finished, open: this.drawerOpen })
   }
 
@@ -244,8 +403,8 @@ export class Learn {
   async restore() {
     const saved = this._saved()
     if (saved.id) await this.open(saved.id, { quiet: true, drawer: saved.drawer !== false })
-    // A journey under way when the page went: its coach comes back at the step the student was on.
-    if (saved.id && saved.journey && this.tutorial.objective?.type === 'journey') this._startJourney(null)
+    // A journey under way when the page went: its coach comes back at the step the student was on (a guided pack's already has).
+    if (saved.id && saved.journey && !this.guided && this.tutorial.objective?.type === 'journey') this._startJourney(null)
   }
 
   /** Open a kept pack where the student left it, with the drawer out unless `drawer` is false. */
@@ -258,9 +417,17 @@ export class Learn {
     }
     await loadMarkdown()
     this.tutorial.finished = await this.library.finished(pack)
-    this.tutorial.show(pack, await this.library.place(id))
+    const place = await this.library.place(id)
+    this.journey.stop()
+    this.guided = isGuided(pack)
+    this.tutorial.show(pack, place)
     this._save({ id })
     this._setOpen(true)
+    // A guided pack has no drawer: the mission controller and its coach lead, from where the student left off.
+    if (this.guided) {
+      this._setDrawer(false)
+      return this._beginMission(place?.mission ?? null)
+    }
     this._setDrawer(drawer)
     this._watch()
   }
@@ -286,6 +453,7 @@ export class Learn {
     this._save({ journey: false })
     this._save({ id: null })
     this._setOpen(false)
+    this.guided = false
     this._watch()
   }
 
@@ -309,8 +477,11 @@ export class Learn {
     this.pane.hidden = !open
     this.railEl.hidden = !open
     this.workarea.dataset.learn = open ? 'open' : 'closed'
+    this.workarea.dataset.guided = String(open && this.guided)
     if (!open) delete this.workarea.dataset.drawer
     this.onResize()
+    // A guided pack has no drawer to close: the Learn button is the way out.
+    this.onOpen(open && this.guided)
   }
 
   _saved() {

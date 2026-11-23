@@ -80,6 +80,18 @@ for (const name of ENGINES) {
     await page.click('#btn-learn')
     await page.waitForFunction(() => document.getElementById('modal')?.open)
     await page.click(`#modal [data-builtin="${pack.id}"]`)
+    // A guided pack (every mission one journey) has no drawer: its controller asks how the
+    // missions run, brings the board up, and opens the first mission (tests/learn-guided.mjs).
+    if (pack.missions.every((mi) => mi.flow.length === 1 && mi.flow[0].type === 'journey')) {
+      const asked = await page.waitForSelector('#modal[open] button[value="choice:sim"]', { timeout: 60000 }).then(() => true, () => false)
+      if (asked) await page.click('#modal[open] button[value="choice:sim"]')
+      const opened = await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 60000 }).then(() => true, () => false)
+      const sim = await page.evaluate((board) => window.openCodeBot.device.simulating && window.openCodeBot.device.targetId === board, pack.board)
+      if (!asked || !opened || !sim) problems.push(`${pack.id}: guided: asked ${asked}, opening card ${opened}, ${pack.board} in the simulator ${sim}`)
+      else console.log(`  ok  guided: asked how it runs, ${pack.board} in the simulator, the first mission's opening card`)
+      await context.close()
+      continue
+    }
     await page.waitForFunction((t) => document.querySelector('#learn-pane .learn-pack-title')?.textContent === t, pack.title, { timeout: 60000 })
     await page.click('#btn-sim')
     await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 60000 })

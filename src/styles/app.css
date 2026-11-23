@@ -180,6 +180,8 @@ kbd {
 /* Gold, the brand's accent, with dark ink: white on gold falls short of 4.5:1. */
 .btn-learn { background: var(--gold); color: var(--block-ink); box-shadow: 0 3px 0 var(--gold-dark); }
 .btn-learn:active:not(:disabled) { box-shadow: 0 0 0 var(--gold-dark); }
+/* In a tutorial, Learn is its way out: quieter, outlined in gold. */
+.btn-learn[data-open='true'] { background: var(--surface); box-shadow: inset 0 0 0 2px var(--gold-dark), 0 3px 0 var(--gold-dark); }
 .btn-connect { background: var(--sky-strong); box-shadow: 0 3px 0 var(--sky-strong-dark); }
 .btn-connect:active:not(:disabled) { box-shadow: 0 0 0 var(--sky-strong-dark); }
 .btn-connect[data-connected='true'] { background: var(--paper-2); color: var(--ink); box-shadow: 0 3px 0 var(--line-strong); }
@@ -441,6 +443,9 @@ kbd {
 .rail-step:hover, .rail-mission:hover { border-color: var(--green); }
 .rail-step[data-done='true'] { background: var(--green-strong); border-color: var(--green-strong); color: #fff; }
 .rail-step[aria-current='step'] { border-color: var(--green-deep); box-shadow: 0 0 0 3px var(--green-soft); }
+.rail-step[data-locked='true'] { background: var(--paper-2); border-style: dashed; color: var(--ink-soft); font-size: 13px; }
+/* A guided pack has no drawer: the coach and the rail lead. */
+.workarea[data-guided='true'] .learn-pane { display: none; }
 .rail-spacer { flex: 1 1 auto; }
 .rail-chevron {
   width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface);
@@ -913,6 +918,13 @@ kbd {
 .modal p, .modal li { line-height: 1.6; }
 .modal ul { padding-left: 20px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.modal-choices { flex-wrap: wrap; }
+.save-as { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; font-weight: 700; }
+.save-as input { flex: 1 1 180px; min-width: 0; padding: 8px 10px; border: 2px solid var(--line-strong); border-radius: var(--r-xs); font: 600 15px/1.2 var(--font-mono, monospace); color: var(--ink); background: var(--surface); }
+.save-as input:focus { outline: 3px solid var(--green-soft); border-color: var(--green-deep); }
+.guide-missions .ex-item[data-state='locked'] { opacity: 0.75; border-style: dashed; }
+.guide-missions .ex-item[aria-current='true'] { border-color: var(--green-deep); box-shadow: 0 0 0 3px var(--green-soft); }
+.guide-runs { margin: 12px 0 0; color: var(--ink-soft); font-size: 14px; }
 
 /* The example picker: a board switch, then a numbered list, easiest first. */
 .ex-boards { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
@@ -1102,6 +1114,7 @@ kbd {
 .journey-say p { margin: 0 0 0.4em; }
 .journey-say p:last-child { margin-bottom: 0; }
 .journey-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; }
+.journey-before { color: var(--green-deep); font-weight: 700; font-size: 14px; margin-left: auto; }
 .journey-link { text-decoration: underline; font-weight: 700; padding: 6px 2px; min-height: 32px; }
 .journey-hint { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 14px; }
 .journey-answers { display: grid; gap: 6px; margin-top: 6px; }

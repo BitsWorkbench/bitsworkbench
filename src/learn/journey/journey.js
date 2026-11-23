@@ -14,23 +14,52 @@ import { Coach } from './coach.js'
 
 const FINISHED = '$done' // in a journey's progress: the finish was reached
 
+/** A title as a Python file's stem: "Light Show" is light_show. */
+const stemOf = (title) => {
+  const s = title.toLowerCase().normalize('NFKD').replace(/[^\w\s]/g, '').trim().replace(/\s+/g, '_')
+  return /^[a-z_]/.test(s) ? s : `mission_${s}`
+}
+
+/**
+ * Where a journey's chapter is worked (docs/mission-packs.md, "Journeys"):
+ * { folder, file }. The journey's files live in a folder of their own, named
+ * for its file (light_show/), so Run never takes another program's files to
+ * the board; its file is its `file`, or named for its title (light_show.py);
+ * a chapter with a `file` of its own is worked in that one, and so are the
+ * chapters after it.
+ */
+export function fileOf(item, chapter) {
+  const base = item.file || `${stemOf(item.title)}.py`
+  let file = base
+  item.chapters.slice(0, chapter + 1).forEach((c) => (file = c.file || file))
+  return { folder: base.replace(/\.py$/i, ''), file }
+}
+
 export class Journey extends EventTarget {
   /**
    * `places`: a Places; `md(text, mode)`: Markdown to HTML; `watcher`: a
    * GoalWatcher of its own; `library`: where progress is kept; `side()`:
    * { sim, terminal } boxes on the page (either may be null);
-   * `startOver(python)`: put a chapter's program in place of the student's,
-   * theirs kept (it may ask them first); true once done, false if they kept working.
-   * Fires `finished` when the student leaves the finish card, `exit` when they stop.
+   * `useFile({ folder, file, code, carry })`: work in a journey's file
+   * (fileOf), opened; made from `code` when it is new, or, with no code, from
+   * the program on show when `carry`. Given `code` and a file of that name
+   * holding something else, the student chooses: save theirs under another
+   * name, or replace it. True once the file is open, false if they did neither.
+   * `stage(step)`: put what a step points at on screen (the simulator for
+   * null: an opening, a question, the finish); the mission controller is in
+   * charge of the screen while a step is up.
+   * Fires `finished` when the student leaves the finish card, `exit` when they
+   * stop, and `place` whenever the step on show changes.
    */
-  constructor({ places, md, watcher, library, side, startOver, effects = null }) {
+  constructor({ places, md, watcher, library, side, useFile, effects = null, stage = null }) {
     super()
+    this.stage = stage
     this.places = places
     this.md = md
     this.watcher = watcher
     this.library = library
     this.side = side
-    this.startOver = startOver
+    this.useFile = useFile
     this.effects = effects
     this.coach = null
     this.running = false
@@ -38,13 +67,12 @@ export class Journey extends EventTarget {
   }
 
   /**
-   * Begin, or carry on, `item` of `pack` in `mode`; `chapter` (an index)
-   * starts that chapter over. False when the student, asked whether to
-   * replace their program with the chapter's, kept working: nothing changed.
+   * Begin, or carry on, `item` of `pack` in `mode`, in its file; `chapter`
+   * (an index) starts that chapter over from its program. False when the
+   * student, asked about a file of that name, chose neither: nothing changed.
    */
   async start(pack, item, mode, { chapter = null } = {}) {
-    const code = chapter !== null && item.chapters[chapter]?.code
-    if (code && !(await this.startOver(code))) return false
+    if (chapter !== null && !(await this.useFile({ ...fileOf(item, chapter), code: item.chapters[chapter]?.code ?? null, carry: true }))) return false
     this.stop()
     this.pack = pack
     this.item = item
@@ -64,6 +92,8 @@ export class Journey extends EventTarget {
       return true
     }
     const next = this.steps.findIndex((s) => !this.done.has(s.id))
+    // Carrying on: in the file of the chapter the student is in (made from the program on show, for work from before journeys had files).
+    if (next !== 0) await this.useFile({ ...fileOf(item, next === -1 ? item.chapters.length - 1 : this.steps[next].chapter), carry: true })
     if (next === -1) await this._finish()
     else if (next === 0) this._opening()
     else this._go(next)
@@ -96,10 +126,39 @@ export class Journey extends EventTarget {
     }
   }
 
+  /** The chapter the step on show belongs to (0 at the opening, the last at the finish). */
+  get chapter() {
+    if (!this.steps?.length) return 0
+    return this.steps[Math.max(0, Math.min(this.index ?? 0, this.steps.length - 1))].chapter
+  }
+
+  /**
+   * Play chapter `i` from its first step, progress kept: steps done before
+   * show as done, with Next. A chapter reached before opens its file as the
+   * student left it; one not reached starts from its program.
+   */
+  async goChapter(i) {
+    const first = this.steps.findIndex((s) => s.chapter === i)
+    if (first === -1) return
+    const reached = this.steps.some((s) => s.chapter === i && this.done.has(s.id))
+    const code = reached ? null : (this.item.chapters[i].code ?? null)
+    if (!(await this.useFile({ ...fileOf(this.item, i), code, carry: true }))) return
+    if (this.paused) return
+    this._go(first)
+  }
+
+  /** Keep a mark in the journey's progress (guide.js: what the student unlocked). */
+  async mark(name) {
+    this.done.add(name)
+    await this._save()
+  }
+
   // ------------------------------------------------------------ steps
 
   _opening() {
     this.index = -1
+    this.stage?.(null)
+    this.dispatchEvent(new CustomEvent('place'))
     this._strip()
     this.coach.centre(`<h2 tabindex="-1">${esc(this.item.title)}</h2>${this.md(this.item.promise, this.mode)}
       <div class="journey-row"><button type="button" class="btn" data-journey="begin">${esc(t('journey.begin'))}</button></div>`, this.side().sim)
@@ -114,9 +173,14 @@ export class Journey extends EventTarget {
     this.coach.card(null)
     const s = this.steps[i]
     if (!s) return this._finish()
+    this.dispatchEvent(new CustomEvent('place'))
+    // What the step points at, on screen first: the controller, not the student, has the screen now.
+    this.stage?.(s.ask ? null : s)
+    if (!s.ask) this.places.reveal?.(s.point)
     this._strip()
     if (s.ask) return this._ask()
     this.coach.step({
+      doneBefore: this.done.has(s.id),
       index: i,
       count: this.steps.length,
       html: this.md(s.say, this.mode),
@@ -135,9 +199,14 @@ export class Journey extends EventTarget {
 
   /** Where a step points now: its place; a palette block's category while that is closed. */
   _locate(s) {
-    const found = this.places.resolve(s.point)
-    if (found || !s.palette) return found
-    return this.places.resolve(`palette:${s.palette}`)
+    const found = this.places.resolve(s.point) || (s.palette ? this.places.resolve(`palette:${s.palette}`) : null)
+    // Gone from the screen (the simulator closed, a block scrolled away): put it back, now and then.
+    if (!found && s.point && !this.coach?.good && Date.now() - (this._staged ?? 0) > 1500) {
+      this._staged = Date.now()
+      this.stage?.(s)
+      this.places.reveal?.(s.point)
+    }
+    return found
   }
 
   _ask() {
@@ -178,6 +247,8 @@ export class Journey extends EventTarget {
     this.watcher.stop()
     this.done.add(FINISHED)
     await this._save()
+    this.stage?.(null)
+    this.dispatchEvent(new CustomEvent('place'))
     this._strip()
     this.coach.centre(`<h2 tabindex="-1">🎉 ${esc(t('journey.finished'))}</h2>${this.md(this.item.complete || '', this.mode)}
       <div class="journey-row"><button type="button" class="btn" data-journey="finish">${esc(t('journey.next'))}</button></div>`, this.side().sim)
@@ -206,16 +277,22 @@ export class Journey extends EventTarget {
     const s = this.steps[this.index]
     switch (action) {
       case 'begin': {
-        // The journey starts from its first chapter's program, the student's kept if it differs.
-        const code = this.item.chapters[0]?.code
-        if (code && !(await this.startOver(code))) return
+        // The journey starts in its file, from its first chapter's program.
+        if (!(await this.useFile({ ...fileOf(this.item, 0), code: this.item.chapters[0]?.code ?? null, carry: true }))) return
         return this._go(0)
       }
       case 'next': {
-        // Into a `fresh` chapter: it starts from its own program, the student's kept if it differs.
+        // Into a chapter with a file of its own, or a `fresh` one: it starts from its own program there.
         const s = this.steps[this.index + 1]
-        const c = s && s.chapter !== this.steps[this.index]?.chapter && this.item.chapters[s.chapter]
-        if (c?.fresh && c.code) await this.startOver(c.code)
+        const from = this.steps[this.index]?.chapter
+        const c = s && s.chapter !== from && this.item.chapters[s.chapter]
+        if (c && (c.file || c.fresh)) {
+          const there = fileOf(this.item, s.chapter)
+          // Reached before (a student going over it again): their file as they left it.
+          const reached = this.steps.some((x) => x.chapter === s.chapter && this.done.has(x.id))
+          const code = c.fresh && !reached ? (c.code ?? null) : null
+          if (!(await this.useFile({ ...there, code, carry: true }))) return
+        }
         return this._go(this.index + 1)
       }
       case 'skip':
@@ -224,7 +301,7 @@ export class Journey extends EventTarget {
         return this._go(this.index + 1)
       case 'hint':
         this.hint = true
-        return this.coach.step({ index: this.index, count: this.steps.length, html: this.md(s.say, this.mode), locate: () => this._locate(s), hints: s.hints.length, hintShown: this.md(s.hints[0], this.mode), skippable: !!s.skippable, showMe: !!this.effects?.hasHelp?.(s), fresh: false })
+        return this.coach.step({ index: this.index, count: this.steps.length, html: this.md(s.say, this.mode), locate: () => this._locate(s), hints: s.hints.length, hintShown: this.md(s.hints[0], this.mode), skippable: !!s.skippable, showMe: !!this.effects?.hasHelp?.(s), fresh: false, doneBefore: this.done.has(s.id) })
       case 'show-me':
         return this.effects?.waiting?.(s, { again: true })
       case 'answer': {

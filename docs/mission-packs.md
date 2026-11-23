@@ -158,7 +158,8 @@ drawer puts the drawer away; leaving it, or finishing, brings the drawer back at
 |---|---|---|
 | `id`, `title` | yes | Text. |
 | `promise` | yes | Markdown: shown on the opening card and in the drawer. |
-| `chapters` | yes | The steps in chapters, each `{ id, title, code, steps }`. `code` (optional) is the program at the chapter's start, the same in blocks and Python: a student can start a chapter over from it, from the drawer, and the journey begins from the first chapter's. Their own program is never lost: when it differs from `code`, they are asked, and it is kept first as a file beside theirs (`main_saved.py`). `"fresh": true` on a chapter with `code`: reaching it from the chapter before also starts from its `code`, the same way; for a chapter that brings in code the steps before did not build (a variable, a new program). Otherwise the student carries on with their own program. |
+| `file` | no | The Python file the journey is worked in, like `light_show.py`; left out, it is named for the title. It sits in a folder of its own named the same (`light_show/`), in the student's files (this browser, or their folder on the computer), so Run never takes another program's files to the board. A name Python can import, never `main.py`, `boot.py` or `code.py`. |
+| `chapters` | yes | The steps in chapters, each `{ id, title, code, file, steps }`. `code` (optional) is the program at the chapter's start, the same in blocks and Python: the journey begins in its file from the first chapter's, and a chapter can be started over from its own. `file` (optional): this chapter and those after it are worked in a file of that name, in the journey's folder, made from the chapter's `code` (or the program so far). `"fresh": true` on a chapter with `code`: reaching it from the chapter before also starts from its `code`; for a chapter that brings in code the steps before did not build (a variable, a new program). Give a fresh chapter its own `file` and nothing is asked. Otherwise the student carries on with their own program. A student's work is never lost: a file is only ever replaced with `code` when it holds the same program, or after the student chooses to save theirs under another name or to replace it. |
 | `solution` | no | The capstone: the program at the end. The answer key, never shown. |
 | `complete` | no | Markdown on the finish card. |
 | `xp`, `board`, `sim` | no | As for an objective. |
@@ -194,6 +195,28 @@ expression, the simulated board's parts by the names `pick` uses.
 A journey plays in the mode the student starts it in. The program is the same in both, but
 each step's words and places belong to its mode, so switching mid-journey pauses the coach
 until the student switches back.
+
+## Guided packs
+
+A pack whose every mission is one journey is **guided**: it opens with no drawer, and the
+mission controller leads. Nothing in the pack says so; it is the shape of its missions.
+
+- **How it runs, once.** Opening the pack asks whether its missions run in the simulator or on
+  the student's board over USB, and remembers the answer for the pack (the missions list can
+  change it). The pack's board comes up at once, in the simulator or on USB, and nothing
+  asks to connect again.
+- **In tutorial mode.** The Learn button reads Exit tutorial, the way out at any time.
+  Progress stays for next time; a reload comes back to the step.
+- **The rail** shows the mission (its button opens the missions list) and its chapters as
+  numbered objectives: done, open, or locked. A done one can be visited again, its steps
+  marked done, with Next.
+- **In order, softly.** Missions and chapters open in order. Picking a locked one warns that
+  things may not work as expected, and offers to unlock the next one only.
+- **The controller has the screen.** Before each step it puts what the step points at in view:
+  the simulator back if the student stopped it, the side panel wide enough to see it, the
+  terminal open for a step about the terminal, a block scrolled into view, menus and the
+  files panel shut. A coach's ring never sits on something off the screen.
+- Finishing a mission opens the next one's card; after the last, the pack's `complete` words.
 
 ## Quizzes
 

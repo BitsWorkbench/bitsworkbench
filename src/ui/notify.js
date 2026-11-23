@@ -27,6 +27,40 @@ export function toast({ kind = 'info', title, detail } = {}) {
 }
 
 /**
+ * The dialog with a button per choice: resolves with the `value` of the one
+ * pressed, or null when it was closed another way (Escape). The `primary`
+ * choice is the green one, and takes the focus.
+ * @param {{title: string, bodyHtml: string, choices: {value: string, label: string, primary?: boolean}[]}} options
+ * @returns {Promise<string|null>}
+ */
+export function choose({ title, bodyHtml, choices }) {
+  const dialog = document.getElementById('modal')
+  dialog.innerHTML = `
+    <form method="dialog" class="modal-inner">
+      <h2></h2>
+      <div class="modal-body"></div>
+      <div class="modal-actions modal-choices"></div>
+    </form>`
+  dialog.querySelector('h2').textContent = title
+  dialog.querySelector('.modal-body').innerHTML = bodyHtml
+  const row = dialog.querySelector('.modal-actions')
+  for (const c of choices) {
+    const b = document.createElement('button')
+    b.className = c.primary ? 'btn' : 'btn btn-ghost'
+    b.value = `choice:${c.value}`
+    b.textContent = c.label
+    row.append(b)
+  }
+  // Escape leaves returnValue as the last dialog set it.
+  dialog.returnValue = ''
+  dialog.showModal()
+  row.querySelector('.btn:not(.btn-ghost)')?.focus()
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue.startsWith('choice:') ? dialog.returnValue.slice(7) : null), { once: true })
+  })
+}
+
+/**
  * @param {{title: string, bodyHtml: string, confirmText?: string,
  *          cancelText?: string}} options
  * @returns {Promise<boolean>} true when confirmed

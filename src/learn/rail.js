@@ -23,6 +23,7 @@ export class Rail extends EventTarget {
 
   /** Draw the rail for a pack at a place, `finished` its finished objectives by id, `open` the drawer's state. */
   render({ pack, place, finished, open }) {
+    this.guided = false
     this.place = place
     this.open = open
     const label = esc(t(open ? 'learn.hideMission' : 'learn.showMission'))
@@ -51,12 +52,41 @@ export class Rail extends EventTarget {
     this.root.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' })
   }
 
+  /**
+   * The rail of a guided pack (guide.js): the pack's button (its missions),
+   * the mission, and the mission's chapters as numbered objectives, each
+   * 'done', 'open' or 'locked', with `current` the one being played. Fires
+   * `missions`, and `chapter` with a chapter's index.
+   */
+  renderGuided({ pack, mission, chapters, states, current }) {
+    this.guided = true
+    const n = mission + 1
+    const count = chapters.length
+    const buttons = chapters
+      .map((c, i) => {
+        const s = states[i]
+        const name = t('learn.railStep', { step: i + 1, count, title: c.title }) + (s === 'done' ? ` ${t('learn.railDone')}` : s === 'locked' ? ` ${t('guide.locked')}` : '')
+        return `<li><button type="button" class="rail-step" data-rail-chapter="${i}" data-done="${s === 'done'}" data-locked="${s === 'locked'}" title="${esc(name)}" aria-label="${esc(name)}"${i === current ? ' aria-current="step"' : ''}>${s === 'locked' ? '<span aria-hidden="true">🔒</span>' : i + 1}</button></li>`
+      })
+      .join('')
+    const packLabel = esc(t('guide.packButton', { title: pack.title }))
+    const missionLabel = esc(t('guide.missionButton', { n, title: pack.missions[mission].title }))
+    this.root.innerHTML = `<button type="button" class="rail-toggle" data-rail="missions" title="${packLabel}" aria-label="${packLabel}"><span aria-hidden="true">🧭</span></button>
+      <button type="button" class="rail-mission" data-rail="missions" title="${missionLabel}" aria-label="${missionLabel}">${esc(t('learn.missionN', { n }))}</button>
+      <ol class="rail-steps" aria-label="${esc(t('guide.objectives'))}">${buttons}</ol>
+      <span class="rail-spacer"></span>`
+    this.root.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' })
+  }
+
   /** The button that opens and closes the drawer, for focus to come back to. */
   get toggleButton() {
     return this.root.querySelector('.rail-toggle')
   }
 
   _click(e) {
+    const chapter = e.target.closest('[data-rail-chapter]')
+    if (chapter) return this.dispatchEvent(new CustomEvent('chapter', { detail: Number(chapter.dataset.railChapter) }))
+    if (e.target.closest('[data-rail="missions"]')) return this.dispatchEvent(new Event('missions'))
     const el = e.target.closest('[data-rail], [data-rail-step]')
     if (!el) return
     if (el.dataset.rail === 'toggle') return this.dispatchEvent(new Event('toggle'))

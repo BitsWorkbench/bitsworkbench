@@ -24,6 +24,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
   Chrome and Edge, in a folder on the computer. Make, rename and delete files and
   folders; Run also puts a program's other `.py` files on the board, so it can
   import them.
+- A first program is `my_program.py`: `main.py` is only the board's name for the
+  program Run sends. Files made before keep their names.
 - Waits are in seconds; `change x by 1` writes `x += 1`.
 
 ### Boards and the simulator
@@ -49,6 +51,14 @@ The first public release, planned for December 1, 2026. Everything it holds:
 - Made for small screens: the mission slides out as a drawer over the simulator
   and terminal, from a narrow rail at the right edge that shows the mission's
   steps and which are done. Run puts the drawer away so the simulator is in view.
+- Guided missions (Python with CodeX): a guide points at each thing to do, with no
+  drawer. Choose once whether missions run in the simulator or on your board over
+  USB, and the board comes up by itself. Learn becomes Exit tutorial; the rail
+  shows the mission's objectives, done, open or locked, and a locked one can be
+  unlocked, with a warning. The guide puts the simulator and panels back where its
+  steps need them.
+- Each mission works in its own file, in a folder named for it: nothing of yours
+  is replaced unless you choose to save yours under another name or replace it.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with
   CodeBot, Coding with Robots, Python with CodeX, and Fly with Python.
 

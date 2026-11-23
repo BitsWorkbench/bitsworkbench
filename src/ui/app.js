@@ -8,7 +8,7 @@ import * as Blockly from 'blockly/core'
 import { BlockWorkspace, STARTER_PROJECTS, fileNameFor } from '../workspace/workspace.js'
 import { generatePython, generateWithLines, devicesUsed, boardOfPython } from '../blocks/index.js'
 import { TerminalPanel } from './terminal.js'
-import { toast, showModal } from './notify.js'
+import { toast, showModal, choose } from './notify.js'
 import { examplesFor, exampleProject, EXAMPLE_DEVICES } from '../examples/index.js'
 import { t, listOf, LANGUAGES, language, languageName, setLanguage } from '../i18n/index.js'
 import { DeviceSwitch } from '../sim/device-switch.js'
@@ -18,7 +18,7 @@ import { LazyPythonEditor } from '../editor/lazy-editor.js'
 import { SnippetPalette } from '../editor/palette.js'
 import { pythonToBlocks } from '../convert/to-blocks.js'
 import { createFileStores } from '../files/store.js'
-import { companionsOf, CopiedFiles } from '../files/companions.js'
+import { companionsOf, CopiedFiles, copyable } from '../files/companions.js'
 import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
@@ -36,6 +36,12 @@ const OPEN_FILE = 'opencodebot.openFile.v1'
 const LAYOUTS = 'opencodebot.layouts.v1'
 /** The panels as the student left them: { sim: was the simulator on, sideW / sideH: the side's width, or height on a narrow screen }. */
 const PANELS = 'opencodebot.panels.v1'
+/**
+ * A student's first file. main.py is only the board's name for the program
+ * Run sends; on the page a program is always a file of the student's own.
+ * Files made before (main.py included) keep their names.
+ */
+const FIRST_FILE = 'my_program.py'
 const TAB_LOCK = 'opencodebot.editing'
 /** How many of a board's examples, easiest first, Learn shows as quick starts. */
 const QUICK_STARTS = 2
@@ -90,8 +96,11 @@ export class App {
       toPython: () => this.workspace.mode === 'text' || this._toText(),
       blocks: this.workspace,
       simView: () => this.device.sim.view ?? null,
-      startOver: (python) => this._startOver(python),
+      useFile: (where) => this._missionFile(where),
       switchMode: (mode) => ((mode === 'python') !== (this.workspace.mode === 'text') ? this._toggleView() : null),
+      prepare: (how) => this._prepareRun(how),
+      stage: (step, how) => this._stage(step, how),
+      onOpen: (open) => this._showLearnOpen(open),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
     this.trek = null
@@ -383,7 +392,8 @@ export class App {
   // ------------------------------------------------------------ chrome
 
   _bindChrome() {
-    $('btn-learn').addEventListener('click', () => this._openLearn())
+    // While a mission pack is open, Learn is the way out of it.
+    $('btn-learn').addEventListener('click', () => (this.learn.isOpen && this.learn.guided ? this.learn.close() : this._openLearn()))
     $('btn-connect').addEventListener('click', () => this._toggleConnect())
     $('btn-sim').addEventListener('click', () => this._toggleSimulate())
     $('btn-run').addEventListener('click', () => this._run())
@@ -468,6 +478,54 @@ export class App {
       this._fitTerm()
       this.terminal.resize()
     })
+  }
+
+  /** The Learn button says Exit tutorial while a guided mission pack is open, so it is plain the student is in one, and how to leave. */
+  _showLearnOpen(open) {
+    const b = $('btn-learn')
+    b.dataset.open = String(open)
+    b.querySelector('.btn-text').textContent = t(open ? 'btn.exitTutorial' : 'btn.learn')
+    b.querySelector('.btn-emoji').textContent = open ? '🚪' : '🧭'
+    b.title = t(open ? 'btn.exitTutorialTitle' : 'btn.learnTitle')
+  }
+
+  /**
+   * A guided mission's board, as the student chose to run it: `runOn` 'sim',
+   * the mission's board in the simulator (a board already on USB is left as
+   * it is: it is what the student has); 'usb', their board connected. False
+   * when the board on USB did not connect.
+   */
+  async _prepareRun({ board, runOn }) {
+    if (runOn === 'usb') {
+      if (this.device.isConnected && !this.device.simulating) return true
+      if (this.device.simulating) await this.device.disconnect()
+      const ok = await this.device.connect()
+      this._refreshSimButton()
+      return ok
+    }
+    if (this.device.isConnected && !this.device.simulating) return true
+    if (board && this.workspace.targetId !== board) await this._pickTarget(board)
+    if (!this.device.simulating) await this._toggleSimulate()
+    return this.device.simulating
+  }
+
+  /**
+   * Before a guided step: what it points at, on screen. The files panel and
+   * menus shut; the simulator back if the student chose it and it went; the
+   * side wide enough to see it; the terminal open when the step is about it.
+   * `step` null is a card over the simulator.
+   */
+  _stage(step, { board, runOn }) {
+    if (!$('files-panel').hidden) this._toggleFiles(false)
+    this._togglePopover($('device-chip'), $('device-menu'), false)
+    this._togglePopover($('btn-menu'), $('app-menu'), false)
+    const usb = this.device.isConnected && !this.device.simulating
+    if (runOn === 'sim' && !usb && !this._staging && (!this.device.simulating || this.device.targetId !== board)) {
+      this._staging = this._prepareRun({ board, runOn }).finally(() => (this._staging = null))
+    }
+    const kind = (step?.point || 'sim').split(':')[0]
+    if (['sim', 'part', 'terminal'].includes(kind)) this._roomForSide(kind)
+    if (kind === 'terminal' && !this.termOpen) this._setTermOpen(true)
   }
 
   _togglePopover(button, panel, force) {
@@ -636,6 +694,22 @@ export class App {
       if (!vertical()) return
       const want = workarea.getBoundingClientRect().height * 0.6
       if (sideNow() < want) setSide(want)
+    }
+
+    // A guided step about the simulator or the terminal: the side wide enough
+    // to see them (not kept as the student's choice), and the simulator at least
+    // as tall as the terminal when the step is about the board.
+    this._roomForSide = (kind) => {
+      const rect = workarea.getBoundingClientRect()
+      if (vertical()) this._roomForSim()
+      else if (sideNow() < Math.max(380, rect.width * 0.34)) setSide(Math.max(380, rect.width * 0.34))
+      if (kind !== 'terminal' && this.termOpen && this.device.simulating) {
+        const room = $('side-pane').getBoundingClientRect().height
+        if (this.termHeight > room * 0.45) {
+          this.termHeight = Math.round(room * 0.4)
+          this._fitTerm()
+        }
+      }
     }
   }
 
@@ -851,55 +925,122 @@ export class App {
   }
 
   /**
-   * A journey's chapter started over: its program `python` replaces the
-   * student's, which is never lost. When theirs is already the chapter's
-   * start, it is simply loaded; otherwise the student is asked, and theirs is
-   * kept first as a file beside the open one (main_saved.py, main_saved_2.py...),
-   * which they can open again from Files. True when the program was replaced.
+   * Work in a journey's file (journey.js, fileOf): `folder`/`file` in the
+   * store the student works in (their folder on the computer, else this
+   * browser), opened, the file before it saved first. A new file is made from
+   * `code`, or with none from the program on show when `carry`. A file there
+   * already opens as the student left it, unless `code` is given and the file
+   * holds something else: then they choose to save theirs under another name
+   * (offered, and theirs to change) or replace it with `code`. Nothing of
+   * theirs is lost without that choice. True once the file is open.
    */
-  async _startOver(python) {
-    // A program blocks cannot show is not loaded in blocks: nothing is replaced.
-    if (this.workspace.mode !== 'text' && !this.blocksFromPython(python).ok) {
-      toast({ kind: 'error', title: t('journey.overFailed') })
-      return false
-    }
-    const now = this._currentPython()
-    if (sameProgram(now, python)) return this._loadProgram(python)
+  _missionFile(where) {
+    // One at a time: a second (a quick click on the rail) waits for the first, so each sees the file open as it is.
+    const run = (this._missionTurn || Promise.resolve()).then(() => this._missionFileNow(where))
+    this._missionTurn = run.catch(() => {})
+    return run
+  }
+
+  async _missionFileNow({ folder, file, code = null, carry = false }) {
     if (!this._canWrite()) return false
-    const open = this.openFile ?? { store: 'browser', path: 'main.py' }
-    // The open file's own store (its folder, reopened if it can be); none, and nothing is replaced.
-    const store = await this._storeFor(open, true)
-    if (!store) {
-      toast({ kind: 'error', title: t('journey.overFailed'), detail: t('files.reopenDetail', { folder: open.folder }) })
+    // A program blocks cannot show is not loaded in blocks: nothing changes.
+    if (code !== null && this.workspace.mode !== 'text' && !this.blocksFromPython(code).ok) {
+      toast({ kind: 'error', title: t('missionFile.failed', { name: file }) })
       return false
     }
-    const slash = open.path.lastIndexOf('/') + 1
-    const stem = open.path.slice(slash).replace(/\.py$/i, '')
-    let path
-    // Letters, digits and _ only: a board takes a program's other files by names Python can import.
-    for (let n = 1; !path || (await store.exists(path)); n++) path = `${open.path.slice(0, slash)}${stem}_${t('journey.keptSuffix')}${n > 1 ? `_${n}` : ''}.py`
-    const name = baseName(path)
-    const ok = await showModal({
-      title: t('journey.overTitle'),
-      bodyHtml: t('journey.overBodyHtml', { name: esc(name) }),
-      confirmText: t('journey.overConfirm'),
-      cancelText: t('journey.overCancel'),
-    })
-    if (!ok) return false
-    // In turn with saves, renames and deletes, so none of them crosses the copy being kept.
-    const kept = await this._inTurn(async () => {
+    const f = this.openFile
+    const kind = f?.store === 'folder' && this.stores.folder?.name === f.folder ? 'folder' : 'browser'
+    const store = this.stores[kind]
+    const path = `${folder}/${file}`
+    const open = f?.store === kind && f.path === path
+    const fail = (err) => {
+      toast({ kind: 'error', title: t('missionFile.failed', { name: file }), detail: err?.message })
+      return false
+    }
+    let text = open ? this._currentPython() : null
+    if (!open) {
       try {
-        await store.write(path, now)
+        text = await this._inTurn(async () => ((await store.exists(path)) ? store.read(path) : null))
+      } catch (err) {
+        return fail(err)
+      }
+    }
+    if (text === null) {
+      const start = code ?? (carry ? this._currentPython() : '')
+      const made = await this._inTurn(async () => {
+        try {
+          if (!(await store.exists(folder))) await store.mkdir(folder)
+          await store.write(path, start)
+          return true
+        } catch (err) {
+          return fail(err)
+        }
+      })
+      return made && this._openFile(kind, path, start)
+    }
+    if (code === null || sameProgram(text, code)) return open || this._openFile(kind, path, text)
+
+    // A file of that name holds something else: the student's choice.
+    const other = await this._freeName(store, folder, file)
+    const how = await choose({
+      title: t('missionFile.title', { name: file }),
+      bodyHtml: `${t('missionFile.bodyHtml', { name: esc(file) })}
+        <label class="save-as"><span>${esc(t('missionFile.newName'))}</span> <input id="mission-save-as" type="text" value="${esc(other)}" spellcheck="false" autocomplete="off"></label>`,
+      choices: [
+        { value: 'save', label: t('missionFile.saveAs'), primary: true },
+        { value: 'replace', label: t('missionFile.replace') },
+      ],
+    })
+    if (!how) return false
+    if (how === 'save') {
+      const typed = document.getElementById('mission-save-as')?.value ?? ''
+      let name = pythonName(typed) || other
+      if (name === file || (await store.exists(`${folder}/${name}`))) name = other
+      // Theirs moves to its new name, open or not, with its blocks' layout; then the name is free.
+      const moved = await this._renameEntry(kind, path, `${folder}/${name}`)
+      if (moved) return fail({ message: moved })
+      toast({ kind: 'info', title: t('missionFile.savedTitle', { name }), detail: t('missionFile.savedBody', { folder }) })
+      if (this.openFile?.store === kind && this.openFile.path === `${folder}/${name}`) {
+        // It was the open one: the mission's code goes into a new file of the old name, and that opens.
+        const made = await this._inTurn(async () => {
+          try {
+            await store.write(path, code)
+            return true
+          } catch (err) {
+            return fail(err)
+          }
+        })
+        return made && this._openFile(kind, path, code)
+      }
+    } else if (this.openFile?.store === kind && this.openFile.path === path) {
+      // Replaced, as they chose: the open file (still this one, checked after the question) takes the mission's program and saves itself.
+      return this._loadProgram(code)
+    }
+    const written = await this._inTurn(async () => {
+      try {
+        await store.write(path, code)
         return true
       } catch (err) {
-        toast({ kind: 'error', title: t('journey.keptFailed', { name }), detail: err.message })
-        return false
+        return fail(err)
       }
     })
-    if (!kept || !this._loadProgram(python)) return false
-    await this.filesPanel.render()
-    toast({ kind: 'info', title: t('journey.keptTitle', { name }), detail: t('journey.keptBody') })
-    return true
+    return written && this._openFile(kind, path, code)
+  }
+
+  /** Open a file whose text is known, the open one saved first; true once it is open. */
+  async _openFile(kind, path, text) {
+    const ok = await this._openRef({ store: kind, path }, { text })
+    if (!$('files-panel').hidden) await this._renderFiles()
+    return ok
+  }
+
+  /** A name like `file` not yet taken in `folder`, still one Python can import: light_show_2.py. */
+  async _freeName(store, folder, file) {
+    const stem = file.replace(/\.py$/i, '')
+    for (let n = 2; ; n++) {
+      const name = `${stem}_${n}.py`
+      if (!(await store.exists(`${folder}/${name}`))) return name
+    }
   }
 
   /** Replace the program with `python`, in the mode the student is in; false when blocks cannot show it (nothing changes). */
@@ -1011,9 +1152,9 @@ export class App {
     this._claimTab()
   }
 
-  /** The first time: the program as it is becomes main.py in this browser. */
+  /** The first time: the program as it is becomes my_program.py in this browser. */
   async _startFile() {
-    const path = await this._freePath(this.stores.browser, '', 'main.py')
+    const path = await this._freePath(this.stores.browser, '', FIRST_FILE)
     const text = this._currentPython()
     let saved
     try {
@@ -1346,10 +1487,10 @@ export class App {
       return open
     })
     if (gone) {
-      // The open file went: work on another Python file there, or a new main.py.
+      // The open file went: work on another Python file there, or a new my_program.py.
       const next = (await store.list('')).find((e) => e.kind === 'file' && /\.py$/i.test(e.name))
       if (next) await this._openRef({ store: storeKind, path: next.path })
-      else await this._createEntry(storeKind, await this._freePath(store, '', 'main.py'), 'file')
+      else await this._createEntry(storeKind, await this._freePath(store, '', FIRST_FILE), 'file')
     }
     await this._renderFiles()
   }
@@ -1691,6 +1832,13 @@ function keepPanels(change) {
   } catch {
     // storage blocked: the panels start as new next time
   }
+}
+
+/** What a student typed as a file's name, as one Python can import and Run may copy ("my game" is my_game.py); '' if none is left. */
+function pythonName(typed) {
+  const stem = typed.trim().replace(/\.py$/i, '').replace(/\W+/g, '_').replace(/^_+|_+$/g, '')
+  const name = stem && `${/^\d/.test(stem) ? `_${stem}` : stem}.py`
+  return name && copyable(name) ? name : ''
 }
 
 /** Boards' names as a list: "CodeX and CodeAIR". */

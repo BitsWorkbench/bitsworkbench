@@ -191,6 +191,12 @@ class Checker {
     if (risk) this.problem(at, `could take forever to match: it has ${risk}`)
   }
 
+  /** A journey's file name: one Python can import, and not one the board keeps for itself. */
+  pyFile(v, at) {
+    if (typeof v !== 'string' || !/^[A-Za-z_]\w*\.py$/.test(v)) return this.problem(at, 'should be a Python file name, like light_show.py')
+    if (['main', 'boot', 'code', 'safemode'].includes(v.slice(0, -3).toLowerCase())) this.problem(at, `${v} is the board's own name: pick another`)
+  }
+
   python(v, at) {
     if (typeof v !== 'string') return this.problem(at, 'should be Python, as text')
     const { root } = tree(v)
@@ -295,6 +301,7 @@ class Checker {
       xp: [this.whole, false],
       board: [(b, where) => this.oneOf(b, where, BOARDS), false],
       promise: this.md,
+      file: [this.pyFile, false],
       chapters: (c, where) => this.list(c, where, this.chapter),
       solution: [this.python, false],
       complete: [this.md, false],
@@ -308,6 +315,7 @@ class Checker {
       title: this.text,
       code: [this.python, false],
       fresh: [this.yes, false],
+      file: [this.pyFile, false],
       steps: (s, where) => this.list(s, where, this.journeyStep),
     })
     if (v?.fresh && !v.code) this.problem(`${at}.fresh`, 'needs the chapter\'s code to start from')
