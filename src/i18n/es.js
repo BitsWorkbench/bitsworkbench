@@ -205,21 +205,16 @@ export default {
   'browser.noSerial': 'Este navegador no es compatible con Web Serial, así que {app} no puede comunicarse con tu dispositivo.',
   'browser.noSerialHint': 'Igual puedes armar bloques y descargar el Python. Chrome o Edge en una computadora sí se conectan.',
   'welcome.title': '¡Bienvenido a {app}!',
+  'welcome.backTitle': 'Bienvenido de nuevo a {app}',
   'welcome.confirm': '¡Vamos!',
+  'welcome.resume': 'Continuar',
+  'welcome.demo': '¡Prueba una demostración!',
   'welcome.bodyHtml': `
-    <p>¡Hola! Con {app} puedes crear programas para tu dispositivo de Firia Labs
-    uniendo bloques. No necesitas escribir nada, pero el Python de verdad
-    siempre está a un clic de <strong>🐍 Python</strong> (sobre tu programa, a la derecha) si quieres echar un vistazo.</p>
-    <ol>
-      <li><strong>Elige tu dispositivo</strong> arriba: CodeBot, CodeX o CodeAIR.</li>
-      <li><strong>Conéctalo</strong> con un cable USB y presiona <strong>Conectar</strong>.</li>
-      <li><strong>Arrastra algunos bloques</strong> y luego presiona <strong>Ejecutar</strong>.</li>
-    </ol>
-    <p><strong>¿No tienes un dispositivo a mano?</strong> Presiona <strong>🎮 Simular</strong>
-    para ejecutar tu programa en un dispositivo simulado, sin cable. Para empezar con un programa
-    ya hecho, abre el menú <strong>⋯</strong> y elige <strong>Empezar con un ejemplo</strong>.</p>
-    <p>Nada de lo que hagas aquí sale de tu computadora, y una vez que esta página
-    se carga, sigue funcionando sin internet.</p>`,
+    <ul class="welcome-list">
+      <li>Programa con bloques o con Python, como prefieras.</li>
+      <li>Ejecútalo en un dispositivo real por USB, o en uno simulado aquí mismo en la pantalla.</li>
+      <li>Gratis y de código abierto, de Firia Labs. Hecho para CodeBot, CodeX y CodeAIR, y abierto a dispositivos de la comunidad.</li>
+    </ul>`,
   'help.bodyHtml': `
     <h3>Cómo conectarte</h3>
     <ul>
@@ -489,6 +484,7 @@ export default {
   'guide.objectives': "Objetivos",
   'guide.packDoneTitle': "¡Terminaste {title}!",
   'guide.packDone': "Todas las misiones están hechas. ¡Bien hecho!",
+  'guide.seePython': "🐍 Verlo en Python",
   'learn.goals': 'Metas',
   'learn.goalMet': 'Hecho:',
   'learn.goalOpen': 'Por hacer:',

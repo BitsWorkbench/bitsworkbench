@@ -46,7 +46,7 @@ console.log('The app')
 await page.goto(`${BASE}?device=loopback&lang=en`, { waitUntil: 'networkidle' })
 await page.evaluate(() => {
   localStorage.clear()
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
   localStorage.setItem('opencodebot-boards', JSON.stringify([{ kind: 'codebot', code: 'print(1)' }]))
 })
@@ -81,7 +81,7 @@ console.log('No WebGL')
     HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
       return /webgl/.test(type) ? null : get.call(this, type, ...rest)
     }
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   const p = await noGL.newPage()

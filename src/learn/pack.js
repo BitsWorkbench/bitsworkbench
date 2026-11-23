@@ -41,6 +41,7 @@ export function readPack(text) {
     complete: [c.md, false],
     board: (v, at) => c.oneOf(v, at, BOARDS),
     licence: [c.text, false],
+    runs: [(v, at) => c.oneOf(v, at, ['sim', 'usb']), false],
     avatar: [c.asset, false],
     assets: [c.assets, false],
     missions: (v, at) => c.list(v, at, c.mission),

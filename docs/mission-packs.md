@@ -39,6 +39,7 @@ once a pack is in use.
 | `overview`, `complete` | no | Markdown. |
 | `board` | yes | `codebot`, `codex` or `codeair`: the board an objective runs on unless it names its own. The student runs it in the simulator or on a board over USB. |
 | `licence` | no | Text: who owns the pack and on what terms it may be shared. Shown, small, under the pack's missions. |
+| `runs` | no | `sim` or `usb`: a pack made for one way of running, so a guided pack does not ask (the demo is `sim`). Left out, the student chooses. |
 | `avatar` | no | The name of an image in `assets`. |
 | `assets` | no | Images the Markdown and avatars use, by name: `data:` URLs of PNG, JPEG, GIF or WebP. A pack is one file, so its pictures travel inside it. |
 | `missions` | yes | The missions, in order. |
@@ -216,7 +217,12 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   the simulator back if the student stopped it, the side panel wide enough to see it, the
   terminal open for a step about the terminal, a block scrolled into view, menus and the
   files panel shut. A coach's ring never sits on something off the screen.
-- Finishing a mission opens the next one's card; after the last, the pack's `complete` words.
+- Finishing a mission opens the next one's card; after the last, the pack's `complete` words,
+  with a button to see the program in Python when the pack was played in blocks.
+
+**The demo.** The welcome's Try a Demo! opens `public/learn/demo/DEMO.json`, a guided pack of
+one CodeBot mission in blocks (`runs: sim`), always from its start. It is the app's own, under
+the app's MIT licence, and is not listed among Learn's packs.
 
 ## Quizzes
 

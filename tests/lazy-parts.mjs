@@ -53,7 +53,7 @@ async function open({ project = null, editor = 'normal' } = {}) {
     if (sessionStorage.getItem('lazy-parts.set')) return
     sessionStorage.setItem('lazy-parts.set', '1')
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
     if (p) localStorage.setItem('opencodebot.project.v1', JSON.stringify(p))
   }, project)

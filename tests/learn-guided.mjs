@@ -84,7 +84,7 @@ for (const [name, width, height, touch] of SIZES) {
   await page.goto(BASE, { waitUntil: 'networkidle' })
   // A CodeBot picked, and no simulator: the pack brings up its own board.
   await page.evaluate(() => {
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   await page.reload({ waitUntil: 'networkidle' })

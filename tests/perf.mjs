@@ -60,7 +60,7 @@ for (const kind of flight ? ['codebot', 'codeair'] : ['codebot']) {
   if (FALLBACK) await context.addInitScript(() => { delete WebAssembly.Suspending; delete WebAssembly.promising })
   const page = await context.newPage()
   await page.addInitScript((k) => {
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', k)
   }, kind)
   const cdp = await context.newCDPSession(page)

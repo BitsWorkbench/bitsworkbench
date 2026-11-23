@@ -51,7 +51,7 @@ async function fresh(p, folder) {
   await p.goto(URL_, { waitUntil: 'networkidle' })
   await p.evaluate(async (folder) => {
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
     await new Promise((r) => { const q = indexedDB.deleteDatabase('opencodebot-browser-files'); q.onsuccess = q.onerror = q.onblocked = r })
     await new Promise((r) => { const q = indexedDB.deleteDatabase('opencodebot-files'); q.onsuccess = q.onerror = q.onblocked = r })

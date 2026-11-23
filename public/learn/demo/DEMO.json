@@ -1,0 +1,71 @@
+{
+  "format": 1,
+  "id": "DEMO",
+  "title": "{app} demo",
+  "brief": "Drive CodeBot in the simulator, in a few minutes.",
+  "board": "codebot",
+  "runs": "sim",
+  "licence": "Part of {app}, MIT licensed.",
+  "complete": "**You coded a robot!** Every block you used is a line of Python, and the Python is what CodeBot runs. Want to see it?",
+  "missions": [
+    {
+      "id": "DEMO_Drive",
+      "title": "Drive CodeBot",
+      "brief": "Run a program, change it, run it again.",
+      "flow": [
+        {
+          "type": "journey",
+          "id": "DEMO_Drive_J",
+          "title": "Drive CodeBot",
+          "file": "demo.py",
+          "promise": "Meet CodeBot, a robot you code with blocks. In a few steps you will make it drive and light up, right here on screen.",
+          "chapters": [
+            {
+              "id": "DEMO_C1",
+              "title": "Drive",
+              "code": "from botcore import *\nimport time\n\nmotors.enable(True)\n\nmotors.run(LEFT, 50)\nmotors.run(RIGHT, 50)\ntime.sleep(1)\nmotors.run(LEFT, 0)\nmotors.run(RIGHT, 0)\n",
+              "steps": [
+                { "id": "DEMO_look", "say": "This is **CodeBot**, in the simulator. Drag it to look around.", "point": "sim", "do": { "event": "orbit" }, "skippable": true, "cheer": "Nice view!" },
+                { "id": "DEMO_run", "say": "These blocks are your program: they drive CodeBot forward for one second. Press **▶ Run**.", "point": "run", "do": { "runs": true }, "cheer": "It drove!" },
+                {
+                  "id": "DEMO_power",
+                  "say": "Click the **50** and make it **100**: full power.",
+                  "point": "field:time.sleep(...)",
+                  "do": { "has": "motors.run(LEFT, 100)" },
+                  "hints": ["The 50 is in the orange **drive** block. Click it, type 100, then click away."],
+                  "cheer": "Full power!"
+                },
+                { "id": "DEMO_run2", "say": "Press **▶ Run** again.", "point": "run", "do": { "runs": true }, "cheer": "Faster and further!" }
+              ]
+            },
+            {
+              "id": "DEMO_C2",
+              "title": "Lights",
+              "steps": [
+                { "id": "DEMO_palette", "say": "Blocks live in the palette. Open **Lights**.", "point": "palette:lights", "do": { "event": "palette", "name": "lights" } },
+                {
+                  "id": "DEMO_leds",
+                  "say": "Drag **turn all top LEDs on** under your drive block.",
+                  "point": "palette-item:leds.user(...)",
+                  "palette": "lights",
+                  "to": "after:time.sleep(...)",
+                  "do": { "has": "leds.user(...)" },
+                  "fx": ["ghost"],
+                  "cheer": "Snapped in."
+                },
+                { "id": "DEMO_run3", "say": "Run it: motion, then lights.", "point": "run", "do": { "runs": true }, "cheer": "Lights on!" },
+                {
+                  "id": "DEMO_ask",
+                  "ask": "Your blocks are a Python program underneath. Which line drives CodeBot?",
+                  "answers": [{ "a": "`leds.user(0xFF)`" }, { "a": "`motors.run(LEFT, 100)`", "correct": true }, { "a": "`import time`" }],
+                  "cheer": "Right: blocks in, Python out."
+                }
+              ]
+            }
+          ],
+          "complete": "CodeBot drove at full power and lit up, all from your blocks."
+        }
+      ]
+    }
+  ]
+}

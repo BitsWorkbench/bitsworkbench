@@ -99,7 +99,7 @@ page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 await page.goto(`${BASE}?device=loopback`, { waitUntil: 'networkidle' })
 await page.evaluate(async () => {
   localStorage.clear()
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
   await new Promise((r) => {
     const req = indexedDB.deleteDatabase('opencodebot-learn')

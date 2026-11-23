@@ -71,7 +71,7 @@ for (const [name, width, height, touch] of SIZES) {
   page.on('pageerror', (e) => problems.push(`${name}: page error: ${e.message}`))
   await page.goto(`${BASE}?device=loopback`, { waitUntil: 'networkidle' })
   await page.evaluate(() => {
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   await page.reload({ waitUntil: 'networkidle' })

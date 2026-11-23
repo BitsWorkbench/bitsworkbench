@@ -34,7 +34,7 @@ const check = (ok, label) => {
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
 // One context: the simulator's tab below sees the same files in this browser.
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-await context.addInitScript(() => localStorage.setItem('opencodebot.welcomed.v1', '1'))
+await context.addInitScript(() => localStorage.setItem('opencodebot.welcome.v1', 'off'))
 const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 

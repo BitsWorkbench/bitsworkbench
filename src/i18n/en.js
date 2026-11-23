@@ -210,21 +210,16 @@ export default {
   'browser.noSerial': 'This browser does not support Web Serial, so {app} cannot talk to your device.',
   'browser.noSerialHint': 'You can still build blocks and download the Python. Chrome or Edge on a computer will connect.',
   'welcome.title': 'Welcome to {app}!',
+  'welcome.backTitle': 'Welcome back to {app}',
   'welcome.confirm': "Let's go!",
+  'welcome.resume': 'Resume',
+  'welcome.demo': 'Try a Demo!',
   'welcome.bodyHtml': `
-    <p>Hi! {app} lets you build programs for your Firia Labs device by
-    snapping blocks together. No typing required, but the real Python is
-    always one press of <strong>🐍 Python</strong> (above your program, on the right) away if you want to peek.</p>
-    <ol>
-      <li><strong>Pick your device</strong> at the top: CodeBot, CodeX or CodeAIR.</li>
-      <li><strong>Plug it in</strong> with a USB cable and press <strong>Connect</strong>.</li>
-      <li><strong>Drag some blocks</strong>, then press <strong>Run</strong>.</li>
-    </ol>
-    <p><strong>No device with you?</strong> Press <strong>🎮 Simulate</strong> to run
-    your program on a simulated device, no cable needed. For a ready-made program to start
-    from, open the <strong>⋯</strong> menu and choose <strong>Start from an example</strong>.</p>
-    <p>Nothing you make here leaves your computer, and once this page has
-    loaded it keeps working without internet.</p>`,
+    <ul class="welcome-list">
+      <li>Code with Blocks or Python, your choice.</li>
+      <li>Run it on a real device over USB, or on a simulated one right on screen.</li>
+      <li>Free and open source, from Firia Labs. Made for CodeBot, CodeX and CodeAIR, and open to devices from the community.</li>
+    </ul>`,
   'help.bodyHtml': `
     <h3>Getting connected</h3>
     <ul>
@@ -492,6 +487,7 @@ export default {
   'guide.objectives': "Objectives",
   'guide.packDoneTitle': "You finished {title}!",
   'guide.packDone': "Every mission is done. Well done!",
+  'guide.seePython': "🐍 See it in Python",
   'learn.goals': 'Goals',
   'learn.goalMet': 'Done:',
   'learn.goalOpen': 'To do:',

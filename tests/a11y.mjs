@@ -161,7 +161,7 @@ await audit('welcome dialog')
 
 await page.evaluate(() => {
   localStorage.clear()
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
 })
 await page.reload({ waitUntil: 'networkidle' })
@@ -341,7 +341,7 @@ await audit('empty file')
 for (const [id, name] of [['codex', 'CodeX'], ['codeair', 'CodeAIR']]) {
   await page.evaluate((b) => {
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', b)
   }, id)
   await page.goto(`${BASE}?device=loopback&board=${id}`, { waitUntil: 'networkidle' })
@@ -351,7 +351,7 @@ for (const [id, name] of [['codex', 'CodeX'], ['codeair', 'CodeAIR']]) {
 }
 await page.evaluate(() => {
   localStorage.clear()
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
 })
 await page.goto(`${BASE}?device=loopback&board=codebot`, { waitUntil: 'networkidle' })

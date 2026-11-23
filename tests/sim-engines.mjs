@@ -49,7 +49,7 @@ async function openBoard(context, kind, touch) {
   page.on('pageerror', (e) => { if (!/^ResizeObserver loop/.test(e.message)) problems.push(`${kind}: page error: ${e.message}`) })
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`${kind}: console error: ${m.text()}`) })
   await page.addInitScript((k) => {
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', k)
     // A first visit: the simulator left on by the page before would come back by itself.
     localStorage.removeItem('opencodebot.panels.v1')
