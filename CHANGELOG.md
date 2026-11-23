@@ -37,6 +37,10 @@ The first public release, planned for December 1, 2026. Everything it holds:
 - A simulated CodeX plays its built-in sound files (`audio.mp3("sounds/welcome")`
   and the rest of its sounds/ folder), and the program waits while one plays.
 - One board at a time: picking another never loses the program.
+- The terminal ends at a `>>>` prompt once the simulator is ready and after each
+  program, so it is plain where to type Python.
+- The page comes back as it was left: the simulator, if it was on, and the size
+  of the side panel.
 
 ### Learn
 - Short examples for each board, easiest first, two of them as quick starts.
@@ -46,7 +50,7 @@ The first public release, planned for December 1, 2026. Everything it holds:
   and terminal, from a narrow rail at the right edge that shows the mission's
   steps and which are done. Run puts the drawer away so the simulator is in view.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with
-  CodeBot, Python with Robots, Python with CodeX, and Fly with Python.
+  CodeBot, Coding with Robots, Python with CodeX, and Fly with Python.
 
 ### Foundations
 - Accessibility: keyboard paths through the app, labelled controls, 4.5:1

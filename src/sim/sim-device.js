@@ -112,6 +112,7 @@ export class SimDevice extends EventTarget {
     const hello = kind.view === '3d' ? t('sim.helloInRoom', { device: this.target?.name, room: this._roomName() }) : t('sim.hello', { device: this.target?.name })
     this._emitText(`\x1b[32m${hello}\x1b[0m\r\n`)
     this._setState(State.READY, t('sim.ready'))
+    this._prompt()
     return true
   }
 
@@ -158,6 +159,9 @@ export class SimDevice extends EventTarget {
       await this.stop()
     }
     this._source = source             // the board's program, run again after a reset
+    // A program's output starts on a line of its own, not after the prompt.
+    if (this._atPrompt) this._emitText('\r\n')
+    this._atPrompt = false
     this._post({ t: 'run', source, stepFirst })
     this._setState(State.RUNNING, t('sim.running'))
     return true
@@ -265,7 +269,18 @@ export class SimDevice extends EventTarget {
   // The terminal: Ctrl-C stops a program; between programs, a live REPL.
   sendRaw(data) {
     const text = typeof data === 'string' ? data : new TextDecoder('latin1').decode(data)
+    this._atPrompt = false
     this._post({ t: 'stdin', text })
+  }
+
+  /**
+   * The `>>>` prompt, as a board shows it, so the terminal ends where typing
+   * starts. Only the prompt: the REPL itself starts at the first key
+   * (engine.js), so it never races a program that is about to run.
+   */
+  _prompt() {
+    this._emitText('>>> ')
+    this._atPrompt = true
   }
 
   _post(m) {
@@ -317,6 +332,7 @@ export class SimDevice extends EventTarget {
           this._emitText(`\r\n\x1b[90m${t('sim.finished')}\x1b[0m\r\n`)
           this._setState(State.READY, t('sim.finished'))
         }
+        this._prompt()
         break
       }
       case 'error':

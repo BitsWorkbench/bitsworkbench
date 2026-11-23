@@ -298,7 +298,7 @@ it is kept by id.
 `public/learn/packs/` holds the packs BitsWorkbench offers in Learn, beside `index.json`, their list:
 
 ```json
-[{ "id": "PWR", "file": "PWR.json", "title": "Python with Robots", "brief": "One line", "board": "codebot" }]
+[{ "id": "PWR", "file": "PWR.json", "title": "Coding with Robots", "brief": "One line", "board": "codebot" }]
 ```
 
 `id`, `title`, `brief` and `board` are the pack's own (a test checks they match). Opening one

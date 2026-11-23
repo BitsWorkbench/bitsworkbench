@@ -34,6 +34,8 @@ const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
 const LAYOUTS = 'opencodebot.layouts.v1'
+/** The panels as the student left them: { sim: was the simulator on, sideW / sideH: the side's width, or height on a narrow screen }. */
+const PANELS = 'opencodebot.panels.v1'
 const TAB_LOCK = 'opencodebot.editing'
 /** How many of a board's examples, easiest first, Learn shows as quick starts. */
 const QUICK_STARTS = 2
@@ -135,7 +137,8 @@ export class App {
 
     // A board that is already plugged in and paired can just come back.
     this.device.autoConnect().catch(() => {})
-    if (kind === 'sim') this._toggleSimulate()
+    // The simulator comes back if it was on when the page went (a board plugged in takes over, as ever).
+    if (kind === 'sim' || panels().sim) this._toggleSimulate()
   }
 
   /** The CodeTrek of the objective on show (null for none), in both palettes. */
@@ -159,6 +162,7 @@ export class App {
     device.addEventListener('state', (e) => {
       const { state, message } = e.detail
       this._setStatus(state, message)
+      keepPanels({ sim: this.device.simulating })
       this._refreshButtons()
       this._refreshDeviceChip()
       this._refreshSide()
@@ -600,10 +604,15 @@ export class App {
       dragging = true
       splitter.setPointerCapture(e.pointerId)
     })
+    // The size the student chose is kept, for the next visit.
+    const chosen = (px) => {
+      setSide(px)
+      keepPanels({ [vertical() ? 'sideH' : 'sideW']: Math.round(sideNow()) })
+    }
     splitter.addEventListener('pointermove', (e) => {
       if (!dragging) return
       const rect = workarea.getBoundingClientRect()
-      setSide(vertical() ? rect.bottom - e.clientY : rect.right - e.clientX)
+      chosen(vertical() ? rect.bottom - e.clientY : rect.right - e.clientX)
     })
     splitter.addEventListener('pointerup', () => {
       dragging = false
@@ -615,9 +624,9 @@ export class App {
       const grow = vertical() ? { ArrowUp: step, ArrowDown: -step } : { ArrowLeft: step, ArrowRight: -step }
       if (!(e.key in grow)) return
       e.preventDefault()
-      setSide(sideNow() + grow[e.key])
+      chosen(sideNow() + grow[e.key])
     })
-    requestAnimationFrame(() => setSide(sideNow()))
+    requestAnimationFrame(() => setSide(panels()[vertical() ? 'sideH' : 'sideW'] || sideNow()))
     // The mission rail came or went: the side fits again.
     this._refitSide = () => setSide(sideNow())
 
@@ -1665,6 +1674,22 @@ export class App {
     if (localStorage.getItem(SEEN_WELCOME)) return
     localStorage.setItem(SEEN_WELCOME, '1')
     showModal({ title: t('welcome.title'), bodyHtml: t('welcome.bodyHtml'), confirmText: t('welcome.confirm') })
+  }
+}
+
+function panels() {
+  try {
+    return JSON.parse(localStorage.getItem(PANELS)) || {}
+  } catch {
+    return {}
+  }
+}
+
+function keepPanels(change) {
+  try {
+    localStorage.setItem(PANELS, JSON.stringify({ ...panels(), ...change }))
+  } catch {
+    // storage blocked: the panels start as new next time
   }
 }
 

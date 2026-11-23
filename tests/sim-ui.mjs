@@ -214,7 +214,10 @@ else console.log('sim-ui: the starter project ran to the end')
 // The REPL, between programs.
 // (Once the board is back at its prompt: typed before the >>>, the keys are lost, and a
 // slow machine gets there later.)
-await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && />>> ?$/.test(window.__sim.out.replace(/\s+$/, ' ')), null, { timeout: 20000 }).catch(() => {})
+// A program's end leaves the terminal at the prompt, with nothing after it, ready for typing.
+await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && />>> $/.test(window.__sim.out), null, { timeout: 20000 })
+  .then(() => console.log('sim-ui: the terminal ends at a >>> prompt once a program ends'))
+  .catch(async () => problems.push(`REPL: no >>> prompt after the program ended: ${JSON.stringify(await page.evaluate(() => window.__sim.out.slice(-80)))}`))
 await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.sendRaw('print(6 * 7)\r') })
 await page.waitForFunction(() => /42/.test(window.__sim.out), null, { timeout: 20000 }).catch(() => problems.push('REPL: no answer to print(6 * 7)'))
 
@@ -322,8 +325,10 @@ await page.screenshot({ path: `${SHOT_DIR}/ocb-sim.png` })
   // another tab of the same browser starts with the same settings
   const again = await context.newPage()
   await again.goto(URL, { waitUntil: 'networkidle' })
-  await again.click('#btn-sim')
+  // The simulator was on: it comes back by itself, without a click.
   await again.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
+    .then(() => console.log('sim-ui: the simulator came back on a new page, as it was left'))
+    .catch(() => problems.push('panels: the simulator did not come back on a new page'))
   await again.click('.sim-gear')
   const kept = await again.evaluate(() => ({
     effects: document.querySelector('.sim-vol[data-bus="effects"] input').value,
