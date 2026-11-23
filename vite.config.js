@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { flightWanted, fetchedFlight, flightConfig } from './sim/tools/flight-library.mjs'
 import { recordedSounds } from './sim/tools/codex-sounds.mjs'
 import { BRAND } from './src/brand.js'
+import en from './src/i18n/en.js'
 
 // CodeAIR flight (sim/tools/flight-library.mjs): with SIM_FLIGHT=1 the build
 // bundles the flight library fetched into sim/build/flight/, and stops if it
@@ -66,11 +67,19 @@ function commit() {
   }
 }
 
-// The pages' titles before the strings load (and for anything that reads the
-// HTML alone): %BRAND_NAME% in index.html and boards.html is the product's name.
+// The pages' titles before the strings load, and the link preview tags, for
+// anything that reads the HTML alone (crawlers, Slack, social sites): in
+// index.html and boards.html, %BRAND_NAME% is the product's name, %BRAND_SITE%
+// its address and %APP_DESCRIPTION% its English description (src/i18n/en.js).
 const brandName = {
   name: 'brand-name',
-  transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%BRAND_NAME%', BRAND.name) },
+  transformIndexHtml: {
+    order: 'pre',
+    handler: (html) => html
+      .replaceAll('%BRAND_NAME%', BRAND.name)
+      .replaceAll('%BRAND_SITE%', BRAND.site)
+      .replaceAll('%APP_DESCRIPTION%', en['app.description']),
+  },
 }
 
 // Relative base so the built app can be dropped in any sub-path of an
@@ -115,7 +124,8 @@ export default defineConfig({
         // JSPI (src/sim/support.js): fetched the first time one starts the
         // simulator, and kept from then on, so a browser with JSPI never
         // downloads or stores it.
-        globIgnores: ['**/sim-assets/env/!(gym)/**', '**/learn/packs/!(index).json', '**/*asyncify*'],
+        // The link preview picture is for other sites to fetch, never the app.
+        globIgnores: ['**/sim-assets/env/!(gym)/**', '**/learn/packs/!(index).json', '**/*asyncify*', 'social-card.png'],
         runtimeCaching: [{
           urlPattern: /\/sim-assets\/env\//,
           handler: 'CacheFirst',
@@ -134,7 +144,7 @@ export default defineConfig({
       manifest: {
         name: BRAND.name,
         short_name: BRAND.shortName,
-        description: 'Friendly block coding for Firia Labs CodeBot, CodeX, and CodeAIR.',
+        description: en['app.description'],
         theme_color: '#4EB748',
         background_color: '#FFFDF7',
         display: 'standalone',

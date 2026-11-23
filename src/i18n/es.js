@@ -4,7 +4,7 @@ import { BRAND } from '../brand.js'
 
 export default {
   'app.name': BRAND.name,
-  'app.description': 'Programación con bloques fácil para CodeBot, CodeX y CodeAIR de Firia Labs.',
+  'app.description': 'Un entorno abierto de programación y aprendizaje para CodeBot, CodeX y CodeAIR de Firia Labs.',
   'app.tagline': 'Suéñalo, constrúyelo',
   'app.beta': 'Beta',
   'app.betaTitle': 'Una primera versión pública: consulta Acerca de',

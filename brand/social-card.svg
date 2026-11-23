@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- The link preview card (og:image) for the site: a Cody-style robot, drawn for this card, the
+       product's name and its tagline. Source for public/social-card.png; see README.md here for how
+       to export it. The text is live, set in the brand's system font stack. -->
+  <defs>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4D038"/>
+      <stop offset="0.55" stop-color="#F3A12F"/>
+      <stop offset="1" stop-color="#EE5A33"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FCEFB0"/>
+      <stop offset="0.7" stop-color="#FDF6D6"/>
+      <stop offset="1" stop-color="#FFFDF7" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="14" cy="14" r="2" fill="#E9E6DA"/>
+    </pattern>
+    <mask id="wrench-jaw">
+      <rect x="-40" y="-140" width="80" height="180" fill="#fff"/>
+      <rect x="-9" y="-136" width="18" height="30" rx="3" fill="#000"/>
+    </mask>
+  </defs>
+
+  <!-- Background: warm white, a faint workbench dot grid, a green rule along the bottom -->
+  <rect width="1200" height="630" fill="#FFFDF7"/>
+  <rect x="470" y="0" width="730" height="616" fill="url(#dots)" opacity="0.7"/>
+  <circle cx="270" cy="318" r="285" fill="url(#glow)"/>
+  <rect x="0" y="616" width="1200" height="14" fill="#4EB748"/>
+
+  <!-- The robot -->
+  <g transform="translate(270 0)" stroke="#4C4D4F" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <!-- shadow -->
+    <ellipse cx="0" cy="592" rx="92" ry="11" fill="#4C4D4F" opacity="0.12" stroke="none"/>
+
+    <!-- rocket flames -->
+    <path d="M-34 494 Q-36 540 0 584 Q36 540 34 494 Z" fill="url(#flame)"/>
+    <path d="M-16 496 Q-17 526 0 552 Q17 526 16 496 Z" fill="#FFF3B0" stroke="none"/>
+    <path d="M-70 492 Q-72 518 -56 540 Q-40 518 -42 492 Z" fill="url(#flame)" stroke-width="5"/>
+    <path d="M70 492 Q72 518 56 540 Q40 518 42 492 Z" fill="url(#flame)" stroke-width="5"/>
+    <rect x="-82" y="466" width="164" height="30" rx="10" fill="#D1D3D4"/>
+
+    <!-- waving arm (left of the picture) -->
+    <path d="M-100 340 Q-150 322 -168 262" fill="none" stroke="#4C4D4F" stroke-width="32"/>
+    <path d="M-100 340 Q-150 322 -168 262" fill="none" stroke="#FFFFFF" stroke-width="18"/>
+    <circle cx="-170" cy="246" r="24" fill="#FFFFFF"/>
+    <path d="M-212 214 Q-222 236 -214 258" fill="none" stroke="#B8BABC" stroke-width="6"/>
+    <path d="M-232 202 Q-246 236 -234 270" fill="none" stroke="#D1D3D4" stroke-width="6"/>
+
+    <!-- arm with the wrench (right of the picture) -->
+    <path d="M100 350 Q142 372 156 424" fill="none" stroke="#4C4D4F" stroke-width="32"/>
+    <path d="M100 350 Q142 372 156 424" fill="none" stroke="#FFFFFF" stroke-width="18"/>
+    <g transform="translate(158 430) rotate(6)">
+      <g mask="url(#wrench-jaw)">
+        <rect x="-9" y="-92" width="18" height="112" rx="9" fill="#F4D038" stroke-width="6"/>
+        <circle cx="0" cy="-104" r="24" fill="#F4D038" stroke-width="6"/>
+      </g>
+    </g>
+    <circle cx="158" cy="430" r="24" fill="#FFFFFF"/>
+
+    <!-- body -->
+    <rect x="-30" y="282" width="60" height="26" rx="6" fill="#D1D3D4"/>
+    <rect x="-108" y="300" width="216" height="172" rx="44" fill="#FFFFFF"/>
+    <!-- chest panel: two code blocks snapped together -->
+    <rect x="-66" y="328" width="132" height="92" rx="18" fill="#F1F1F2" stroke-width="5"/>
+    <path d="M-48 346 h18 v-5 h20 v5 h50 a6 6 0 0 1 6 6 v14 a6 6 0 0 1 -6 6 h-88 a6 6 0 0 1 -6 -6 v-14 a6 6 0 0 1 6 -6 z" fill="#4EB748" stroke-width="4"/>
+    <path d="M-36 378 h18 v-5 h20 v5 h62 a6 6 0 0 1 6 6 v14 a6 6 0 0 1 -6 6 h-100 a6 6 0 0 1 -6 -6 v-14 a6 6 0 0 1 6 -6 z" fill="#F4D038" stroke-width="4"/>
+    <circle cx="-34" cy="444" r="9" fill="#4EB748" stroke-width="5"/>
+    <circle cx="0" cy="444" r="9" fill="#F4D038" stroke-width="5"/>
+    <circle cx="34" cy="444" r="9" fill="#D1D3D4" stroke-width="5"/>
+
+    <!-- antenna -->
+    <path d="M0 122 V92" fill="none"/>
+    <circle cx="0" cy="80" r="15" fill="#F4D038"/>
+
+    <!-- ears -->
+    <rect x="-156" y="164" width="34" height="86" rx="14" fill="#F4D038"/>
+    <rect x="122" y="164" width="34" height="86" rx="14" fill="#F4D038"/>
+
+    <!-- head -->
+    <rect x="-128" y="118" width="256" height="172" rx="52" fill="#FFFFFF"/>
+    <rect x="-98" y="144" width="196" height="118" rx="32" fill="#3E3F41" stroke-width="5"/>
+    <!-- plus-shaped eyes and a smile -->
+    <g fill="#F4D038" stroke="none">
+      <rect x="-64" y="186" width="40" height="13" rx="4"/>
+      <rect x="-50.5" y="172" width="13" height="40" rx="4"/>
+      <rect x="24" y="186" width="40" height="13" rx="4"/>
+      <rect x="37.5" y="172" width="13" height="40" rx="4"/>
+    </g>
+    <path d="M-24 230 Q0 248 24 230" fill="none" stroke="#F4D038" stroke-width="8"/>
+  </g>
+
+  <!-- The name and tagline -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif">
+    <text x="508" y="290" font-size="84" font-weight="700" fill="#4EB748" letter-spacing="-1">BitsWorkbench</text>
+    <text x="512" y="368" font-size="54" font-weight="400" fill="#4C4D4F">Dream it, build it</text>
+    <text x="512" y="442" font-size="30" font-weight="400" fill="#6B6C6E">Open coding and learning for</text>
+    <text x="512" y="482" font-size="30" font-weight="400" fill="#6B6C6E">CodeBot, CodeX and CodeAIR</text>
+  </g>
+</svg>

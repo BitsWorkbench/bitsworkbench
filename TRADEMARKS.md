@@ -15,8 +15,9 @@ What that means in practice:
 - **You may not** use the logo, the mascot or the product names as the name or
   branding of your own app, fork or service, or in a way that suggests Firia
   Labs made or endorses it.
-- **If you fork this project**, replace the files in `brand/` and the
-  `firia-bot` icons in `public/icons/` with your own artwork, and change the
-  product name.
+- **If you fork this project**, replace the files in `brand/`, the
+  `firia-bot` icons in `public/icons/` and the link preview picture
+  `public/social-card.png` with your own artwork, and change the product name
+  and address (`src/brand.js`).
 
 For permission beyond this, contact Firia Labs.

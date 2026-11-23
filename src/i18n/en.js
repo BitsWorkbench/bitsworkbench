@@ -7,11 +7,12 @@ import { BRAND } from '../brand.js'
 
 export default {
   'app.name': BRAND.name,
-  'app.description': 'Friendly block coding for Firia Labs CodeBot, CodeX, and CodeAIR.',
+  'app.description': 'An open coding and learning environment for Firia Labs CodeBot, CodeX, and CodeAIR.',
   'app.tagline': 'Dream it, build it',
   'app.beta': 'Beta',
   'app.betaTitle': 'An early public release: see About',
-  // The browser tab's title. Drop " Beta" here and in pageTitle when the Beta ends.
+  // The browser tab's title. Drop " Beta" here, in pageTitle and in index.html's link
+  // preview tags (og:title, twitter:title) when the Beta ends.
   'app.title': '{app} Beta',
   // This language's name for itself, shown in the language menu.
   'lang.name': 'English',

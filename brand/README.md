@@ -1,7 +1,8 @@
 # Brand assets
 
 The official Firia Labs artwork this project uses, kept here unmodified so the
-derived icons can be traced back to a source.
+derived icons can be traced back to a source, and the link preview card drawn
+from it.
 
 **Trademarked.** The Firia Labs logo, wordmark and the Cody mascot in this
 folder, and the icons derived from them in `public/icons/`, are trademarks of
@@ -14,6 +15,8 @@ Firia Labs. They are not covered by the project's MIT licence or by CC BY-NC
 | `firia-logo.svg` | The full Firia Labs lockup: bot head, "FIRIA" in `#4EB748`, "LABS" on the gold banner. Not shipped in the app — it lives here as the source for the head mark below. |
 | `../public/icons/firia-bot.svg` | The Cody rocket mascot, used in the app header. Unmodified. |
 | `../public/icons/firia-bot-head.svg` | The square head mark, used as the favicon, the PWA icon and the empty-workspace hint. |
+| `social-card.svg` | The link preview card (1200 x 630): a Cody-style robot drawn new for it, the product's name and "Dream it, build it". Its export, `../public/social-card.png`, is the `og:image` and `twitter:image` in `index.html`. |
+| `export-social-card.mjs` | Exports the card: `node brand/export-social-card.mjs`. Look at the PNG, at full size and shrunk to a chat thumbnail, before committing it. |
 
 ## How the head mark was made
 

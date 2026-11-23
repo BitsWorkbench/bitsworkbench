@@ -5,9 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#4EB748" />
     <!-- The title and description are repeated here, in English, for crawlers and link
-         previews that do not run the page's script; src/i18n/en.js is their source. -->
-    <meta name="description" content="Friendly block coding for Firia Labs CodeBot, CodeX, and CodeAIR."
+         previews that do not run the page's script; src/i18n/en.js is their source, and
+         the build fills them in (vite.config.js). The preview picture is drawn in
+         brand/social-card.svg. -->
+    <meta name="description" content="%APP_DESCRIPTION%"
           data-i18n-attr="content=app.description" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%BRAND_NAME%" />
+    <meta property="og:url" content="%BRAND_SITE%/" />
+    <meta property="og:title" content="%BRAND_NAME% Beta" />
+    <meta property="og:description" content="%APP_DESCRIPTION%" />
+    <meta property="og:image" content="%BRAND_SITE%/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A friendly robot beside the words %BRAND_NAME%, Dream it, build it" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="%BRAND_NAME% Beta" />
+    <meta name="twitter:description" content="%APP_DESCRIPTION%" />
+    <meta name="twitter:image" content="%BRAND_SITE%/social-card.png" />
     <link rel="icon" href="./icons/firia-bot-head.svg" type="image/svg+xml" />
     <title data-i18n="app.title">%BRAND_NAME% Beta</title>
   </head>
