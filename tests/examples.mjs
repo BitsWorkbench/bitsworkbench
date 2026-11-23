@@ -42,7 +42,7 @@ async function fresh(lang = 'en') {
   await page.goto(`${BASE}?device=loopback&lang=${lang}`, { waitUntil: 'networkidle' })
   await page.evaluate(() => {
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   await page.reload({ waitUntil: 'networkidle' })

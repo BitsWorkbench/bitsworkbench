@@ -29,7 +29,8 @@ import { installPaletteSize } from './palette-size.js'
 import { esc } from '../learn/esc.js'
 import { BANNER } from '../blocks/generate.js'
 
-const SEEN_WELCOME = 'opencodebot.welcomed.v1'
+const SEEN_WELCOME = 'opencodebot.welcomed.v1' // been here before: Welcome back
+const WELCOME = 'opencodebot.welcome.v1' // 'off': no welcome (tests, kiosks)
 const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
@@ -141,8 +142,10 @@ export class App {
     this._renderLanguages()
     this._refreshDeviceChip()
     this._checkBrowser()
-    this._maybeWelcome()
-    this.learn.restore().catch((err) => console.warn('learn', err))
+    // The welcome first; then the demo, or the mission pack the student was in, if any.
+    this._welcome()
+      .then((demo) => (demo ? this.learn.openDemo() : this.learn.restore()))
+      .catch((err) => console.warn('learn', err))
 
     // A board that is already plugged in and paired can just come back.
     this.device.autoConnect().catch(() => {})
@@ -1811,10 +1814,30 @@ export class App {
     this.terminal.warn(`${t('browser.noSerial')}\r\n${t('browser.noSerialHintSim')}`)
   }
 
-  _maybeWelcome() {
-    if (localStorage.getItem(SEEN_WELCOME)) return
-    localStorage.setItem(SEEN_WELCOME, '1')
-    showModal({ title: t('welcome.title'), bodyHtml: t('welcome.bodyHtml'), confirmText: t('welcome.confirm') })
+  /**
+   * The welcome, on every visit: Welcome, or Welcome back with Resume for one
+   * who has been here before, and always Try a Demo!. Resolves true when the
+   * demo was chosen. `opencodebot.welcome.v1` set to `off` leaves it out (for
+   * automated tests, and a kiosk that opens straight to work).
+   */
+  async _welcome() {
+    let back = false
+    try {
+      if (localStorage.getItem(WELCOME) === 'off') return false
+      back = !!localStorage.getItem(SEEN_WELCOME)
+      localStorage.setItem(SEEN_WELCOME, '1')
+    } catch {
+      // storage blocked: every visit is a first one
+    }
+    const how = await choose({
+      title: t(back ? 'welcome.backTitle' : 'welcome.title'),
+      bodyHtml: t('welcome.bodyHtml'),
+      choices: [
+        { value: 'go', label: t(back ? 'welcome.resume' : 'welcome.confirm'), primary: true },
+        { value: 'demo', label: t('welcome.demo') },
+      ],
+    })
+    return how === 'demo'
   }
 }
 

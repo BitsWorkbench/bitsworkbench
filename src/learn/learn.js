@@ -44,6 +44,7 @@ export class Learn {
   constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
     this.prepare = prepare
     this.onOpen = onOpen
+    this.toPython = toPython
     this.guided = false
     this.pane = pane
     this.railEl = rail
@@ -141,7 +142,8 @@ export class Learn {
     this.journey.stop()
     this.tutorial.go({ mission: mi, step: 0 })
     const device = getTarget(this._board())?.name || this._board()
-    let how = runOn(pack.id)
+    // A pack made for one way (`runs`: the demo is the simulator's) asks nothing.
+    let how = pack.runs === 'sim' || pack.runs === 'usb' ? pack.runs : runOn(pack.id)
     if (!how) {
       how = await choose(runChoice(device))
       // Closed without a choice: nothing starts, and the student is out of the tutorial.
@@ -238,12 +240,38 @@ export class Learn {
     const pack = this.tutorial.pack
     const next = this.tutorial.place.mission + 1
     if (next < pack.missions.length) return this._beginMission(next)
-    await showModal({
+    // Done in blocks: the same program is Python, one press away.
+    const blocks = this.tutorial.mode === 'blocks'
+    const how = await choose({
       title: t('guide.packDoneTitle', { title: pack.title }),
       bodyHtml: this.tutorial.mdFor(pack.complete, this.tutorial.mode) || `<p>${t('guide.packDone')}</p>`,
-      confirmText: t('btn.exitTutorial'),
+      choices: [
+        ...(blocks ? [{ value: 'python', label: t('guide.seePython'), primary: true }] : []),
+        { value: 'exit', label: t('btn.exitTutorial'), primary: !blocks },
+      ],
     })
     this.close()
+    if (how === 'python') this.toPython()
+  }
+
+  /**
+   * The demo (Try a Demo!, on the welcome): a small guided pack that comes
+   * with the app, learn/demo/DEMO.json, always played from its start.
+   */
+  async openDemo() {
+    let pack
+    try {
+      const res = await fetch(new URL('learn/demo/DEMO.json', document.baseURI))
+      if (!res.ok) throw new Error(`${res.status}`)
+      pack = await this.library.add(await res.text())
+    } catch (err) {
+      console.warn('learn: demo', err)
+      pack = await this.library.get('DEMO').catch(() => null)
+      if (!pack) return toast({ kind: 'error', title: t('learn.unreachable', { title: t('welcome.demo') }) })
+    }
+    for (const m of pack.missions) for (const item of m.flow) await this.library.setGoals(pack.id, item.id, [])
+    await this.library.setPlace(pack.id, null)
+    await this.open(pack.id)
   }
 
   /** Hand the journey on show over to the coach: the drawer goes, the coach comes. */

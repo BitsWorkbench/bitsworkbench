@@ -36,7 +36,7 @@ page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 await page.goto(URL_, { waitUntil: 'networkidle' })
 await page.evaluate(() => {
   localStorage.clear()
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
 })
 await page.reload({ waitUntil: 'networkidle' })
@@ -182,7 +182,7 @@ async function freshTyped(url, typed) {
   await p.goto(url, { waitUntil: 'networkidle' })
   await p.evaluate(() => {
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   await p.reload({ waitUntil: 'networkidle' })
@@ -239,7 +239,7 @@ const keeps = (p) =>
   await p.goto(BASE, { waitUntil: 'networkidle' })
   await p.evaluate(() => {
     localStorage.clear()
-    localStorage.setItem('opencodebot.welcomed.v1', '1')
+    localStorage.setItem('opencodebot.welcome.v1', 'off')
     localStorage.setItem('opencodebot.device.v1', 'codebot')
   })
   await p.reload({ waitUntil: 'networkidle' })

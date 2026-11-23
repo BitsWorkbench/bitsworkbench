@@ -40,7 +40,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' })
 await page.evaluate(async () => {
   localStorage.clear()
   // Skip the welcome dialog; this test is about programs and their files.
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
   await new Promise((r) => { const q = indexedDB.deleteDatabase('opencodebot-browser-files'); q.onsuccess = q.onerror = q.onblocked = r })
 })

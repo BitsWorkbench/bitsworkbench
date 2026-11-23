@@ -45,6 +45,9 @@ The first public release, planned for December 1, 2026. Everything it holds:
   of the side panel.
 
 ### Learn
+- A welcome on every visit (Welcome back, with Resume, after the first), with
+  **Try a Demo!**: a few guided steps that drive CodeBot in the simulator, then
+  show the same program in Python.
 - Short examples for each board, easiest first, two of them as quick starts.
 - Mission packs open in a tutorial pane: steps, goals that tick as they are met,
   quizzes, CodeTrek in the palette, and each step taught in blocks or in Python.

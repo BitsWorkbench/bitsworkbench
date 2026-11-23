@@ -44,7 +44,7 @@ page.on('console', (m) => {
 await page.goto(URL, { waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBotInternals)
 if (await page.evaluate(() => document.getElementById('modal')?.open)) {
-  await page.click('#modal button[value="ok"]')
+  await page.click('#modal button[value="choice:go"]')
 }
 
 for (const device of DEVICES) {
@@ -187,7 +187,7 @@ for (const width of [360, 412, 683]) {
   const narrow = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true })
   await narrow.goto(URL, { waitUntil: 'networkidle' })
   if (await narrow.evaluate(() => document.getElementById('modal')?.open)) {
-    await narrow.click('#modal button[value="ok"]')
+    await narrow.click('#modal button[value="choice:go"]')
   }
   const learn = await narrow.locator('#btn-learn').boundingBox()
   if (!learn || learn.x < 0 || learn.x + learn.width > width) problems.push(`Learn at ${width}px ▸ off screen (${JSON.stringify(learn)})`)

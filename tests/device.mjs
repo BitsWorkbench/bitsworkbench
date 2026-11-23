@@ -41,7 +41,8 @@ await page.reload({ waitUntil: 'networkidle' })
 await page.waitForFunction(() => !!window.openCodeBot)
 const dismiss = async () => {
   if (await page.evaluate(() => document.getElementById('modal')?.open)) {
-    await page.click('#modal button[value="ok"]')
+    // The welcome's Let's go (or Resume), or a dialog's OK.
+    await page.click('#modal button[value="ok"], #modal button[value="choice:go"]')
   }
 }
 await dismiss()

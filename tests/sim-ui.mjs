@@ -93,7 +93,7 @@ const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console error: ${m.text()}`) })
 await page.addInitScript(() => {
-  localStorage.setItem('opencodebot.welcomed.v1', '1')
+  localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
 })
 await page.goto(URL, { waitUntil: 'networkidle' })

@@ -71,7 +71,7 @@ for (const name of ENGINES) {
       if (sessionStorage.getItem('lpu')) return
       sessionStorage.setItem('lpu', '1')
       localStorage.clear()
-      localStorage.setItem('opencodebot.welcomed.v1', '1')
+      localStorage.setItem('opencodebot.welcome.v1', 'off')
       localStorage.setItem('opencodebot.device.v1', board)
     }, pack.board)
     await page.goto(BASE, { waitUntil: 'networkidle' })
