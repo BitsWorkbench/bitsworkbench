@@ -488,6 +488,7 @@ export default {
   'guide.packDoneTitle': "You finished {title}!",
   'guide.packDone': "Every mission is done. Well done!",
   'guide.seePython': "🐍 See it in Python",
+  'guide.againPython': "🐍 Try it in Python",
   'learn.goals': 'Goals',
   'learn.goalMet': 'Done:',
   'learn.goalOpen': 'To do:',

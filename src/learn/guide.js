@@ -32,6 +32,10 @@ export const journeyOf = (mission) => mission.flow[0]
 /** A chapter's steps in a mode. */
 export const stepsIn = (chapter, mode) => chapter.steps.filter((s) => !s.mode || s.mode === mode)
 
+/** Does a guided pack have words for Python (a `--Python--` section, or a Python-only step)? Then it can be played again in Python. */
+export const speaksPython = (pack) =>
+  pack.missions.some((m) => journeyOf(m).chapters.some((c) => c.steps.some((s) => s.mode === 'python' || /--Python--/.test(`${s.say ?? ''}${s.ask ?? ''}`))))
+
 /**
  * Each chapter of a journey: 'done' (every step done), 'open' (the first, the
  * one after a done one, one already started, or one the student unlocked) or

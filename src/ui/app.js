@@ -97,6 +97,8 @@ export class App {
       toPython: () => this.workspace.mode === 'text' || this._toText(),
       blocks: this.workspace,
       simView: () => this.device.sim.view ?? null,
+      // The Python view on show: the coach points into its editor and palette.
+      pythonView: () => (this.view === 'python' ? { editor: this.pythonEditor, palette: this.palette } : null),
       useFile: (where) => this._missionFile(where),
       switchMode: (mode) => ((mode === 'python') !== (this.workspace.mode === 'text') ? this._toggleView() : null),
       prepare: (how) => this._prepareRun(how),
@@ -910,6 +912,7 @@ export class App {
       myBlocks: () => this.myBlocks.list(),
       trek: () => (this.trek ? trekSnippets(this.trek) : []),
       used: (snippet) => snippet.trek && this.learn.event('trek-used'),
+      opened: (id) => this.learn.event('palette', id),
     })
     this.myBlocks.addEventListener('change', () => this.palette.refresh())
     $('btn-view').addEventListener('click', () => this._toggleView())

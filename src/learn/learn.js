@@ -8,7 +8,7 @@
 import { t } from '../i18n/index.js'
 import { toast, showModal, choose } from '../ui/notify.js'
 import { getTarget } from '../device/targets.js'
-import { isGuided, journeyOf, chapterStates, missionStates, firstToDo, runOn, setRunOn, runChoice, missionsHtml, unlockWarning, chapterUnlocked, MISSION_UNLOCKED } from './guide.js'
+import { isGuided, speaksPython, journeyOf, chapterStates, missionStates, firstToDo, runOn, setRunOn, runChoice, missionsHtml, unlockWarning, chapterUnlocked, MISSION_UNLOCKED } from './guide.js'
 import { Library } from './library.js'
 import { PackError, named } from './pack.js'
 import { Tutorial, loadMarkdown } from './tutorial.js'
@@ -33,7 +33,8 @@ export class Learn {
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
    * For journeys: `blocks`, the BlockWorkspace; `simView()`, the simulator's
-   * view while it is open; `useFile(...)`, to work in a journey's file
+   * view while it is open; `pythonView()`, { editor, palette } while Python is
+   * on show (journey/places.js); `useFile(...)`, to work in a journey's file
    * (journey.js: true once it is open, the student's work never lost);
    * `switchMode(mode)`, back to the mode a paused journey is in.
    * For guided packs (guide.js): `prepare({ board, runOn })`, the board up in
@@ -41,7 +42,7 @@ export class Learn {
    * `stage(step, { board, runOn })`, what a step points at put on screen;
    * `onOpen(open)` when a pack opens or closes (the Learn button follows).
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
     this.prepare = prepare
     this.onOpen = onOpen
     this.toPython = toPython
@@ -88,7 +89,7 @@ export class Learn {
       const r = document.querySelector(sel)?.getBoundingClientRect()
       return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
     }
-    const places = new Places({ blocks, sim: simView })
+    const places = new Places({ blocks, sim: simView, python: pythonView })
     this.journey = new Journey({
       places,
       effects: new Effects({ places }),
@@ -240,16 +241,23 @@ export class Learn {
     const pack = this.tutorial.pack
     const next = this.tutorial.place.mission + 1
     if (next < pack.missions.length) return this._beginMission(next)
-    // Done in blocks: the same program is Python, one press away.
+    // Done in blocks: the same again in Python, when the pack has words for Python; else the program as Python, one press away.
     const blocks = this.tutorial.mode === 'blocks'
+    const again = blocks && speaksPython(pack)
     const how = await choose({
       title: t('guide.packDoneTitle', { title: pack.title }),
       bodyHtml: this.tutorial.mdFor(pack.complete, this.tutorial.mode) || `<p>${t('guide.packDone')}</p>`,
       choices: [
-        ...(blocks ? [{ value: 'python', label: t('guide.seePython'), primary: true }] : []),
+        ...(blocks ? [{ value: again ? 'again' : 'python', label: t(again ? 'guide.againPython' : 'guide.seePython'), primary: true }] : []),
         { value: 'exit', label: t('btn.exitTutorial'), primary: !blocks },
       ],
     })
+    if (how === 'again') {
+      // From the first mission, in Python: progress starts over, the program is the student's to keep or replace.
+      for (const m of pack.missions) await this.library.setGoals(pack.id, journeyOf(m).id, [])
+      this.toPython()
+      return this._beginMission(0)
+    }
     this.close()
     if (how === 'python') this.toPython()
   }
