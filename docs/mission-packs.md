@@ -174,7 +174,7 @@ Each step is either something to do or a question:
 | `point` | Where the coach points: a place (below). Left out, the bubble sits over the simulator. |
 | `palette` | For a `palette-item`: its category's id, opened for the student when the step starts. |
 | `to` | For a block to drag: where it goes, as a place (`after:display.show(...)`). |
-| `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera) and `palette` (opened a category; `"name"` its id). |
+| `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera 45 degrees, by dragging or with the arrow keys) and `palette` (opened a category; `"name"` its id). In blocks, a step's checks see only the blocks snapped into the program (hanging from its start, a function or an event): a block still being dragged, or dropped loose beside the program, does not meet it. Left out, the step is one to read: its bubble has Next at once. |
 | `ask`, `answers` | Instead of `say`, `point` and `do`: a question in the bubble, as in a quiz. |
 | `cheer` | Markdown: a few words when it is met. |
 | `hints` | Up to three, Markdown, one at a time on request. |
@@ -186,7 +186,8 @@ Each step is either something to do or a question:
 
 **Places** name things on screen, never selectors: `run`, `stop`, `pause`, `step` (shown once a
 running program is paused), `switch` (Blocks or
-Python), `sim`, `terminal`; `palette:lights`, a category by its id (`basics`, `screen`,
+Python), `sim`, `terminal`; `program`, the student's whole program (every block, or every line
+in Python); `palette:lights`, a category by its id (`basics`, `screen`,
 `lights`, `sound`, `sensors`, `radio`, `move`, `logic`, `loops`, `math`, `text`, `lists`,
 `variables`, `functions`, `python`); `palette-item:` and a pattern, the block in the open
 category whose code matches; `block:` and a pattern, the student's block whose statement
@@ -235,7 +236,10 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   (`--Python--` sections, or Python-only steps), and else to see the program in Python.
 
 **The demo.** The welcome's Try a Demo! opens `public/learn/demo/DEMO.json`, a guided pack of
-one CodeBot mission in blocks (`runs: sim`), always from its start. It is the app's own, under
+one CodeBot mission in blocks (`runs: sim`), always from its start. Its file, `demo/demo.py`, is
+replaced without asking when it holds only what the demo left there (the program as it was when
+the student last met a step); changed by the student since, it is theirs to save under another
+name, as for any mission. It is the app's own, under
 the app's MIT licence, and is not listed among Learn's packs.
 
 ## Quizzes

@@ -6,6 +6,7 @@
  *
  *   run, stop, pause, step, switch, sim,     the app's own controls (step
  *   terminal                                 shows once a run is paused)
+ *   program                                  the student's blocks, all of them
  *   palette:lights                           a palette category, by its id
  *   palette-item:pixels.fill(...)            the block in the open category whose code matches
  *   block:display.show(...)                  the student's block whose code matches
@@ -36,7 +37,7 @@ function boxOf(el) {
 }
 
 /** The places that are the editor's or the Python palette's in Python. */
-const PY_KINDS = new Set(['palette', 'palette-item', 'block', 'field', 'after'])
+const PY_KINDS = new Set(['palette', 'palette-item', 'block', 'field', 'after', 'program'])
 /** A string or a number in a line of Python: what `field:` points at there. */
 const LITERAL = /(["'])(?:\\.|(?!\1).)*\1|(?<![\w.])\d+(?:\.\d+)?\b/
 
@@ -46,6 +47,24 @@ function within(box, area) {
   const x = box.x + box.w / 2
   const y = box.y + Math.min(box.h, 40) / 2
   return x >= area.x && x <= area.x + area.w && y >= area.y && y <= area.y + area.h
+}
+
+/** The smallest box holding every box (null for none). */
+function union(boxes) {
+  if (!boxes.length) return null
+  const x = Math.min(...boxes.map((b) => b.x))
+  const y = Math.min(...boxes.map((b) => b.y))
+  return { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y }
+}
+
+/** The part of a box inside an area (null when none of it is). */
+function clip(box, area) {
+  if (!box) return null
+  const x = Math.max(box.x, area.x)
+  const y = Math.max(box.y, area.y)
+  const w = Math.min(box.x + box.w, area.x + area.w) - x
+  const h = Math.min(box.y + box.h, area.y + area.h) - y
+  return w > 0 && h > 0 ? { x, y, w, h } : null
 }
 
 export class Places {
@@ -80,6 +99,13 @@ export class Places {
     const py = this.python()
     if (py && PY_KINDS.has(kind)) return this._inPython(py, kind, arg)
     switch (kind) {
+      case 'program': {
+        // Every block of the program, as one box, within the blocks area.
+        const area = boxOf(this.workspace.getParentSvg?.())
+        const boxes = this.workspace.getTopBlocks(false).map((b) => boxOf(b.getSvgRoot())).filter(Boolean)
+        const box = area && clip(union(boxes), area)
+        return box && { box, el: this.workspace.getParentSvg(), side: 'right' }
+      }
       case 'sim': {
         const el = this.sim()?.renderer?.domElement
         const box = boxOf(el)
@@ -141,6 +167,18 @@ export class Places {
       return box && within(box, boxOf(el.closest('.py-flyout'))) ? { box, el } : null
     }
     const view = editor.view
+    if (kind === 'program') {
+      // The program's lines, as one box, within the editor.
+      const doc = view?.state.doc
+      const first = doc && view.coordsAtPos(0)
+      const last = doc && view.coordsAtPos(doc.length)
+      const area = view && boxOf(view.scrollDOM)
+      if (!first || !last || !area) return null
+      let right = first.right
+      for (let n = 1; n <= doc.lines; n++) right = Math.max(right, view.coordsAtPos(doc.line(n).to)?.right ?? 0)
+      const box = clip({ x: first.left, y: first.top, w: right - first.left, h: last.bottom - first.top }, area)
+      return box && { box, el: view.contentDOM, side: 'right' }
+    }
     const at = view && this._pyStatement(view, arg)
     if (!at) return null
     const doc = view.state.doc

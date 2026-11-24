@@ -20,6 +20,7 @@ import { settings } from '../settings.js'
 const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFigure }
 const SKY = 0xdfe8ef
 const ROBOT_CLOSEST = 0.12      // m, the nearest the camera comes to a robot
+const ORBIT = Math.PI / 4       // turned this far, the student has looked around
 
 export class SimView {
   // `buttons`, for a board whose buttons the view presses (every board):
@@ -31,8 +32,11 @@ export class SimView {
   // the figure's rotation arrows tilts the board, as do Shift and the arrow
   // keys (5 degrees a press); Home sets it level.
   // `onPick(name)`: a click on a board names the part it lands on (parts.js).
-  constructor(host, { assetsBase, buttons = null, onPick = null }) {
+  // `onOrbit()`: the student has turned the camera 45 degrees, by drag or
+  // key, in all since the last time (a mission's `orbit` event).
+  constructor(host, { assetsBase, buttons = null, onPick = null, onOrbit = null }) {
     this.host = host
+    this.onOrbit = onOrbit
     this.assetsBase = assetsBase
     this.buttons = buttons
     this.onPick = onPick
@@ -86,7 +90,22 @@ export class SimView {
     canvas.tabIndex = 0
     canvas.setAttribute('role', 'img')
     canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown + -' + (buttons?.onTilt ? ' Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown Home' : ''))
-    const key = (e) => { if (!(this.buttons && this._buttonKey(e))) this.rig.key(e) }
+    const key = (e) => {
+      if (this.buttons && this._buttonKey(e)) return
+      const before = this._offset()
+      if (this.rig.key(e)) this._turned(this._offset().angleTo(before))
+    }
+    // A drag that turns the camera, a step at a time.
+    let last = null
+    this.controls.addEventListener('start', () => { last = this._offset() })
+    this.controls.addEventListener('end', () => { last = null })
+    this.controls.addEventListener('change', () => {
+      if (!last) return
+      const now = this._offset()
+      this._turned(now.angleTo(last))
+      last = now
+    })
+    this._turnedBy = 0
     canvas.addEventListener('keydown', key)
     canvas.addEventListener('keyup', key)
     canvas.addEventListener('blur', () => { this._releaseAll(); this.rig.held.clear() })
@@ -98,6 +117,25 @@ export class SimView {
     this.resize()
     this._loop = this._loop.bind(this)
     this._raf = requestAnimationFrame(this._loop)
+  }
+
+  // The way the camera looks at what it turns round, as a unit vector.
+  _offset() {
+    return this.camera.position.clone().sub(this.controls.target).normalize()
+  }
+
+  // Count turning from now (a new step asking for it starts from nothing).
+  resetTurn() {
+    this._turnedBy = 0
+  }
+
+  // The camera turned by `radians`: 45 degrees in all is an orbit.
+  _turned(radians) {
+    if (!(radians > 0)) return
+    this._turnedBy += radians
+    if (this._turnedBy < ORBIT) return
+    this._turnedBy = 0
+    this.onOrbit?.()
   }
 
   // What a screen reader names and describes (sim/describe.js).
