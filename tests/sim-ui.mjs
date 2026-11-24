@@ -506,6 +506,7 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
 {
   await page.evaluate(() => {
     const view = window.openCodeBot.device.sim.view
+    window.openCodeBot.device.sim.setSpeed(1)          // at real time (the course check above left it at 4x)
     window.openCodeBot.device.sim.setCamera('chase', { turn: 150 })
     window.__steady = []
     window.__draw = view.renderer.render
@@ -527,8 +528,9 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
       v.push({ at: b.now, bot: Math.hypot(b.bx - a.bx, b.bz - a.bz) / dt, cam: Math.hypot(b.cx - a.cx, b.cz - a.cz) / dt })
     }
     const moving = v.filter((x) => x.bot > 0.05)
-    if (moving.length < 10) return { frames: moving.length }
+    if (moving.length < 10) return { frames: 0, drawn: r.length, moving: moving.length }
     const t0 = moving[0].at, t1 = moving[moving.length - 1].at
+    if (t1 - t0 < 3000) return { frames: 0, drawn: r.length, moving: moving.length, ms: Math.round(t1 - t0) }
     const mid = v.filter((x) => x.at > t0 + 1500 && x.at < t1 - 1000)
     const spread = (xs) => { const m = xs.reduce((s, x) => s + x, 0) / xs.length; return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length) / m }
     const bot = mid.map((x) => x.bot)
@@ -537,7 +539,7 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   })
   if (!(steady.frames >= 20 && steady.bot < 0.1 && steady.cam < 0.1 && steady.off < 0.1)) problems.push(`chase: a steady drive is not drawn steadily ${JSON.stringify(steady)}`)
   else console.log(`sim-ui: a steady drive in chase is drawn steadily (the robot's speed varies ${Math.round(steady.bot * 100)}% frame to frame, the camera's ${Math.round(steady.cam * 100)}%)`)
-  await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
+  await page.evaluate(() => { window.openCodeBot.device.sim.setCamera('chase'); window.openCodeBot.device.sim.setSpeed(4) })
 }
 
 // The camera menu: each of CodeSpace's four where it should be for the robot,
