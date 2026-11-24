@@ -347,6 +347,7 @@ class Checker {
             answers: (a, where) => this.list(a, where, (answer, w) => this.fields(answer, w, { a: this.md, correct: [this.yes, false] }), { min: 2 }),
           }
         : { say: this.md, point: [this.place, false], palette: [this.text, false], to: [this.place, false], do: [this.check, false] }),
+      goal: [this.md, false],
       cheer: [this.md, false],
       hints: [(h, where) => this.list(h, where, this.md, { min: 0 }), false],
       more: [this.md, false],

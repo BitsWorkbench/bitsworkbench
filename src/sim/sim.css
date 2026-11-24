@@ -100,3 +100,37 @@
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* The goals HUD (learn/hud.js): the objective and its goals at the lower
+   left of the view, as CodeSpace showed them. Light on the picture, so the
+   robot stays in sight. */
+.goals-hud {
+  position: absolute; left: 8px; bottom: 8px; z-index: 5; max-width: min(340px, calc(100% - 16px));
+  padding: 6px 8px; border-radius: 10px; color: #fff; font-size: 13px; line-height: 1.3;
+  background: rgba(24, 28, 34, 0.7); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  pointer-events: none;   /* a drag over it still turns the camera; only its button and boxes take the pointer */
+}
+.goals-hud-toggle, .goals-hud-boxes li { pointer-events: auto; }
+.goals-hud[hidden] { display: none; }
+.goals-hud-head { display: flex; align-items: center; gap: 6px; }
+.goals-hud-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.goals-hud-title em { font-style: normal; font-weight: 500; opacity: 0.85; }
+.goals-hud-count { flex: none; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.goals-hud-toggle {
+  flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 14px; color: #fff; background: rgba(255, 255, 255, 0.16);
+}
+.goals-hud-toggle:hover, .goals-hud-toggle:focus-visible { background: rgba(255, 255, 255, 0.3); }
+.goals-hud-boxes, .goals-hud-list { list-style: none; margin: 0 0 5px; padding: 0 0 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.25); }
+.goals-hud-boxes { display: flex; flex-wrap: wrap; gap: 6px; }
+.goals-hud-list { display: grid; gap: 4px; max-height: 9.5em; overflow-y: auto; }
+.goals-hud-list li { display: flex; gap: 7px; align-items: flex-start; }
+.goals-hud-list li[aria-current='step'] .goals-hud-words { font-weight: 700; }
+.goals-hud-list li[data-done='true'] .goals-hud-words { opacity: 0.8; }
+.goals-hud-words p { margin: 0; }
+.goals-hud-box {
+  flex: none; display: inline-grid; place-items: center; width: 16px; height: 16px; margin-top: 1px;
+  border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 4px; font-size: 11px; font-weight: 900;
+}
+.goals-hud-box[data-done='true'] { background: #3fa34d; border-color: #3fa34d; }
+.goals-hud-boxes li[aria-current='step'] .goals-hud-box { box-shadow: 0 0 0 2px #f5c542; }

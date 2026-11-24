@@ -65,14 +65,19 @@ export class Rail extends EventTarget {
     const buttons = chapters
       .map((c, i) => {
         const s = states[i]
-        const name = t('learn.railStep', { step: i + 1, count, title: c.title }) + (s === 'done' ? ` ${t('learn.railDone')}` : s === 'locked' ? ` ${t('guide.locked')}` : '')
+        const name = t('guide.railObjective', { step: i + 1, count, title: c.title }) + (s === 'done' ? ` ${t('learn.railDone')}` : s === 'locked' ? ` ${t('guide.locked')}` : '')
         return `<li><button type="button" class="rail-step" data-rail-chapter="${i}" data-done="${s === 'done'}" data-locked="${s === 'locked'}" title="${esc(name)}" aria-label="${esc(name)}"${i === current ? ' aria-current="step"' : ''}>${s === 'locked' ? '<span aria-hidden="true">🔒</span>' : i + 1}</button></li>`
       })
       .join('')
     const packLabel = esc(t('guide.packButton', { title: pack.title }))
-    const missionLabel = esc(t('guide.missionButton', { n, title: pack.missions[mission].title }))
-    this.root.innerHTML = `<button type="button" class="rail-toggle" data-rail="missions" title="${packLabel}" aria-label="${packLabel}"><span aria-hidden="true">🧭</span></button>
-      <button type="button" class="rail-mission" data-rail="missions" title="${missionLabel}" aria-label="${missionLabel}">${esc(t('learn.missionN', { n }))}</button>
+    const m = pack.missions[mission]
+    const missionLabel = esc(t('guide.missionButton', { n, title: m.title }))
+    // The pack's and the mission's own pictures (their `avatar`), where they have them.
+    const picture = (name) => (name && pack.assets?.[name] ? `<img class="rail-avatar" src="${esc(pack.assets[name])}" alt="">` : '')
+    const packIcon = picture(pack.avatar) || '<span aria-hidden="true">🧭</span>'
+    const missionIcon = picture(m.avatar)
+    this.root.innerHTML = `<button type="button" class="rail-toggle${pack.avatar && packIcon.startsWith('<img') ? ' rail-pack-avatar' : ''}" data-rail="missions" title="${packLabel}" aria-label="${packLabel}">${packIcon}</button>
+      <button type="button" class="rail-mission" data-rail="missions" title="${missionLabel}" aria-label="${missionLabel}">${missionIcon}<span>${esc(t('learn.missionN', { n }))}</span></button>
       <ol class="rail-steps" aria-label="${esc(t('guide.objectives'))}">${buttons}</ol>
       <span class="rail-spacer"></span>`
     this.root.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' })

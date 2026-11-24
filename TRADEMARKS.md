@@ -16,8 +16,10 @@ What that means in practice:
   branding of your own app, fork or service, or in a way that suggests Firia
   Labs made or endorses it.
 - **If you fork this project**, replace the files in `brand/`, the
-  `firia-bot` icons in `public/icons/` and the link preview picture
-  `public/social-card.png` with your own artwork, and change the product name
+  `firia-bot` icons in `public/icons/`, the link preview picture
+  `public/social-card.png` and the demo's pack and mission pictures (the
+  `assets` of `public/learn/demo/DEMO.json`, from Firia Labs CodeSpace) with
+  your own artwork, and change the product name
   and address (`src/brand.js`).
 
 For permission beyond this, contact Firia Labs.

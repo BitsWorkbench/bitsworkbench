@@ -20,6 +20,8 @@ import { Rail } from './rail.js'
 import { Journey } from './journey/journey.js'
 import { Effects } from './journey/effects.js'
 import { Places } from './journey/places.js'
+import { GoalsHud } from './hud.js'
+import { esc } from './esc.js'
 
 /** The demo's pack id (public/learn/demo/DEMO.json). */
 export const DEMO_PACK = 'DEMO'
@@ -47,8 +49,9 @@ export class Learn {
    * `startSim(sim)`, a mission's `sim` ({ room, course, camera }) applied
    * to the simulator as the mission begins;
    * `onOpen(open)` when a pack opens or closes (the Learn button follows).
+   * `simStage()`: the simulator's stage, for the goals HUD (hud.js).
    */
-  constructor({ pane, rail, workarea, onResize, device, program, connectedProgram = program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, startSim = () => {}, onOpen = () => {} }) {
+  constructor({ pane, rail, workarea, onResize, device, program, connectedProgram = program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, startSim = () => {}, onOpen = () => {}, simStage = () => null }) {
     this.prepare = prepare
     this.startSim = startSim
     this.onOpen = onOpen
@@ -110,8 +113,15 @@ export class Learn {
       stage: (step) => this.guided && stage(step, { board: this._board(), runOn: this.runOn }),
     })
     this.tutorial.addEventListener('journey', (e) => this._startJourney(e.detail.chapter))
-    this.journey.addEventListener('progress', () => this._journeyProgress())
-    this.journey.addEventListener('place', () => this.guided && this._drawRail())
+    this.hud = new GoalsHud(simStage)
+    this.journey.addEventListener('progress', () => {
+      this._journeyProgress()
+      this._hud()
+    })
+    this.journey.addEventListener('place', () => {
+      if (this.guided) this._drawRail()
+      this._hud()
+    })
     this.journey.addEventListener('exit', () => {
       this._save({ journey: false })
       // Leaving the guide of a guided pack leaves the tutorial: there is no drawer to go back to.
@@ -392,13 +402,16 @@ export class Learn {
     const before = await this.library.goals(pack.id, objective.id)
     if (this.tutorial.objective !== objective) return
     this.tutorial.setDone(before)
-    this.watching = { pack, objective }
+    this.watching = { pack, objective, done: before }
     this.watcher.start(objective.goals, before)
+    this._hud()
   }
 
   async _goalsMet(done) {
     const watching = this.watching
     if (!watching) return
+    watching.done = done
+    this._hud()
     await this.library.setGoals(watching.pack.id, watching.objective.id, done)
     const finished = await this.library.finished(watching.pack)
     if (this.tutorial.objective === watching.objective) this.tutorial.setDone(done, finished)
@@ -500,6 +513,42 @@ export class Learn {
     this._setOpen(false)
     this.guided = false
     this._watch()
+    this._hud()
+  }
+
+  /**
+   * The goals HUD over the simulator: a journey's chapter and its steps, or
+   * an objective and its goals, while one is being worked; else nothing.
+   */
+  _hud() {
+    const j = this.journey
+    const mode = this.tutorial.mode
+    const plain = (md) => {
+      const div = document.createElement('div')
+      div.innerHTML = this.tutorial.mdFor(md, mode)
+      return div.textContent.trim()
+    }
+    if (j.running && !j.paused && j.steps?.length) {
+      const c = j.chapter
+      const here = j.steps[j.index]
+      const goals = j.steps
+        .filter((s) => s.chapter === c && !s.ask)
+        .map((s) => {
+          // A step's goal: its `goal`, or the first sentence of its words.
+          const text = s.goal ? plain(s.goal) : plain(s.say).split(/(?<=[.!?])\s/)[0]
+          return { text, html: esc(text), done: j.done.has(s.id), here: s === here }
+        })
+      return this.hud.show({ n: c + 1, title: j.item.chapters[c].title, goals })
+    }
+    const w = this.watching
+    if (!this.isOpen || !w || w.objective !== this.tutorial.objective) return this.hud.show(null)
+    const flow = this.tutorial.pack.missions[this.tutorial.place.mission].flow
+    const n = flow.slice(0, this.tutorial.place.step + 1).filter((i) => i.type !== 'quiz').length
+    this.hud.show({
+      n,
+      title: w.objective.title,
+      goals: w.objective.goals.map((g, i) => ({ text: plain(g.md), html: this.tutorial.mdFor(g.md, mode), done: !!w.done?.[i] })),
+    })
   }
 
   /** 'blocks' or 'python': the tutorial shows that mode's text. A change is the `switched` event. */
@@ -507,6 +556,7 @@ export class Learn {
     if (this.tutorial.mode !== mode) this.event('switched')
     this.tutorial.setMode(mode)
     this.journey.setMode(mode)
+    this._hud()
   }
 
   get isOpen() {

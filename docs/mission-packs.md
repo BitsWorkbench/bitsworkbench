@@ -176,6 +176,7 @@ Each step is either something to do or a question:
 | `to` | For a block to drag: where it goes, as a place (`after:display.show(...)`). |
 | `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera 45 degrees, by dragging or with the arrow keys) and `palette` (opened a category; `"name"` its id). In blocks, a step's checks see only the blocks snapped into the program (hanging from its start, a function or an event): a block still being dragged, or dropped loose beside the program, does not meet it. Left out, the step is one to read: its bubble has Next at once. |
 | `ask`, `answers` | Instead of `say`, `point` and `do`: a question in the bubble, as in a quiz. |
+| `goal` | Markdown, a few words: the step as a goal in the goals HUD over the simulator ("Run your program"). Left out, the first sentence of `say`. |
 | `cheer` | Markdown: a few words when it is met. |
 | `hints` | Up to three, Markdown, one at a time on request. |
 | `more` | Markdown: more to read, folded. |
@@ -222,8 +223,14 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   asks to connect again.
 - **In tutorial mode.** The Learn button reads Exit tutorial, the way out at any time.
   Progress stays for next time; a reload comes back to the step.
-- **The rail** shows the mission (its button opens the missions list) and its chapters as
-  numbered objectives: done, open, or locked. A done one can be visited again, its steps
+- **The rail** shows, top to bottom, the mission pack and the mission, each by its `avatar`
+  where it has one (a tooltip names it: Mission pack, Mission), both opening the missions
+  list, then the mission's chapters as numbered objectives: done, open, or locked.
+- **The goals HUD**, at the lower left of the simulator, shows the objective (the chapter) and
+  its steps as goals, each ticked as it is met; folded, a box per goal with its words in the
+  tooltip. It is open where the view has room, folded where it is short, and gone where the
+  view is shorter still; the student's choice is kept. An ordinary objective shows its goals
+  there too. A done one can be visited again, its steps
   marked done, with Next.
 - **In order, softly.** Missions and chapters open in order. Picking a locked one warns that
   things may not work as expected, and offers to unlock the next one only.

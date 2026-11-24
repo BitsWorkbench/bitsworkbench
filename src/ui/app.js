@@ -116,6 +116,7 @@ export class App {
         if (camera) sim.setCamera(camera.mode, { turn: camera.turn ?? null })
       },
       onOpen: (open) => this._showLearnOpen(open),
+      simStage: () => document.querySelector('#sim-host .sim-stage'),
     })
     // What the demo leaves in its file, so the next demo replaces it without asking when the student has not changed it since.
     this.learn.journey.addEventListener('progress', () => this._keepGuideLeft())
