@@ -13,7 +13,7 @@ export const SECTIONS = ['Blocks', 'Python', 'Concept', 'Caution', 'Peek', 'Remi
 export const EVENTS = ['edited', 'file-created', 'trek-used', 'stepped', 'switched', 'orbit', 'palette']
 
 /** A journey step's named places (docs/mission-packs.md, "Journeys"): the kind, before any `:`. */
-export const PLACES = ['run', 'stop', 'pause', 'step', 'switch', 'sim', 'terminal', 'palette', 'palette-item', 'block', 'field', 'after', 'part']
+export const PLACES = ['run', 'stop', 'pause', 'step', 'switch', 'sim', 'terminal', 'program', 'palette', 'palette-item', 'block', 'field', 'after', 'part']
 /** Effects a journey step can ask for, by name. */
 export const EFFECTS = ['ghost', 'beam', 'zoom', 'pulse', 'morph']
 /** Explainer cards a journey step can show. */
@@ -333,7 +333,7 @@ class Checker {
             ask: this.md,
             answers: (a, where) => this.list(a, where, (answer, w) => this.fields(answer, w, { a: this.md, correct: [this.yes, false] }), { min: 2 }),
           }
-        : { say: this.md, point: [this.place, false], palette: [this.text, false], to: [this.place, false], do: this.check }),
+        : { say: this.md, point: [this.place, false], palette: [this.text, false], to: [this.place, false], do: [this.check, false] }),
       cheer: [this.md, false],
       hints: [(h, where) => this.list(h, where, this.md, { min: 0 }), false],
       more: [this.md, false],
