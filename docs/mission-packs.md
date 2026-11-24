@@ -181,6 +181,7 @@ Each step is either something to do or a question:
 | `hints` | Up to three, Markdown, one at a time on request. |
 | `more` | Markdown: more to read, folded. |
 | `skippable` | `true`: the student may skip it (any step that needs sight, such as turning the camera). |
+| `onward` | `true`: once met, straight on to the next step, with no Next to press (a step that only opens the way to the next, such as opening a category of the palette). Its `cheer` is not shown. |
 | `show` | A card beside the simulator once met: `{ "card": "picture", "asset": "...", "caption": "..." }`, `compare` (the program as Python) or `callout`. |
 | `fx` | Effects: `ghost` (while the step waits, the `point` block flies to `to`, with a hand; "Show me" plays it again), and once met `beam <place> > <place>` (a line of light, to each part of a `part:`), `zoom <place>` (a magnifier on the board's screen), `pulse <place>` (each part glows), `morph` (each of the student's blocks lights in turn). Under reduced motion they stand still. |
 | `mode` | `blocks` or `python`: a step only that mode plays. |
@@ -224,8 +225,10 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
 - **In tutorial mode.** The Learn button reads Exit tutorial, the way out at any time.
   Progress stays for next time; a reload comes back to the step.
 - **The rail** shows, top to bottom, the mission pack and the mission, each by its `avatar`
-  where it has one (a tooltip names it: Mission pack, Mission), both opening the missions
-  list, then the mission's chapters as numbered objectives: done, open, or locked.
+  where it has one (its tooltip is its name alone), both opening the missions list, then the
+  mission's chapters as numbered objectives, as CodeSpace shows them: every number in sight,
+  a green check in the corner of a done one, a lock in the corner of a locked one (grey), and
+  the objective's name as its tooltip.
 - **The goals HUD**, at the lower left of the simulator, shows the objective (the chapter) and
   its steps as goals, each ticked as it is met; folded, a box per goal with its words in the
   tooltip. It is open where the view has room, folded where it is short, and gone where the
@@ -243,7 +246,9 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   (`--Python--` sections, or Python-only steps), and else to see the program in Python.
 
 **The demo.** The welcome's Try a Demo! opens `public/learn/demo/DEMO.json`, a guided pack of
-one CodeBot mission in blocks (`runs: sim`), always from its start. Its file, `demo/demo.py`, is
+one CodeBot mission in blocks (`runs: sim`), in one click: past its opening card, straight into
+its first step. Tried before and left part way, it asks whether to start over (from the first
+step, in blocks) or carry on where the student was; finished, it starts over. Its file, `demo/demo.py`, is
 replaced without asking when it holds only what the demo left there (the program as it was when
 the student last met a step); changed by the student since, it is theirs to save under another
 name, as for any mission. It is the app's own, under

@@ -211,6 +211,10 @@ export default {
   'welcome.confirm': '¡Vamos!',
   'welcome.resume': 'Continuar',
   'welcome.demo': '¡Prueba una demostración!',
+  'demo.againTitle': '¿Empezar la demostración de nuevo?',
+  'demo.againBody': 'Ya has estado aquí. ¿Empiezas la demostración desde el principio, con bloques, o sigues donde lo dejaste?',
+  'demo.startOver': 'Empezar de nuevo',
+  'demo.carryOn': 'Seguir',
   'welcome.bodyHtml': `
     <ul class="welcome-list">
       <li>Programa con bloques o con Python, como prefieras.</li>

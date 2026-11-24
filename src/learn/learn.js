@@ -17,7 +17,7 @@ import { RegexTester } from './regex.js'
 import { offersBlocks } from './offer.js'
 import { BRAND } from '../brand.js'
 import { Rail } from './rail.js'
-import { Journey } from './journey/journey.js'
+import { Journey, FINISHED } from './journey/journey.js'
 import { Effects } from './journey/effects.js'
 import { Places } from './journey/places.js'
 import { GoalsHud } from './hud.js'
@@ -56,6 +56,7 @@ export class Learn {
     this.startSim = startSim
     this.onOpen = onOpen
     this.toPython = toPython
+    this.switchMode = switchMode
     this.guided = false
     this.pane = pane
     this.railEl = rail
@@ -153,9 +154,10 @@ export class Learn {
   /**
    * Begin a guided mission (the first not done for null): the student's
    * choice of simulator or board, asked once for the pack; the board up; then
-   * the coach, at its opening card or where the student left off.
+   * the coach, at its opening card or where the student left off (`now`:
+   * past the opening card, into the first step).
    */
-  async _beginMission(mi) {
+  async _beginMission(mi, { now = false } = {}) {
     const pack = this.tutorial.pack
     if (mi === null || !pack.missions[mi]) mi = firstToDo(missionStates(await this._progresses(pack)))
     this.journey.stop()
@@ -173,7 +175,7 @@ export class Learn {
     if (!(await this._prepare(device))) return
     if (this.tutorial.pack !== pack || this.tutorial.place?.mission !== mi) return
     if (this.runOn === 'sim' && this.tutorial.objective?.sim) this.startSim(this.tutorial.objective.sim)
-    if (!(await this.journey.start(pack, this.tutorial.objective, this.tutorial.mode))) return
+    if (!(await this.journey.start(pack, this.tutorial.objective, this.tutorial.mode, { now }))) return
     this._save({ journey: true })
     this._drawRail()
   }
@@ -283,7 +285,10 @@ export class Learn {
 
   /**
    * The demo (Try a Demo!, on the welcome): a small guided pack that comes
-   * with the app, learn/demo/DEMO.json, always played from its start.
+   * with the app, learn/demo/DEMO.json, in one click: past its opening card,
+   * into its first step. Tried before and left part way: the student is asked
+   * whether to start over (from the first step, in blocks) or carry on where
+   * they were. Finished: it starts over, as there is nothing to carry on.
    */
   async openDemo() {
     let pack
@@ -296,9 +301,26 @@ export class Learn {
       pack = await this.library.get(DEMO_PACK).catch(() => null)
       if (!pack) return toast({ kind: 'error', title: t('learn.unreachable', { title: t('welcome.demo') }) })
     }
+    const progress = await this._progresses(pack)
+    const started = progress.some((goals) => goals.length)
+    const finished = progress.every((goals) => goals.includes(FINISHED))
+    if (started && !finished) {
+      const how = await choose({
+        title: t('demo.againTitle'),
+        bodyHtml: `<p>${esc(t('demo.againBody'))}</p>`,
+        choices: [
+          { value: 'over', label: t('demo.startOver'), primary: true },
+          { value: 'resume', label: t('demo.carryOn') },
+        ],
+      })
+      if (!how) return
+      if (how === 'resume') return this.open(pack.id, { now: true })
+    }
     for (const m of pack.missions) for (const item of m.flow) await this.library.setGoals(pack.id, item.id, [])
     await this.library.setPlace(pack.id, null)
-    await this.open(pack.id)
+    // From the start, in blocks (a student who went on to Python is taken back).
+    if (this.tutorial.mode !== 'blocks') this.switchMode?.('blocks')
+    await this.open(pack.id, { now: true })
   }
 
   /** Hand the journey on show over to the coach: the drawer goes, the coach comes. */
@@ -466,7 +488,7 @@ export class Learn {
   }
 
   /** Open a kept pack where the student left it, with the drawer out unless `drawer` is false. */
-  async open(id, { quiet = false, drawer = true } = {}) {
+  async open(id, { quiet = false, drawer = true, now = false } = {}) {
     const pack = await this.library.get(id).catch(() => null)
     if (!pack) {
       if (!quiet) toast({ kind: 'error', title: t('learn.gone') })
@@ -484,7 +506,7 @@ export class Learn {
     // A guided pack has no drawer: the mission controller and its coach lead, from where the student left off.
     if (this.guided) {
       this._setDrawer(false)
-      return this._beginMission(place?.mission ?? null)
+      return this._beginMission(place?.mission ?? null, { now })
     }
     this._setDrawer(drawer)
     this._watch()

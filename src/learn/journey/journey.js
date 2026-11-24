@@ -12,7 +12,7 @@ import { t } from '../../i18n/index.js'
 import { esc } from '../esc.js'
 import { Coach } from './coach.js'
 
-const FINISHED = '$done' // in a journey's progress: the finish was reached
+export const FINISHED = '$done' // in a journey's progress: the finish was reached
 
 /** A title as a Python file's stem: "Light Show" is light_show. */
 const stemOf = (title) => {
@@ -68,10 +68,12 @@ export class Journey extends EventTarget {
 
   /**
    * Begin, or carry on, `item` of `pack` in `mode`, in its file; `chapter`
-   * (an index) starts that chapter over from its program. False when the
-   * student, asked about a file of that name, chose neither: nothing changed.
+   * (an index) starts that chapter over from its program; `now` skips the
+   * opening card, straight into the first step (the demo: Try a Demo! already
+   * said what it is). False when the student, asked about a file of that
+   * name, chose neither: nothing changed.
    */
-  async start(pack, item, mode, { chapter = null } = {}) {
+  async start(pack, item, mode, { chapter = null, now = false } = {}) {
     if (chapter !== null && !(await this.useFile({ ...fileOf(item, chapter), code: item.chapters[chapter]?.code ?? null, carry: true }))) return false
     this.stop()
     this.pack = pack
@@ -95,8 +97,16 @@ export class Journey extends EventTarget {
     // Carrying on: in the file of the chapter the student is in (made from the program on show, for work from before journeys had files).
     if (next !== 0) await this.useFile({ ...fileOf(item, next === -1 ? item.chapters.length - 1 : this.steps[next].chapter), carry: true })
     if (next === -1) await this._finish()
+    else if (next === 0 && now) await this._begin()
     else if (next === 0) this._opening()
     else this._go(next)
+    return true
+  }
+
+  /** The journey starts in its file, from its first chapter's program. */
+  async _begin() {
+    if (!(await this.useFile({ ...fileOf(this.item, 0), code: this.item.chapters[0]?.code ?? null, carry: true }))) return false
+    this._go(0)
     return true
   }
 
@@ -233,6 +243,8 @@ export class Journey extends EventTarget {
     this.watcher.stop()
     this.done.add(s.id)
     await this._save()
+    // A step that only opens the way to the next: on to it, no Next to press.
+    if (s.onward && this.index + 1 < this.steps.length) return this._action({ action: 'next' })
     this._strip()
     this.coach.met({ html: s.cheer && this.md(s.cheer, this.mode) })
     this.coach.announce(`${t('journey.done')}. ${this._plain(s.cheer || '')}`)
@@ -281,11 +293,7 @@ export class Journey extends EventTarget {
   async _action({ action, value }) {
     const s = this.steps[this.index]
     switch (action) {
-      case 'begin': {
-        // The journey starts in its file, from its first chapter's program.
-        if (!(await this.useFile({ ...fileOf(this.item, 0), code: this.item.chapters[0]?.code ?? null, carry: true }))) return
-        return this._go(0)
-      }
+      case 'begin': return this._begin()
       case 'next': {
         // A step to read is done once read.
         const read = this.steps[this.index]

@@ -74,15 +74,25 @@ for (const [name, width, height, touch] of SIZES) {
   await page.waitForLoadState('networkidle')
   check(didReload && !(await welcome()), 'Try a Demo! is one click, even when the page reloads onto a new build on the way')
   await page.unroute(/\/assets\/view-[^/]*\.js$/)
-  await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 30000 })
-  check(/^Meet CodeBot!/.test(await page.locator('.journey-centre p').first().innerText()), 'Meet CodeBot!')
+  // Straight into the first step: no opening card to click past.
+  await page.waitForSelector('.journey-bubble:not([hidden])', { timeout: 30000 })
+  check(await page.locator('.journey-centre').isHidden(), 'no opening card: the demo opens at its first step')
+  check(/^Meet CodeBot/.test(await page.locator('.journey-bubble .journey-say').innerText()), 'Meet CodeBot, in the first step')
   const s = await page.evaluate(() => ({ sim: window.openCodeBot.device.simulating, board: window.openCodeBot.device.targetId, learn: document.querySelector('#btn-learn .btn-text').textContent }))
   check(s.sim && s.board === 'codebot', `CodeBot comes up in the simulator, nothing asked (${s.board})`)
   check(s.learn === 'Exit tutorial', 'in tutorial mode')
   check(await page.evaluate(() => window.openCodeBot.device.sim.cameraMode === 'chase' && window.openCodeBot.device.sim.cameraOpts.turn === 150), 'the chase camera, looking at CodeBot\'s front')
-  await page.click('.journey-centre [data-journey="begin"]')
-  await page.waitForSelector('.journey-bubble:not([hidden])')
   check((await page.evaluate(() => window.openCodeBot.openFile.path)) === 'demo/demo.py', 'the demo works in demo/demo.py')
+  // The bubble about the simulator: to its left, pointing right, clear of its buttons and the terminal (where there is room).
+  const beside = () => page.evaluate(() => {
+    const b = document.querySelector('.journey-bubble').getBoundingClientRect()
+    const sim = document.querySelector('#panel-sim canvas.sim-canvas').getBoundingClientRect()
+    return { side: document.querySelector('.journey-bubble').dataset.side, left: b.right <= sim.left + 1 }
+  })
+  if (!touch) {
+    const at = await beside()
+    check(at.side === 'left' && at.left, `the simulator's bubble is to its left, pointing in (${JSON.stringify(at)})`)
+  }
 
   const met = () => page.waitForSelector('.journey-bubble.good', { timeout: 20000 }).then(() => true, () => false)
   const next = async () => {
@@ -116,6 +126,8 @@ for (const [name, width, height, touch] of SIZES) {
     check(!(await quickly()), 'a nudge of the view does not meet it')
     await drag(Math.round((await page.locator('#panel-sim canvas.sim-canvas').boundingBox()).width * 0.5))
     check(await met(), 'turning it 45 degrees does')
+    const at = await beside()
+    check(at.side === 'left' && at.left, `and its cheer stays to the left (${JSON.stringify(at)})`)
     await next()
   } else {
     await page.click('.journey-bubble [data-journey="skip"]')
@@ -137,8 +149,9 @@ for (const [name, width, height, touch] of SIZES) {
   })
   // (A phone's view, under the coach, is too short for it.)
   if (!touch) check(!!hud && /Objective 1:\s*Drive/.test(hud.text) && hud.boxes === 5 && hud.done === 3, `the goals HUD shows the objective and its goals, three met (${JSON.stringify(hud)})`)
-  const rail = await page.evaluate(() => [...document.querySelectorAll('#learn-rail [data-rail="missions"], #learn-rail [data-rail-chapter]')].map((b) => `${b.querySelector('img') ? 'img ' : ''}${b.title}`))
-  check(/^img Mission pack: /.test(rail[0]) && /^img Mission 1: Drive CodeBot/.test(rail[1]) && /^Objective 1 of 2: Drive/.test(rail[2]), `the rail: the pack's picture, the mission's, then the objectives (${rail.join(' | ')})`)
+  const rail = await page.evaluate(() => [...document.querySelectorAll('#learn-rail [data-rail="missions"], #learn-rail [data-rail-chapter]')].map((b) => `${b.querySelector('img') ? 'img ' : ''}${b.title}|${b.textContent.trim()}|${b.dataset.locked ?? ''}`))
+  check(rail.length === 4 && rail[0] === 'img BitsWorkbench demo||' && rail[1] === 'img Drive CodeBot||', `the rail: the pack's picture and name, the mission's picture and name, no mission number (${rail.join(' / ')})`)
+  check(rail[2] === 'Drive|1|false' && rail[3] === 'Lights|2🔒|true', `then every objective's number, its name, the locked one with a lock (${rail.slice(2).join(' / ')})`)
   await next()
   // 3: full power
   check((await at()) === 'DEMO_power' && (await pointed()), 'step 3 points at the power in the drive block')
@@ -153,9 +166,10 @@ for (const [name, width, height, touch] of SIZES) {
   // 5: Lights
   check((await at()) === 'DEMO_palette' && (await pointed()), 'step 5 points at the Lights category')
   await page.evaluate(() => window.openCodeBot.learn.journey.places.openPalette('lights'))
-  check(await met(), 'opening it meets it')
-  await next()
-  check((await at()) === 'DEMO_leds' && (await pointed()), 'step 6 points at the LED block in the palette')
+  await page.waitForTimeout(600)
+  check((await at()) === 'DEMO_leds' && (await pointed()), 'opening it goes straight on, no Done to press: step 6 points at the LED block in the palette')
+  const lit = await page.evaluate(() => [...document.querySelectorAll('#learn-rail [data-rail-chapter]')].map((b) => `${b.textContent.trim()}|${b.dataset.done}|${b.dataset.locked}`))
+  check(lit[0] === '1✓|true|false' && lit[1] === '2|false|false', `the rail: the first objective done, with a check; the second open (${lit.join(' / ')})`)
   // Dropped loose, beside the program: not snapped in.
   const loose = await page.evaluate(() => {
     const ws = window.openCodeBot.workspace.workspace
@@ -216,17 +230,15 @@ for (const [name, width, height, touch] of SIZES) {
   await next()
   check((await at()) === 'DEMO_palette' && (await pointed()), 'Python: the step points at the Python palette\'s Lights')
   await page.click('#py-palette .py-cat[data-id="lights"]')
-  check(await met(), 'Python: opening Lights meets it')
-  await next()
-  check((await at()) === 'DEMO_leds' && (await pointed()), 'Python: the step points at the Lights category, the code left in sight')
+  await page.waitForTimeout(600)
+  check((await at()) === 'DEMO_leds' && (await pointed()), 'Python: opening Lights goes straight on, Lights left open')
+  check(await page.evaluate(() => window.openCodeBot.learn.journey._locate(window.openCodeBot.learn.journey.steps[window.openCodeBot.learn.journey.index])?.el?.classList?.contains('snippet')), 'Python: the step points at the card')
   // The card goes in where the cursor is: at the end, as a drag there would put it.
   await page.evaluate(() => {
     const view = window.openCodeBot.pythonEditor.view
     const last = view.state.doc.line(view.state.doc.lines - (view.state.doc.line(view.state.doc.lines).text.trim() ? 0 : 1))
     view.dispatch({ selection: { anchor: last.to } })
   })
-  await page.click('#py-palette .py-cat[data-id="lights"]')
-  check(await pointed(), 'Python: once Lights is open, the step points at the card')
   await page.locator('#py-palette .snippet').filter({ hasText: /^leds\.user\(0xFF\)$/ }).click()
   check(await met(), 'Python: the card goes in under the last line, and meets it')
   check((await page.locator('.journey-bubble .journey-say').innerText()).trim() === 'Code added.', 'Python: Code added.')
@@ -250,14 +262,38 @@ for (const [name, width, height, touch] of SIZES) {
   const mine = await page.evaluate(() => window.openCodeBot._currentPython())
   await type(`${mine.trimEnd()}\nprint("mine")\n`)
   await page.waitForTimeout(1500)
-  await page.evaluate(() => window.openCodeBot.learn.openDemo())
-  await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 15000 })
-  await page.click('.journey-centre [data-journey="begin"]')
-  check(await page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 5000 }).then(() => true, () => false), 'demo.py changed by the student: it is theirs to keep')
+  // (Finished, the demo starts over without asking: there is nothing to carry on.)
+  const demo = () => page.evaluate(() => { window.openCodeBot.learn.openDemo() })
+  await demo()
+  check(await page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 15000 }).then(() => true, () => false), 'demo.py changed by the student: it is theirs to keep')
   await page.click('#modal[open] button[value="choice:save"]')
   await page.waitForSelector('.journey-bubble:not([hidden])')
   const kept = await page.evaluate(() => window.openCodeBot.stores.browser.read('demo/demo_2.py').catch(() => null))
   check(kept?.includes('print("mine")'), 'kept as demo/demo_2.py')
+  check(await page.evaluate(() => window.openCodeBot.workspace.mode === 'blocks' && window.openCodeBot.learn.journey.mode === 'blocks'), 'finished in Python, the demo starts over in blocks')
+
+  // Tried before and left part way: asked whether to start over or carry on.
+  const asked = () => page.waitForSelector('#modal[open] button[value="choice:over"]', { timeout: 10000 }).then(() => true, () => false)
+  await page.click('.journey-bubble [data-journey="skip"]')
+  await page.waitForTimeout(400)
+  check((await at()) === 'DEMO_program', 'a step on')
+  await demo()
+  check(await asked(), 'Try a Demo! again, part way through: asked whether to start over')
+  check(/Start the demo over\?/.test(await page.locator('#modal[open] h2').innerText()) && (await page.locator('#modal[open] button[value="choice:resume"]').count()) === 1, 'Start over, or Carry on')
+  await page.click('#modal[open] button[value="choice:resume"]')
+  await page.waitForSelector('.journey-bubble:not([hidden])')
+  await page.waitForTimeout(400)
+  check((await at()) === 'DEMO_program', 'Carry on: where they were')
+  // In Python by now: Start over goes back to the first step, in blocks.
+  await page.evaluate(() => window.openCodeBot.learn.toPython())
+  await page.waitForTimeout(400)
+  await demo()
+  check(await asked(), 'asked again')
+  await page.click('#modal[open] button[value="choice:over"]')
+  await page.waitForSelector('.journey-bubble:not([hidden])')
+  await page.waitForTimeout(400)
+  const over = await page.evaluate(() => ({ at: window.openCodeBot.learn.journey.steps[window.openCodeBot.learn.journey.index]?.id, mode: window.openCodeBot.workspace.mode, done: window.openCodeBot.learn.journey.done.size }))
+  check(over.at === 'DEMO_look' && over.mode === 'blocks' && over.done === 0, `Start over: the first step, in blocks, nothing done (${JSON.stringify(over)})`)
   await context.close()
 }
 await browser.close()
