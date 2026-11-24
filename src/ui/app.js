@@ -23,7 +23,7 @@ import { companionsOf, CopiedFiles, copyable } from '../files/companions.js'
 import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
-import { Learn } from '../learn/learn.js'
+import { Learn, DEMO_PACK } from '../learn/learn.js'
 import { installCodeTrek } from '../learn/trek-blocks.js'
 import { trekSnippets } from '../learn/trek.js'
 import { installPaletteSize } from './palette-size.js'
@@ -31,6 +31,7 @@ import { esc } from '../learn/esc.js'
 import { BANNER } from '../blocks/generate.js'
 
 const SEEN_WELCOME = 'opencodebot.welcomed.v1' // been here before: Welcome back
+const GUIDE_LEFT = 'opencodebot.guideLeft.v1' // { 'store:path': the program the demo last left in that file }
 const WELCOME = 'opencodebot.welcome.v1' // 'off': no welcome (tests, kiosks)
 const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
@@ -93,6 +94,7 @@ export class App {
       onResize: () => this._refitSide?.(),
       device: this.device,
       program: () => this._currentPython(),
+      connectedProgram: () => this._connectedPython(),
       onTrek: (trek) => this._showTrek(trek),
       blocksFromPython: (python, board) => pythonToBlocks(python, board),
       toPython: () => this.workspace.mode === 'text' || this._toText(),
@@ -106,6 +108,8 @@ export class App {
       stage: (step, how) => this._stage(step, how),
       onOpen: (open) => this._showLearnOpen(open),
     })
+    // What the demo leaves in its file, so the next demo replaces it without asking when the student has not changed it since.
+    this.learn.journey.addEventListener('progress', () => this._keepGuideLeft())
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
     this.trek = null
     this.codeTrek = installCodeTrek(this.workspace, { used: () => this.learn.event('trek-used') })
@@ -946,6 +950,31 @@ export class App {
     return back && back.python === python ? back.text : python
   }
 
+  /**
+   * The program a guide's step checks: in blocks, only the blocks snapped
+   * into it. A stack that hangs from no hat block (the program's start, a
+   * function, an event) is not in the program yet: a block being dragged in,
+   * or one dropped loose beside it. With no hat block at all, every block is.
+   */
+  _connectedPython() {
+    if (this.workspace.mode === 'text') return this._currentPython()
+    const ws = this.workspace.workspace
+    const tops = ws.getTopBlocks(false)
+    const loose = new Set(tops.filter((b) => b.previousConnection || b.outputConnection).map((b) => b.id))
+    if (!loose.size || loose.size === tops.length) return this._currentPython()
+    const state = Blockly.serialization.workspaces.save(ws)
+    state.blocks.blocks = state.blocks.blocks.filter((b) => !loose.has(b.id))
+    const scratch = new Blockly.Workspace()
+    try {
+      Blockly.serialization.workspaces.load(state, scratch, { recordUndo: false })
+      return generatePython(scratch, this.workspace.targetId)
+    } catch {
+      return this._currentPython()
+    } finally {
+      scratch.dispose()
+    }
+  }
+
   _blocksPython() {
     return generatePython(this.workspace.workspace, this.workspace.targetId)
   }
@@ -1048,9 +1077,10 @@ export class App {
     }
     if (code === null || sameProgram(text, code)) return open || this._openFile(kind, path, text)
 
-    // A file of that name holds something else: the student's choice.
+    // A file of that name holds something else: the student's choice, unless it is only what the demo left there.
     const other = await this._freeName(store, folder, file)
-    const how = await choose({
+    const left = guideLeft()[`${kind}:${path}`]
+    const how = left != null && sameProgram(text, left) ? 'replace' : await choose({
       title: t('missionFile.title', { name: file }),
       bodyHtml: `${t('missionFile.bodyHtml', { name: esc(file) })}
         <label class="save-as"><span>${esc(t('missionFile.newName'))}</span> <input id="mission-save-as" type="text" value="${esc(other)}" spellcheck="false" autocomplete="off"></label>`,
@@ -1093,6 +1123,21 @@ export class App {
       }
     })
     return written && this._openFile(kind, path, code)
+  }
+
+  /**
+   * The demo met a step: what is in its file now is the demo's, not the
+   * student's own. (A mission's file is theirs, done with the guide or not:
+   * only the demo, always played from its start, is replaced unasked.)
+   */
+  _keepGuideLeft() {
+    const f = this.openFile
+    if (!f || !this.learn.journey.running || this.learn.journey.pack?.id !== DEMO_PACK) return
+    try {
+      localStorage.setItem(GUIDE_LEFT, JSON.stringify({ ...guideLeft(), [`${f.store}:${f.path}`]: this._currentPython() }))
+    } catch {
+      // not kept: starting again asks, as before
+    }
   }
 
   /** Open a file whose text is known, the open one saved first; true once it is open. */
@@ -1903,6 +1948,14 @@ export class App {
       ],
     })
     return how === 'demo'
+  }
+}
+
+function guideLeft() {
+  try {
+    return JSON.parse(localStorage.getItem(GUIDE_LEFT)) || {}
+  } catch {
+    return {}
   }
 }
 

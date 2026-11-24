@@ -88,10 +88,27 @@ for (const [name, width, height, touch] of SIZES) {
   const at = () => page.evaluate(() => window.openCodeBot.learn.journey.steps[window.openCodeBot.learn.journey.index]?.id)
   const pointed = () => page.evaluate(() => { const j = window.openCodeBot.learn.journey; return !!j._locate(j.steps[j.index]) })
 
-  // 1: look around (skippable)
+  // 1: look around: met by turning the view 45 degrees, not by a nudge.
   check((await at()) === 'DEMO_look' && (await pointed()), 'step 1 points at the simulator')
-  await page.click('.journey-bubble [data-journey="skip"]')
-  await page.waitForTimeout(400)
+  const drag = async (dx) => {
+    const r = await page.locator('#panel-sim canvas.sim-canvas').boundingBox()
+    const x = r.x + r.width * 0.3, y = r.y + r.height * 0.75
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    for (let i = 1; i <= 10; i++) await page.mouse.move(x + (dx * i) / 10, y)
+    await page.mouse.up()
+  }
+  const quickly = () => page.waitForSelector('.journey-bubble.good', { timeout: 1500 }).then(() => true, () => false)
+  if (!touch) {
+    await drag(15)
+    check(!(await quickly()), 'a nudge of the view does not meet it')
+    await drag(Math.round((await page.locator('#panel-sim canvas.sim-canvas').boundingBox()).width * 0.5))
+    check(await met(), 'turning it 45 degrees does')
+    await next()
+  } else {
+    await page.click('.journey-bubble [data-journey="skip"]')
+    await page.waitForTimeout(400)
+  }
   // 2: Run
   check((await at()) === 'DEMO_run' && (await pointed()), 'step 2 points at Run')
   await run()
@@ -113,6 +130,17 @@ for (const [name, width, height, touch] of SIZES) {
   check(await met(), 'opening it meets it')
   await next()
   check((await at()) === 'DEMO_leds' && (await pointed()), 'step 6 points at the LED block in the palette')
+  // Dropped loose, beside the program: not snapped in.
+  const loose = await page.evaluate(() => {
+    const ws = window.openCodeBot.workspace.workspace
+    const b = ws.newBlock('codebot_leds_all')
+    b.initSvg()
+    b.render()
+    b.moveBy(40, 400)
+    return b.id
+  })
+  check(!(await quickly()), 'a block dropped loose is not snapped in')
+  await page.evaluate((id) => window.openCodeBot.workspace.workspace.getBlockById(id).dispose(), loose)
   const now = await page.evaluate(() => window.openCodeBot._currentPython())
   await load(`${now.trimEnd()}\nleds.user(0xFF)\n`)
   check(await met(), 'adding it meets it')
@@ -135,12 +163,10 @@ for (const [name, width, height, touch] of SIZES) {
   await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 15000 })
   check(await page.evaluate(() => window.openCodeBot.workspace.mode === 'text' && window.openCodeBot.learn.journey.mode === 'python'), 'in the Python view, the demo starts again in Python')
   await page.click('.journey-centre [data-journey="begin"]')
-  // demo.py holds the blocks' program: the student keeps it under another name.
-  check(await page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 5000 }).then(() => true, () => false), 'their program from the blocks is theirs to keep')
-  await page.click('#modal[open] button[value="choice:save"]')
+  // demo.py holds only what the guide left there: it starts over without asking, and no demo_2.py.
+  check(!(await page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 2500 }).then(() => true, () => false)), 'demo.py as the guide left it is replaced without asking')
   await page.waitForSelector('.journey-bubble:not([hidden])')
-  const kept = await page.evaluate(() => window.openCodeBot.stores.browser.read('demo/demo_2.py').catch(() => null))
-  check(kept?.includes('leds.user(0xFF)'), 'kept as demo/demo_2.py')
+  check(!(await page.evaluate(() => window.openCodeBot.stores.browser.exists('demo/demo_2.py'))), 'and no demo_2.py')
   const type = (py) => page.evaluate(async (py) => {
     const app = window.openCodeBot
     await app.pythonEditor.load()
@@ -191,6 +217,18 @@ for (const [name, width, height, touch] of SIZES) {
   await page.click('#modal[open] button[value="choice:exit"]')
   await page.waitForTimeout(500)
   check(await page.evaluate(() => !window.openCodeBot.learn.isOpen), 'out of the tutorial')
+  // Changed by the student after the guide: the demo again asks before it replaces their work.
+  const mine = await page.evaluate(() => window.openCodeBot._currentPython())
+  await type(`${mine.trimEnd()}\nprint("mine")\n`)
+  await page.waitForTimeout(1500)
+  await page.evaluate(() => window.openCodeBot.learn.openDemo())
+  await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 15000 })
+  await page.click('.journey-centre [data-journey="begin"]')
+  check(await page.waitForSelector('#modal[open] button[value="choice:save"]', { timeout: 5000 }).then(() => true, () => false), 'demo.py changed by the student: it is theirs to keep')
+  await page.click('#modal[open] button[value="choice:save"]')
+  await page.waitForSelector('.journey-bubble:not([hidden])')
+  const kept = await page.evaluate(() => window.openCodeBot.stores.browser.read('demo/demo_2.py').catch(() => null))
+  check(kept?.includes('print("mine")'), 'kept as demo/demo_2.py')
   await context.close()
 }
 await browser.close()

@@ -21,6 +21,9 @@ import { Journey } from './journey/journey.js'
 import { Effects } from './journey/effects.js'
 import { Places } from './journey/places.js'
 
+/** The demo's pack id (public/learn/demo/DEMO.json). */
+export const DEMO_PACK = 'DEMO'
+
 const OPEN = 'opencodebot.learn.v1' // { id, drawer: false when the student closed it }
 
 export class Learn {
@@ -28,7 +31,8 @@ export class Learn {
    * `pane`, `rail`, `workarea`: the elements; `onResize()` after the rail
    * comes or goes, for the editor and the side to fit again;
    * `device`, the app's device, and `program()`, the student's program as
-   * Python, for the goals; `onTrek(trek)` with the CodeTrek of the objective
+   * Python, for the goals, and `connectedProgram()`, the same with only the
+   * blocks snapped into it, for a guide's steps; `onTrek(trek)` with the CodeTrek of the objective
    * on show (null when none is), for the palettes; `blocksFromPython(python,
    * board)`, the app's Python to blocks, to judge whether an objective is
    * taught in blocks; `toPython()` when the student asks to switch to Python.
@@ -42,7 +46,7 @@ export class Learn {
    * `stage(step, { board, runOn })`, what a step points at put on screen;
    * `onOpen(open)` when a pack opens or closes (the Learn button follows).
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
+  constructor({ pane, rail, workarea, onResize, device, program, connectedProgram = program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
     this.prepare = prepare
     this.onOpen = onOpen
     this.toPython = toPython
@@ -94,7 +98,8 @@ export class Learn {
       places,
       effects: new Effects({ places }),
       md: (text, mode) => this.tutorial.mdFor(text, mode),
-      watcher: new GoalWatcher({ device, program, tester }),
+      // A step is met by blocks snapped in, not by one still being dragged or dropped loose.
+      watcher: new GoalWatcher({ device, program: connectedProgram, tester }),
       library: this.library,
       side: () => ({ sim: box('#panel-sim'), terminal: box('#panel-terminal') }),
       useFile,
@@ -274,7 +279,7 @@ export class Learn {
       pack = await this.library.add(await res.text())
     } catch (err) {
       console.warn('learn: demo', err)
-      pack = await this.library.get('DEMO').catch(() => null)
+      pack = await this.library.get(DEMO_PACK).catch(() => null)
       if (!pack) return toast({ kind: 'error', title: t('learn.unreachable', { title: t('welcome.demo') }) })
     }
     for (const m of pack.missions) for (const item of m.flow) await this.library.setGoals(pack.id, item.id, [])
