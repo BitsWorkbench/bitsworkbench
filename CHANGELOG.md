@@ -64,6 +64,9 @@ The first public release, planned for December 1, 2026. Everything it holds:
   editor and cards in its palette, in Python's own words. Start a mission in the
   Python view to play it in Python, or finish the pack in blocks and try it again
   in Python.
+- A goals HUD at the lower left of the simulator, as in CodeSpace: the objective
+  and its goals, ticked as they are met. The rail shows the mission pack's and the
+  mission's pictures, then the objectives, each named in its tooltip.
 - Each mission works in its own file, in a folder named for it: nothing of yours
   is replaced unless you choose to save yours under another name or replace it.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with

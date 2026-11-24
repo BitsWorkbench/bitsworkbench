@@ -96,6 +96,15 @@ for (const [name, width, height, touch] of SIZES) {
   check((await at()) === 'DEMO_run' && (await pointed()), 'step 2 points at Run')
   await run()
   check(await met(), 'running meets it')
+  // The goals HUD over the simulator, and the rail: the pack, the mission, the objectives.
+  const hud = await page.evaluate(() => {
+    const h = document.querySelector('#panel-sim .goals-hud:not([hidden])')
+    return h && { text: h.textContent, done: h.querySelectorAll('.goals-hud-box[data-done="true"]').length, boxes: h.querySelectorAll('.goals-hud-box').length }
+  })
+  // (A phone's view, under the coach, is too short for it.)
+  if (!touch) check(!!hud && /Objective 1:\s*Drive/.test(hud.text) && hud.boxes === 4 && hud.done === 2, `the goals HUD shows the objective and its goals, two met (${JSON.stringify(hud)})`)
+  const rail = await page.evaluate(() => [...document.querySelectorAll('#learn-rail [data-rail="missions"], #learn-rail [data-rail-chapter]')].map((b) => `${b.querySelector('img') ? 'img ' : ''}${b.title}`))
+  check(/^img Mission pack: /.test(rail[0]) && /^img Mission 1: Drive CodeBot/.test(rail[1]) && /^Objective 1 of 2: Drive/.test(rail[2]), `the rail: the pack's picture, the mission's, then the objectives (${rail.join(' | ')})`)
   await next()
   // 3: full power
   check((await at()) === 'DEMO_power' && (await pointed()), 'step 3 points at the power in the drive block')

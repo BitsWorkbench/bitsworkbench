@@ -105,6 +105,7 @@ export class App {
       prepare: (how) => this._prepareRun(how),
       stage: (step, how) => this._stage(step, how),
       onOpen: (open) => this._showLearnOpen(open),
+      simStage: () => document.querySelector('#sim-host .sim-stage'),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).
     this.trek = null
