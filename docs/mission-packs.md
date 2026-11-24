@@ -174,7 +174,7 @@ Each step is either something to do or a question:
 | `point` | Where the coach points: a place (below). Left out, the bubble sits over the simulator. |
 | `palette` | For a `palette-item`: its category's id, opened for the student when the step starts. |
 | `to` | For a block to drag: where it goes, as a place (`after:display.show(...)`). |
-| `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera) and `palette` (opened a category; `"name"` its id). |
+| `do` | What meets the step: any check (above), including two events for journeys: `orbit` (the student turned the simulator's camera) and `palette` (opened a category; `"name"` its id). Left out, the step is one to read: its bubble has Next at once. |
 | `ask`, `answers` | Instead of `say`, `point` and `do`: a question in the bubble, as in a quiz. |
 | `cheer` | Markdown: a few words when it is met. |
 | `hints` | Up to three, Markdown, one at a time on request. |
@@ -186,7 +186,8 @@ Each step is either something to do or a question:
 
 **Places** name things on screen, never selectors: `run`, `stop`, `pause`, `step` (shown once a
 running program is paused), `switch` (Blocks or
-Python), `sim`, `terminal`; `palette:lights`, a category by its id (`basics`, `screen`,
+Python), `sim`, `terminal`; `program`, the student's whole program (every block, or every line
+in Python); `palette:lights`, a category by its id (`basics`, `screen`,
 `lights`, `sound`, `sensors`, `radio`, `move`, `logic`, `loops`, `math`, `text`, `lists`,
 `variables`, `functions`, `python`); `palette-item:` and a pattern, the block in the open
 category whose code matches; `block:` and a pattern, the student's block whose statement
