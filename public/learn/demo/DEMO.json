@@ -18,6 +18,7 @@
           "id": "DEMO_Drive_J",
           "title": "Drive CodeBot",
           "file": "demo.py",
+          "sim": { "camera": { "mode": "chase", "turn": 150 } },
           "promise": "Meet CodeBot, a robot you code with blocks. In a few steps you will make it drive and light up, right here on screen.",
           "chapters": [
             {

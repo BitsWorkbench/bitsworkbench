@@ -94,7 +94,7 @@ Any other field is an error, so a misspelt field name is caught rather than igno
 | `hints` | no | Markdown, up to three. |
 | `complete` | no | Markdown shown when the goals are met. |
 | `blocks` | no | Whether the objective is taught in blocks, `true` or `false`. Left out, BitsWorkbench decides (below). |
-| `sim` | no | `{ "room", "course" }`: where the simulated board starts, by the ids in `src/sim/kinds.js` (`ROOMS`) and `src/sim/world/courses.js` (`COURSES`). |
+| `sim` | no | `{ "room", "course", "camera" }`: where the simulated board starts, by the ids in `src/sim/kinds.js` (`ROOMS`) and `src/sim/world/courses.js` (`COURSES`), and the camera it starts with: `{ "mode": "chase", "turn": 150 }`, a mode from `CAMERA_MODES` in `src/sim/kinds.js` and, for `chase`, degrees round from behind the robot (180 looks at its front). A guided mission's `sim` is applied as it begins, in the simulator. |
 
 The code is always Python. In blocks mode the student sees the same program as blocks, made by
 the round trip, so goals, code and solution are written once.

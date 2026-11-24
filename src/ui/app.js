@@ -104,6 +104,12 @@ export class App {
       switchMode: (mode) => ((mode === 'python') !== (this.workspace.mode === 'text') ? this._toggleView() : null),
       prepare: (how) => this._prepareRun(how),
       stage: (step, how) => this._stage(step, how),
+      startSim: ({ room, course, camera }) => {
+        const sim = this.device.sim
+        if (room) sim.setRoom(room)
+        if (course !== undefined) sim.setCourse(course)
+        if (camera) sim.setCamera(camera.mode, { turn: camera.turn ?? null })
+      },
       onOpen: (open) => this._showLearnOpen(open),
     })
     // The open objective's CodeTrek, in the block palette (and the Python one, below).

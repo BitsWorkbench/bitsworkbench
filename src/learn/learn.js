@@ -40,10 +40,13 @@ export class Learn {
    * For guided packs (guide.js): `prepare({ board, runOn })`, the board up in
    * the simulator or on USB (false when the board on USB did not connect);
    * `stage(step, { board, runOn })`, what a step points at put on screen;
+   * `startSim(sim)`, a mission's `sim` ({ room, course, camera }) applied
+   * to the simulator as the mission begins;
    * `onOpen(open)` when a pack opens or closes (the Learn button follows).
    */
-  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, onOpen = () => {} }) {
+  constructor({ pane, rail, workarea, onResize, device, program, onTrek, blocksFromPython, toPython, blocks, simView, pythonView = () => null, useFile, switchMode, prepare = async () => true, stage = () => {}, startSim = () => {}, onOpen = () => {} }) {
     this.prepare = prepare
+    this.startSim = startSim
     this.onOpen = onOpen
     this.toPython = toPython
     this.guided = false
@@ -154,6 +157,7 @@ export class Learn {
     this.runOn = how
     if (!(await this._prepare(device))) return
     if (this.tutorial.pack !== pack || this.tutorial.place?.mission !== mi) return
+    if (this.runOn === 'sim' && this.tutorial.objective?.sim) this.startSim(this.tutorial.objective.sim)
     if (!(await this.journey.start(pack, this.tutorial.objective, this.tutorial.mode))) return
     this._save({ journey: true })
     this._drawRail()
