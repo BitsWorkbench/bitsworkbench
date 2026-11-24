@@ -24,6 +24,7 @@ import { createMyBlocksStore } from '../my-blocks/store.js'
 import { installMyBlocks } from '../my-blocks/blocks.js'
 import { FilesPanel } from './files-panel.js'
 import { Learn, DEMO_PACK } from '../learn/learn.js'
+import { fileOf } from '../learn/journey/journey.js'
 import { installCodeTrek } from '../learn/trek-blocks.js'
 import { trekSnippets } from '../learn/trek.js'
 import { installPaletteSize } from './palette-size.js'
@@ -1079,7 +1080,7 @@ export class App {
 
     // A file of that name holds something else: the student's choice, unless it is only what the demo left there.
     const other = await this._freeName(store, folder, file)
-    const left = guideLeft()[`${kind}:${path}`]
+    const left = this.learn.journey.pack?.id === DEMO_PACK ? guideLeft()[this._guideKey(kind, path)] : null
     const how = left != null && sameProgram(text, left) ? 'replace' : await choose({
       title: t('missionFile.title', { name: file }),
       bodyHtml: `${t('missionFile.bodyHtml', { name: esc(file) })}
@@ -1132,12 +1133,21 @@ export class App {
    */
   _keepGuideLeft() {
     const f = this.openFile
-    if (!f || !this.learn.journey.running || this.learn.journey.pack?.id !== DEMO_PACK) return
+    const j = this.learn.journey
+    if (!f || !j.running || j.pack?.id !== DEMO_PACK) return
+    // Only the demo's own file: another file opened mid-demo stays the student's.
+    const { folder, file } = fileOf(j.item, j.chapter)
+    if (f.path !== `${folder}/${file}`) return
     try {
-      localStorage.setItem(GUIDE_LEFT, JSON.stringify({ ...guideLeft(), [`${f.store}:${f.path}`]: this._currentPython() }))
+      localStorage.setItem(GUIDE_LEFT, JSON.stringify({ [this._guideKey(f.store, f.path)]: this._currentPython() }))
     } catch {
       // not kept: starting again asks, as before
     }
+  }
+
+  /** Where a file is, for the demo's record: its store, the folder's name for one on the computer, and its path. */
+  _guideKey(kind, path) {
+    return `${kind}:${kind === 'folder' ? `${this.stores.folder?.name}:` : ''}${path}`
   }
 
   /** Open a file whose text is known, the open one saved first; true once it is open. */

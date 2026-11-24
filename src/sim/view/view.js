@@ -121,6 +121,11 @@ export class SimView {
     return this.camera.position.clone().sub(this.controls.target).normalize()
   }
 
+  // Count turning from now (a new step asking for it starts from nothing).
+  resetTurn() {
+    this._turnedBy = 0
+  }
+
   // The camera turned by `radians`: 45 degrees in all is an orbit.
   _turned(radians) {
     if (!(radians > 0)) return
