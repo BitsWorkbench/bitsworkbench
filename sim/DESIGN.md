@@ -413,8 +413,11 @@ realism setting: Low, Medium, High, Ultra, or Auto (the default). Each level
 | frames a second, at most | 30 | 60 | 60 | the screen's |
 
 Antialiasing is fixed when the view is made, so a change to it takes effect at the
-simulator's next start; the rest changes at once. Auto starts where it settled last time
-(Medium the first time), steps down a level after two seconds below 24 frames a second,
+simulator's next start; the rest changes at once. Auto starts where it settled last time,
+and the first time from the graphics chip WebGL names (`guessLevel`: Low drawn in software,
+Medium for a phone's or Chromebook's chip or one it does not know, High for a recent laptop's,
+Ultra for a graphics card), so a capable machine looks right from the first frame. It does not
+count its first three seconds (the room loading, shaders compiling, slow everywhere), steps down a level after two seconds below 24 frames a second,
 steps up after eight seconds at 95% of the level's frame cap, and never goes back up to a
 level it came down from, so it settles instead of flapping. The panel shows the frame
 rate and the pace, and "Show the frame rate" puts both over the view.

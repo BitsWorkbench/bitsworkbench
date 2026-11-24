@@ -27,6 +27,7 @@ export class SimDevice extends EventTarget {
     this.view = null
     this.viewHost = null
     this.cameraMode = 'rotate'     // view/camera-rig.js CAMERA_MODES
+    this.cameraOpts = {}           // and where it starts: { turn } for chase
     this.course = null             // a line course on the floor (world/courses.js)
     this.room = null               // a room from kinds.js ROOMS; null: the board's own
     this.supported = 'WebAssembly' in globalThis && typeof Worker !== 'undefined'
@@ -117,22 +118,22 @@ export class SimDevice extends EventTarget {
   }
 
   async _openView(kind, room, assetsBase, onPick) {
+    // The student turning the camera 45 degrees: a mission journey can ask for it (the `orbit` event).
+    const onOrbit = () => this.dispatchEvent(new CustomEvent('orbit'))
     if (this.viewHost) {
       if (kind.view === 'codex') {
         // CodeX stands in the showroom; the view presses its keys
         const [{ SimView }, { CODEX_KEYS }] = await Promise.all([import('./view/view.js'), import('./view/codex-figure.js')])
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, onOrbit, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
         await this.view.loadRoom(kind.room).catch((err) => console.warn('room', err))
       } else {
         // a robot in a room: a click on its buttons presses them; the arrow
         // keys stay the camera's
         const { SimView } = await import('./view/view.js')
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
-        this.view.setCamera(this.cameraMode)
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, onOrbit, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
+        this.view.setCamera(this.cameraMode, this.cameraOpts)
         await this.view.loadRoom(room).catch((err) => console.warn('room', err))
       }
-      // The student turning the camera: a mission journey can ask for it (the `orbit` event).
-      this.view.controls?.addEventListener('start', () => this.dispatchEvent(new CustomEvent('orbit')))
     }
   }
 
@@ -260,9 +261,12 @@ export class SimDevice extends EventTarget {
   }
 
   // A camera, at its home (again: back to its home). The bar's menu follows.
-  setCamera(mode) {
+  // `opts` ({ turn }, camera-rig.js): left out, the same mode keeps its own
+  // (back to its home), and another mode has none.
+  setCamera(mode, opts) {
+    this.cameraOpts = opts ?? (mode === this.cameraMode ? this.cameraOpts : {})
     this.cameraMode = mode
-    this.view?.setCamera(mode)
+    this.view?.setCamera(mode, this.cameraOpts)
     this.dispatchEvent(new CustomEvent('camera', { detail: mode }))
   }
 
@@ -294,7 +298,7 @@ export class SimDevice extends EventTarget {
       case 'course': this.view?.setCourse?.(m.course); break
       case 'frame': {
         this.view?.push(m.snapshot)
-        if (this._moved) { this._moved = false; this.view?.setCamera?.(this.cameraMode) }
+        if (this._moved) { this._moved = false; this.view?.setCamera?.(this.cameraMode, this.cameraOpts) }
         this.describer?.frame(m.snapshot, this._roomName())
         this.lastFrame = m.snapshot
         this.speaker?.frame(m.snapshot.devices[0])

@@ -47,9 +47,11 @@ export class CameraRig {
     this._bindLook(canvas)
   }
 
-  setMode(mode) {
+  // `turn`: for chase, degrees round from behind the robot it starts at (180
+  // looks at its front).
+  setMode(mode, { turn = null } = {}) {
     this.mode = mode
-    this.chase = { ...CHASE }
+    this.chase = { ...CHASE, ...(turn === null ? {} : { turn: THREE.MathUtils.degToRad(turn) }) }
     this.held.clear()
     const orbit = mode === 'rotate' || mode === 'chase'
     this.controls.enabled = orbit

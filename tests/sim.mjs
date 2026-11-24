@@ -14,7 +14,7 @@ import { COURSES, courseShape } from '../src/sim/world/courses.js'
 import { CB3 } from '../src/sim/world/codebot.js'
 import { AIR } from '../src/sim/world/codeair.js'
 import { ROOMS } from '../src/sim/kinds.js'
-import { AutoRealism } from '../src/sim/view/realism.js'
+import { AutoRealism, WARMUP, guessLevel } from '../src/sim/view/realism.js'
 import * as THREE from 'three'
 import { yawIn, Light } from '../src/sim/view/led.js'
 import { describe, change, compass } from '../src/sim/describe.js'
@@ -671,6 +671,8 @@ console.log('realism')
 
 await test('Auto realism steps down when frames lag, up when they are comfortably fast, and settles without flapping', async () => {
   const auto = new AutoRealism('medium')
+  for (let i = 0; i < WARMUP; i++) auto.measure(5)
+  assert.equal(auto.level, 'medium', 'the first seconds (the room loading, shaders compiling) are not counted')
   for (let i = 0; i < 8; i++) auto.measure(60)
   assert.equal(auto.level, 'high', 'eight fast seconds at Medium')
   auto.measure(20)
@@ -684,8 +686,19 @@ await test('Auto realism steps down when frames lag, up when they are comfortabl
   for (let i = 0; i < 20; i++) auto.measure(30)
   assert.equal(auto.level, 'low', 'Low at its cap of 30 may not climb to a level it left')
   const fresh = new AutoRealism('low')
-  for (let i = 0; i < 8; i++) fresh.measure(29)
+  for (let i = 0; i < WARMUP + 8; i++) fresh.measure(29)
   assert.equal(fresh.level, 'medium', 'Low running at its cap climbs')
+})
+
+await test('Auto starts from the graphics chip', async () => {
+  assert.equal(guessLevel('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)'), 'low', 'drawn in software')
+  assert.equal(guessLevel('ANGLE (ARM, Mali-G72, OpenGL ES 3.2)'), 'medium', 'a Chromebook')
+  assert.equal(guessLevel('ANGLE (Intel, Intel(R) UHD Graphics 600, OpenGL 4.6)'), 'medium', 'an older Intel chip')
+  assert.equal(guessLevel('ANGLE (Intel, Intel(R) Iris(R) Xe Graphics, D3D11)'), 'high', 'a recent laptop')
+  assert.equal(guessLevel('ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)'), 'high', 'a MacBook Air')
+  assert.equal(guessLevel('ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)'), 'ultra', 'a MacBook Pro')
+  assert.equal(guessLevel('ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)'), 'ultra', 'a graphics card')
+  assert.equal(guessLevel(''), 'medium', 'a chip that says nothing')
 })
 
 await test('a lit NeoPixel keeps the colour the program set, bright or dim', async () => {

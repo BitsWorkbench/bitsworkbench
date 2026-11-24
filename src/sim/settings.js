@@ -6,6 +6,9 @@
 // program runs the same at every setting (sim/DESIGN.md, sections 3 and 4).
 
 const STORE = 'opencodebot.simSettings.v1'
+// Auto's level is kept only from this version of Auto on: before it, a slow
+// first few seconds (the room loading) could leave it at Low for good.
+const AUTO_VERSION = 2
 
 export const BUSES = ['motors', 'speaker', 'effects', 'music']
 export const REALISMS = ['auto', 'low', 'medium', 'high', 'ultra']
@@ -30,7 +33,7 @@ function load() {
     }
     if (REALISMS.includes(saved.realism)) s.realism = saved.realism
     if (typeof saved.showFps === 'boolean') s.showFps = saved.showFps
-    if (REALISMS.includes(saved.autoLevel) && saved.autoLevel !== 'auto') s.autoLevel = saved.autoLevel
+    if (REALISMS.includes(saved.autoLevel) && saved.autoLevel !== 'auto' && saved.autoVersion === AUTO_VERSION) s.autoLevel = saved.autoLevel
   } catch {
     // unreadable or unavailable: the defaults
   }
@@ -86,7 +89,7 @@ class Settings extends EventTarget {
   _save() {
     try {
       const { volume, muted, realism, autoLevel, showFps } = this
-      localStorage.setItem(STORE, JSON.stringify({ volume, muted, realism, autoLevel, showFps }))
+      localStorage.setItem(STORE, JSON.stringify({ volume, muted, realism, autoLevel, autoVersion: AUTO_VERSION, showFps }))
     } catch {
       // not kept: the choice holds for this visit
     }
