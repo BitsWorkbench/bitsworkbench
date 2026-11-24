@@ -37,7 +37,8 @@ const SIZES = [
 const browser = await chromium.launch(process.env.OCB_CHROMIUM ? { executablePath: process.env.OCB_CHROMIUM } : {})
 for (const [name, width, height, touch] of SIZES) {
   console.log(name)
-  const context = await browser.newContext({ viewport: { width, height }, hasTouch: touch })
+  // No service worker: a part missing from the server is missing (as for a page left on an old build).
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: touch, serviceWorkers: 'block' })
   const page = await context.newPage()
   page.on('pageerror', (e) => problems.push(`${name}: page error: ${e.message}`))
   const welcome = () => page.waitForSelector('#modal[open] button[value="choice:demo"]', { timeout: 10000 }).then(() => true, () => false)
@@ -62,9 +63,19 @@ for (const [name, width, height, touch] of SIZES) {
   check(await welcome(), 'it shows again on the next visit')
   check((await title()) === 'Welcome back to BitsWorkbench' && (await page.locator('#modal[open] button[value="choice:go"]').innerText()) === 'Resume', 'as Welcome back, with Resume')
 
-  // The demo.
+  // The demo, in one click: a page that reloads on its way there (onto a new build) goes straight in.
+  // As after a deploy: the simulator's picture is gone from the server, so the page reloads onto the new build.
+  let gone = true
+  await page.route(/\/assets\/view-[^/]*\.js$/, (route) => (gone ? route.fulfill({ status: 404, body: '' }) : route.continue()))
+  const reloaded = page.waitForEvent('framenavigated', { timeout: 20000 }).then(() => true, () => false)
   await page.click('#modal[open] button[value="choice:demo"]')
+  const didReload = await reloaded
+  gone = false
+  await page.waitForLoadState('networkidle')
+  check(didReload && !(await welcome()), 'Try a Demo! is one click, even when the page reloads onto a new build on the way')
+  await page.unroute(/\/assets\/view-[^/]*\.js$/)
   await page.waitForSelector('.journey-centre [data-journey="begin"]', { timeout: 30000 })
+  check(/^Meet CodeBot!/.test(await page.locator('.journey-centre p').first().innerText()), 'Meet CodeBot!')
   const s = await page.evaluate(() => ({ sim: window.openCodeBot.device.simulating, board: window.openCodeBot.device.targetId, learn: document.querySelector('#btn-learn .btn-text').textContent }))
   check(s.sim && s.board === 'codebot', `CodeBot comes up in the simulator, nothing asked (${s.board})`)
   check(s.learn === 'Exit tutorial', 'in tutorial mode')
@@ -109,8 +120,13 @@ for (const [name, width, height, touch] of SIZES) {
     await page.click('.journey-bubble [data-journey="skip"]')
     await page.waitForTimeout(400)
   }
-  // 2: Run
-  check((await at()) === 'DEMO_run' && (await pointed()), 'step 2 points at Run')
+  // 2: the blocks, to read
+  check((await at()) === 'DEMO_program' && (await pointed()), 'step 2 points at the blocks')
+  check(/top down/.test(await page.locator('.journey-bubble .journey-say').innerText()), 'and says what they do')
+  await next()
+  // 3: Run
+  check((await at()) === 'DEMO_run' && (await pointed()), 'step 3 points at Run')
+  check(!/These blocks/.test(await page.locator('.journey-bubble .journey-say').innerText()), 'and talks of Run, not the blocks')
   await run()
   check(await met(), 'running meets it')
   await next()
@@ -146,14 +162,12 @@ for (const [name, width, height, touch] of SIZES) {
   check(await met(), 'adding it meets it')
   await next()
   await run()
-  check(await met(), 'running meets step 7')
+  check(await met(), 'running meets the last step')
   await page.waitForSelector('#btn-run:not([hidden])', { timeout: 15000 })
-  await next()
-  // 8: the question
-  await page.click('.journey-answers [data-value="1"]')
-  check(await met(), 'the right answer meets the last step')
+  check(await page.evaluate(() => window.openCodeBot.learn.journey.steps.length === 8), 'in blocks, eight steps and no Python question')
   await next()
   await page.waitForSelector('.journey-centre [data-journey="finish"]', { timeout: 5000 })
+  check(/from your blocks/.test(await page.locator('.journey-centre').innerText()), 'the finish, in words for blocks')
   check(await onScreen('.journey-centre [data-journey="finish"]'), 'the finish card, on screen')
   await page.click('.journey-centre [data-journey="finish"]')
   // The end: the same again, in Python.
@@ -175,6 +189,8 @@ for (const [name, width, height, touch] of SIZES) {
   }, py)
   await page.click('.journey-bubble [data-journey="skip"]')
   await page.waitForTimeout(400)
+  check((await at()) === 'DEMO_program' && (await pointed()), 'Python: the step points at the program')
+  await next()
   await run()
   check(await met(), 'Python: running meets it')
   await next()
@@ -193,7 +209,7 @@ for (const [name, width, height, touch] of SIZES) {
   check(await met(), 'Python: opening Lights meets it')
   await next()
   check((await at()) === 'DEMO_leds' && (await pointed()), 'Python: the step points at the Lights category, the code left in sight')
-  // As a student does: the last line clicked, then Lights, then the card.
+  // The card goes in where the cursor is: at the end, as a drag there would put it.
   await page.evaluate(() => {
     const view = window.openCodeBot.pythonEditor.view
     const last = view.state.doc.line(view.state.doc.lines - (view.state.doc.line(view.state.doc.lines).text.trim() ? 0 : 1))
@@ -203,6 +219,7 @@ for (const [name, width, height, touch] of SIZES) {
   check(await pointed(), 'Python: once Lights is open, the step points at the card')
   await page.locator('#py-palette .snippet').filter({ hasText: /^leds\.user\(0xFF\)$/ }).click()
   check(await met(), 'Python: the card goes in under the last line, and meets it')
+  check((await page.locator('.journey-bubble .journey-say').innerText()).trim() === 'Code added.', 'Python: Code added.')
   check((await page.evaluate(() => window.openCodeBot._currentPython())).trimEnd().endsWith('leds.user(0xFF)'), 'Python: at the end of the program')
   await next()
   await run()
@@ -211,7 +228,9 @@ for (const [name, width, height, touch] of SIZES) {
   await next()
   await page.click('.journey-answers [data-value="1"]')
   check(await met(), 'Python: the question')
+  check(!/blocks in/.test(await page.locator('.journey-bubble').innerText()), 'Python: no words about blocks under it')
   await next()
+  check(/from your Python/.test(await page.locator('.journey-centre').innerText()), 'Python: the finish, in words for Python')
   await page.click('.journey-centre [data-journey="finish"]')
   check(await page.waitForSelector('#modal[open] button[value="choice:exit"]', { timeout: 5000 }).then(() => true, () => false), 'done in Python: the way out')
   await page.click('#modal[open] button[value="choice:exit"]')

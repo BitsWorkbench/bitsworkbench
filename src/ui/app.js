@@ -34,6 +34,8 @@ import { BANNER } from '../blocks/generate.js'
 const SEEN_WELCOME = 'opencodebot.welcomed.v1' // been here before: Welcome back
 const GUIDE_LEFT = 'opencodebot.guideLeft.v1' // { 'store:path': the program the demo last left in that file }
 const WELCOME = 'opencodebot.welcome.v1' // 'off': no welcome (tests, kiosks)
+const DEMO_ASKED = 'opencodebot.demoAsked' // this tab chose Try a Demo! and the demo has not opened yet (a reload on the way keeps the choice)
+const DEMO_ASKED_MS = 120_000
 const PICKED_DEVICE = 'opencodebot.device.v1'
 const TERMINAL_PANEL = 'opencodebot.terminalPanel.v1'
 const OPEN_FILE = 'opencodebot.openFile.v1'
@@ -153,7 +155,15 @@ export class App {
     this._checkBrowser()
     // The welcome first; then the demo, or the mission pack the student was in, if any.
     this._welcome()
-      .then((demo) => (demo ? this.learn.openDemo() : this.learn.restore()))
+      .then(async (demo) => {
+        if (!demo) return this.learn.restore()
+        await this.learn.openDemo()
+        try {
+          sessionStorage.removeItem(DEMO_ASKED)
+        } catch {
+          // nothing was kept
+        }
+      })
       .catch((err) => console.warn('learn', err))
 
     // A board that is already plugged in and paired can just come back.
@@ -1944,6 +1954,8 @@ export class App {
     let back = false
     try {
       if (localStorage.getItem(WELCOME) === 'off') return false
+      // Chosen just now, and the page reloaded on its way to the demo (onto a new build, new-build.js): straight in.
+      if (Date.now() - Number(sessionStorage.getItem(DEMO_ASKED) || 0) < DEMO_ASKED_MS) return true
       back = !!localStorage.getItem(SEEN_WELCOME)
       localStorage.setItem(SEEN_WELCOME, '1')
     } catch {
@@ -1957,6 +1969,13 @@ export class App {
         { value: 'demo', label: t('welcome.demo') },
       ],
     })
+    if (how === 'demo') {
+      try {
+        sessionStorage.setItem(DEMO_ASKED, String(Date.now()))
+      } catch {
+        // storage blocked: a reload on the way asks again
+      }
+    }
     return how === 'demo'
   }
 }

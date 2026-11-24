@@ -188,12 +188,15 @@ export class Journey extends EventTarget {
       hints: s.hints?.length ?? 0,
       skippable: !!s.skippable,
       showMe: !!this.effects?.hasHelp?.(s),
+      // A step with nothing to do is one to read: Next, at once.
+      read: !s.do,
       fresh,
     })
     if (fresh) this.coach.announce(`${t('journey.stepOf', { n: i + 1, m: this.steps.length })}. ${this._plain(s.say)}`)
     // A block in a category: open it, so the ring lands on the block itself.
     // (Not in Python: its palette's cards cover the code a step may ask to click first; the ring is on the category instead.)
     if (s.palette && !this.places.resolve(s.point) && !this.places.python?.()) this.places.openPalette(s.palette)
+    if (!s.do) return
     this.effects?.waiting?.(s)
     this.places.sim?.()?.resetTurn?.()
     this.watcher.start([{ md: '', check: s.do }])
@@ -284,6 +287,12 @@ export class Journey extends EventTarget {
         return this._go(0)
       }
       case 'next': {
+        // A step to read is done once read.
+        const read = this.steps[this.index]
+        if (read && !read.ask && !read.do && !this.done.has(read.id)) {
+          this.done.add(read.id)
+          await this._save()
+        }
         // Into a chapter with a file of its own, or a `fresh` one: it starts from its own program there.
         const s = this.steps[this.index + 1]
         const from = this.steps[this.index]?.chapter
@@ -303,7 +312,7 @@ export class Journey extends EventTarget {
         return this._go(this.index + 1)
       case 'hint':
         this.hint = true
-        return this.coach.step({ index: this.index, count: this.steps.length, html: this.md(s.say, this.mode), locate: () => this._locate(s), hints: s.hints.length, hintShown: this.md(s.hints[0], this.mode), skippable: !!s.skippable, showMe: !!this.effects?.hasHelp?.(s), fresh: false, doneBefore: this.done.has(s.id) })
+        return this.coach.step({ index: this.index, count: this.steps.length, html: this.md(s.say, this.mode), locate: () => this._locate(s), hints: s.hints.length, hintShown: this.md(s.hints[0], this.mode), skippable: !!s.skippable, showMe: !!this.effects?.hasHelp?.(s), read: !s.do, fresh: false, doneBefore: this.done.has(s.id) })
       case 'show-me':
         return this.effects?.waiting?.(s, { again: true })
       case 'answer': {
