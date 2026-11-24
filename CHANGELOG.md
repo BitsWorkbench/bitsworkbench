@@ -38,6 +38,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
   clicking a board's buttons.
 - A simulated CodeX plays its built-in sound files (`audio.mp3("sounds/welcome")`
   and the rest of its sounds/ folder), and the program waits while one plays.
+- A robot driving steadily moves steadily on screen, and the Chase camera glides
+  after it rather than lurching.
 - One board at a time: picking another never loses the program.
 - The terminal ends at a `>>>` prompt once the simulator is ready and after each
   program, so it is plain where to type Python.
@@ -47,7 +49,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
 ### Learn
 - A welcome on every visit (Welcome back, with Resume, after the first), with
   **Try a Demo!**: a few guided steps that drive CodeBot in the simulator, then
-  the same again in Python.
+  the same again in Python. One click opens its first step; tried before, it asks
+  whether to start over or carry on.
 - Short examples for each board, easiest first, two of them as quick starts.
 - Mission packs open in a tutorial pane: steps, goals that tick as they are met,
   quizzes, CodeTrek in the palette, and each step taught in blocks or in Python.
@@ -66,7 +69,8 @@ The first public release, planned for December 1, 2026. Everything it holds:
   in Python.
 - A goals HUD at the lower left of the simulator, as in CodeSpace: the objective
   and its goals, ticked as they are met. The rail shows the mission pack's and the
-  mission's pictures, then the objectives, each named in its tooltip.
+  mission's pictures, then every objective's number, a check on the done ones
+  and a lock on the locked, each named in its tooltip.
 - Each mission works in its own file, in a folder named for it: nothing of yours
   is replaced unless you choose to save yours under another name or replace it.
 - The first six missions of four Firia Labs courses, free: Python Level 1 with
