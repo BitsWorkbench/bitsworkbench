@@ -198,6 +198,7 @@ export class Journey extends EventTarget {
     if (s.palette && !this.places.resolve(s.point) && !this.places.python?.()) this.places.openPalette(s.palette)
     if (!s.do) return
     this.effects?.waiting?.(s)
+    this.places.sim?.()?.resetTurn?.()
     this.watcher.start([{ md: '', check: s.do }])
   }
 

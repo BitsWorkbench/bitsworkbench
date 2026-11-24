@@ -117,22 +117,22 @@ export class SimDevice extends EventTarget {
   }
 
   async _openView(kind, room, assetsBase, onPick) {
+    // The student turning the camera 45 degrees: a mission journey can ask for it (the `orbit` event).
+    const onOrbit = () => this.dispatchEvent(new CustomEvent('orbit'))
     if (this.viewHost) {
       if (kind.view === 'codex') {
         // CodeX stands in the showroom; the view presses its keys
         const [{ SimView }, { CODEX_KEYS }] = await Promise.all([import('./view/view.js'), import('./view/codex-figure.js')])
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, onOrbit, buttons: { keys: CODEX_KEYS, fullScreen: true, onButton: (n, down) => this.press(n, down), onTilt: (x, y) => this.tilt(x, y) } })
         await this.view.loadRoom(kind.room).catch((err) => console.warn('room', err))
       } else {
         // a robot in a room: a click on its buttons presses them; the arrow
         // keys stay the camera's
         const { SimView } = await import('./view/view.js')
-        this.view = new SimView(this.viewHost, { assetsBase, onPick, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
+        this.view = new SimView(this.viewHost, { assetsBase, onPick, onOrbit, buttons: { keys: {}, onButton: (n, down) => this.press(n, down) } })
         this.view.setCamera(this.cameraMode)
         await this.view.loadRoom(room).catch((err) => console.warn('room', err))
       }
-      // The student turning the camera: a mission journey can ask for it (the `orbit` event).
-      this.view.controls?.addEventListener('start', () => this.dispatchEvent(new CustomEvent('orbit')))
     }
   }
 
