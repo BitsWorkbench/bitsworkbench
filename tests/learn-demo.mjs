@@ -79,6 +79,7 @@ for (const [name, width, height, touch] of SIZES) {
   const s = await page.evaluate(() => ({ sim: window.openCodeBot.device.simulating, board: window.openCodeBot.device.targetId, learn: document.querySelector('#btn-learn .btn-text').textContent }))
   check(s.sim && s.board === 'codebot', `CodeBot comes up in the simulator, nothing asked (${s.board})`)
   check(s.learn === 'Exit tutorial', 'in tutorial mode')
+  check(await page.evaluate(() => window.openCodeBot.device.sim.cameraMode === 'chase' && window.openCodeBot.device.sim.cameraOpts.turn === 150), 'the chase camera, looking at CodeBot\'s front')
   await page.click('.journey-centre [data-journey="begin"]')
   await page.waitForSelector('.journey-bubble:not([hidden])')
   check((await page.evaluate(() => window.openCodeBot.openFile.path)) === 'demo/demo.py', 'the demo works in demo/demo.py')

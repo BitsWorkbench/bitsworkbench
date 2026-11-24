@@ -6,6 +6,7 @@
 import { tree } from '../convert/tree.js'
 import { riskyRegex } from './regex.js'
 import { BRAND } from '../brand.js'
+import { CAMERA_MODES } from '../sim/kinds.js'
 
 export const FORMAT = 1
 export const BOARDS = ['codebot', 'codex', 'codeair']
@@ -284,7 +285,7 @@ class Checker {
       hints: [(h, where) => this.list(h, where, this.md, { min: 0 }), false],
       complete: [this.md, false],
       blocks: [this.yes, false],
-      sim: [(s, where) => this.fields(s, where, { room: [this.text, false], course: [this.text, false] }), false],
+      sim: [this.sim, false],
     })
     if (Array.isArray(v.hints) && v.hints.length > 3) this.problem(`${at}.hints`, 'three at most')
   }
@@ -294,6 +295,18 @@ class Checker {
    * chapter may start from a program (`code`), the same in blocks and in
    * Python, so a student can pick up a chapter in either mode.
    */
+  /** Where the simulated board starts: its room, a course, and the camera ({ mode, turn }). */
+  sim(v, at) {
+    this.fields(v, at, {
+      room: [this.text, false],
+      course: [this.text, false],
+      camera: [(c, where) => this.fields(c, where, {
+        mode: (m, w) => this.oneOf(m, w, CAMERA_MODES),
+        turn: [(n, w) => (typeof n === 'number' && n >= -360 && n <= 360) || this.problem(w, 'should be degrees, -360 to 360'), false],
+      }), false],
+    })
+  }
+
   journey(v, at) {
     this.fields(v, at, {
       type: () => {},
@@ -306,7 +319,7 @@ class Checker {
       chapters: (c, where) => this.list(c, where, this.chapter),
       solution: [this.python, false],
       complete: [this.md, false],
-      sim: [(s, where) => this.fields(s, where, { room: [this.text, false], course: [this.text, false] }), false],
+      sim: [this.sim, false],
     })
   }
 

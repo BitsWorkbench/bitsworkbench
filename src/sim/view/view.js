@@ -14,7 +14,7 @@ import { CodeAIRFigure } from './codeair-figure.js'
 import { CodeXFigure, TILT_MAX } from './codex-figure.js'
 import { courseMesh } from './course-mesh.js'
 import { CameraRig } from './camera-rig.js'
-import { PRESETS, AutoRealism } from './realism.js'
+import { PRESETS, AutoRealism, guessLevel, gpuName } from './realism.js'
 import { settings } from '../settings.js'
 
 const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFigure }
@@ -46,8 +46,11 @@ export class SimView {
     this.frames = [null, null]      // the two latest snapshots, with arrival times
 
     // Realism (realism.js): chosen in the settings panel, or Auto, which
-    // moves a level at a time from the frame rate it measures. A school
-    // Chromebook's GPU gets fewer pixels and effects rather than fewer frames.
+    // starts from the graphics chip (where it settled last time, after the
+    // first) and moves a level at a time from the frame rate it measures. A
+    // school Chromebook's GPU gets fewer pixels and effects rather than fewer
+    // frames.
+    if (settings.realism === 'auto' && !settings.autoLevel) settings.setAutoLevel(guessLevel(gpuName()))
     this.auto = new AutoRealism(settings.autoLevel ?? 'medium')
     this.level = settings.realism === 'auto' ? this.auto.level : settings.realism
     this.fps = null                 // frames a second, the last second drawn; null at rest
@@ -465,11 +468,11 @@ export class SimView {
   }
 
   // A camera (camera-rig.js), at its home; again, back to its home.
-  setCamera(mode) {
+  setCamera(mode, opts) {
     this._touch()
     const s = this.frames[1]?.frame.devices[0]
     if (s && s.x === undefined) return        // a board that stays put keeps its camera
-    this.rig.setMode(mode)
+    this.rig.setMode(mode, opts)
     if (!s) return
     this._placeCamera(s, true)
   }

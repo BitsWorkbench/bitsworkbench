@@ -92,10 +92,12 @@ if (FALLBACK) await context.addInitScript(() => { delete WebAssembly.Suspending;
 const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`))
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console error: ${m.text()}`) })
-await page.addInitScript(() => {
+await page.addInitScript((realism) => {
   localStorage.setItem('opencodebot.welcome.v1', 'off')
   localStorage.setItem('opencodebot.device.v1', 'codebot')
-})
+  if (realism) localStorage.setItem('opencodebot.simSettings.v1', JSON.stringify({ realism }))
+  // Medium, as Auto started everywhere before it guessed from the graphics chip (it would start this software renderer at Low). OCB_REALISM picks another.
+}, process.env.OCB_REALISM || 'medium')
 await page.goto(URL, { waitUntil: 'networkidle' })
 await page.click('#btn-sim')
 await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 20000 })
