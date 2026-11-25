@@ -7,7 +7,7 @@
 // its origin. The figure's root sits at the world pose: under the drone's
 // centre at the height of its underside, facing +x.
 import * as THREE from 'three'
-import { Led, boxIn, neoPixel, reflect, yawIn } from './led.js'
+import { Led, boxIn, neoPixel, reflect, wear, yawIn } from './led.js'
 import { Keys } from './keys.js'
 import { Parts, loadParts } from './parts.js'
 
@@ -35,6 +35,11 @@ export class CodeAIRFigure {
     this.props = []
     this.leds = []                         // BYTE 0 to 7, then STA
     this.pixels = []
+  }
+
+  /** Every light on the board (led.js), for its look. */
+  get lights() {
+    return [...this.leds, ...this.pixels].filter(Boolean)
   }
 
   // env: studio light for the metal to reflect (view.js)
@@ -79,6 +84,7 @@ export class CodeAIRFigure {
     // the NeoPixels lit in the cup in each one's top (led.js), four on top
     // and four under the board, their cups facing down
     this.pixels = PIXELS.map((name) => neoPixel(this.body, node(name), name.endsWith('b') ? -1 : 1))
+    wear(this.lights, 'codeair')
 
     const c = document.createElement('canvas')
     c.width = c.height = 64

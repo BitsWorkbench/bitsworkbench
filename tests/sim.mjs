@@ -16,7 +16,7 @@ import { AIR } from '../src/sim/world/codeair.js'
 import { ROOMS } from '../src/sim/kinds.js'
 import { AutoRealism, WARMUP, guessLevel } from '../src/sim/view/realism.js'
 import * as THREE from 'three'
-import { yawIn, Light } from '../src/sim/view/led.js'
+import { yawIn, Light, LOOKS } from '../src/sim/view/led.js'
 import { describe, change, compass } from '../src/sim/describe.js'
 import { loadEnvironment } from '../src/sim/headless.js'
 import { Engine } from '../src/sim/runtime/engine.js'
@@ -712,13 +712,18 @@ await test('a lit NeoPixel keeps the colour the program set, bright or dim', asy
     hsl: light.mat.emissive.getHSL({}, THREE.SRGBColorSpace),
   })
   const want = (r, g, b) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace).getHSL({}, THREE.SRGBColorSpace)
+  // At full (emissive 1) the very colour; hotter (the default look's emissive
+  // past 1, led.js hot) the same hue, lighter, toward white.
+  const full = { ...LOOKS.codebot, emissive: 1 }
   for (const [name, rgb] of Object.entries({ ORANGE: [255, 165, 0], PURPLE: [0x6a, 0x0d, 0xad], RED: [255, 0, 0], BLUE: [0, 0, 255] })) {
-    for (const scale of [1, 0.1]) {
+    for (const [scale, look] of [[1, full], [0.1, full], [1, LOOKS.codebot]]) {
+      light.look = look
       light.rgb(...rgb.map((v) => Math.round(v * scale)))
       const { c, hsl } = seen()
       const w = want(...rgb)
-      assert.ok(Math.abs(hsl.h - w.h) < 0.02, `${name} at ${scale}: hue ${hsl.h.toFixed(3)}, want ${w.h.toFixed(3)}`)
-      assert.ok(hsl.s > 0.95 * w.s, `${name} at ${scale}: saturation ${hsl.s.toFixed(3)}, want ${w.s.toFixed(3)}`)
+      assert.ok(Math.abs(hsl.h - w.h) < 0.02, `${name} at ${scale}, emissive ${look.emissive}: hue ${hsl.h.toFixed(3)}, want ${w.h.toFixed(3)}`)
+      if (look === full) assert.ok(hsl.s > 0.95 * w.s, `${name} at ${scale}: saturation ${hsl.s.toFixed(3)}, want ${w.s.toFixed(3)}`)
+      else assert.ok(hsl.l > w.l, `${name} hotter: lightness ${hsl.l.toFixed(3)}, want more than ${w.l.toFixed(3)}`)
       assert.ok(Math.max(c.r, c.g, c.b) <= 1 + 1e-6, `${name}: driven past full, a channel clips`)
       assert.equal(light.mat.color.getHex(), 0, 'nothing pale under the light')
       assert.equal(light.mat.toneMapped, false)

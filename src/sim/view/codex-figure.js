@@ -14,7 +14,7 @@
 // Two rotation arrows beside the board (an arc under it for tiltX, one at its
 // right for tiltY) are what a drag tilts it by; they stay put as it turns.
 import * as THREE from 'three'
-import { Light, glowSprite, neoPixel } from './led.js'
+import { Light, glowSprite, neoPixel, wear } from './led.js'
 import { Keys } from './keys.js'
 import { Parts, loadParts } from './parts.js'
 
@@ -67,6 +67,11 @@ export class CodeXFigure {
     this.pixels = []                        // NeoPixels 0 to 3: each a Light
   }
 
+  /** Every light on the board (led.js), for its look. */
+  get lights() {
+    return [...this.leds, ...this.pixels].filter(Boolean)
+  }
+
   async load(loader, base) {
     const [gltf, parts] = await Promise.all([loader.loadAsync(`${base}models/codex.glb`), loadParts(`${base}models/codex.parts.json`)])
     const model = gltf.scene
@@ -117,6 +122,7 @@ export class CodeXFigure {
       const part = node(`Neo_${n}`)
       this.pixels[n] = neoPixel(part.parent, part)
     }
+    wear(this.lights, 'codex')
 
     // The screen: a texture of the program's pixels over the active area,
     // drawn as the backlight lights it.

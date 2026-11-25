@@ -64,6 +64,15 @@ handling, so its build takes longjmp through Emscripten's JS trampolines; everyt
 including the port's rule that only the outermost async call may suspend, is shared. Each
 build writes `BUILT_FROM.txt`, and `tests/sim.mjs` checks the two match the sources.
 
+`shared.patch` fixes MicroPython's event-driven REPL (the one this port runs, a character
+at a time): on an empty line it took any key that left the line empty, an arrow key's
+escape sequence part way included, as Enter and printed a fresh prompt, so Up gave
+`>>> >>>` and the rest of the sequence as text. The page also feeds the REPL one character
+at a time, in order (`replInput` in `engine.js`), since its line editor is not re-entrant.
+The terminal (`src/ui/terminal.js`, `line-edits.js`) turns the line editor's cursor-left
+and erase-line codes into ones xterm.js carries back over a wrapped line, so recalling a
+line longer than the terminal is wide redraws cleanly, on a board too.
+
 Measured (Node 24, Linux, the `sim` variant both ways):
 
 | | JSPI build | Asyncify build |
@@ -254,12 +263,19 @@ until a program turns it on, as botcore leaves it.
 **One lit look on every board** (`Light` in `led.js`, CodeX's LEDs and NeoPixels too): a lit
 LED shows the colour the program set, at any brightness. Its colour is the program's red,
 green and blue as a screen shows them (sRGB), scaled together so brightness never changes
-the hue; its body is that light alone, solid, never driven past full and not tone mapped (a
-pale package under it, a channel clipping or the film curve each push orange toward yellow
-and every colour toward white); its glow is a tint of the same colour laid over what is
-around it rather than light added to it (added light runs to white over the lit body and
-turns red toward yellow over a green board). CodeSpace's simulator likewise lights an LED in
-the program's colour as is, with a glow layer of that colour.
+the hue; its body is that light alone (no painted colour), a little see-through, and not
+tone mapped. Past full it runs hotter by mixing toward white (`hot`), never by driving a
+channel past 1: a channel clipping or the film curve each push orange toward yellow. Its
+glow is a tint of the same colour laid over what is around it rather than light added to it
+(added light runs to white over the lit body and turns red toward yellow over a green
+board). CodeSpace's simulator likewise lights an LED in the program's colour as is, with a
+glow layer of that colour.
+
+How strong each of those is (painted colour, emissive, opacity, glow strength and size,
+added or laid-over glow, tone mapping) is a look per board, `LOOK_DEFAULTS` in `led.js`.
+A hidden panel (`led-tuner.js`) sets them live: open it with `?tune=leds` in the address or
+Ctrl+Alt+Shift+L with the simulator showing; it lights every LED on the board, shows every
+board's numbers as JSON to copy into `LOOK_DEFAULTS`, and puts the defaults back when closed.
 
 **NeoPixels light in their cup** (`neoPixel` and `lensIn` in `led.js`, on CodeX and CodeAIR).
 A NeoPixel is a white body with a square cup in its top, where the LED and its clear lens

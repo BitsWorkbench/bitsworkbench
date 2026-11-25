@@ -43,6 +43,10 @@ The first public release, planned for December 1, 2026. Everything it holds:
 - One board at a time: picking another never loses the program.
 - The terminal ends at a `>>>` prompt once the simulator is ready and after each
   program, so it is plain where to type Python.
+- The terminal's Up and Down arrows walk back and forth through what was typed,
+  one clean line at a time, long lines too, on the simulator and on a board.
+- Lit LEDs and NeoPixels in the simulator look like light, bright and glowing,
+  rather than coloured boxes.
 - The page comes back as it was left: the simulator, if it was on, and the size
   of the side panel.
 
