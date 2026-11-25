@@ -48,6 +48,7 @@ await test('the JSPI and Asyncify builds were built from the same source', async
   const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(new URL(`../sim/runtime/${f}`, import.meta.url))).digest('hex').slice(0, 16)
   assert.match(jspi, new RegExp(`port.patch ${sha('port.patch')}\n`), 'port.patch changed since the build: npm run sim:runtime')
   assert.match(jspi, new RegExp(`py.patch ${sha('py.patch')}\n`), 'py.patch changed since the build: npm run sim:runtime')
+  assert.match(jspi, new RegExp(`shared.patch ${sha('shared.patch')}\n`), 'shared.patch changed since the build: npm run sim:runtime')
   const variantDir = new URL('../sim/runtime/variant/', import.meta.url)
   const variant = crypto.createHash('sha256')
     .update(Buffer.concat(fs.readdirSync(variantDir).sort().map((f) => fs.readFileSync(new URL(f, variantDir)))))

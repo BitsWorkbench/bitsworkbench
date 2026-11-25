@@ -381,10 +381,15 @@ export class Engine {
         this._lastYieldSim = this.world.timeUs
       }
       // Characters queue up behind a running command; the REPL is busy
-      // until the last one is done.
+      // until the last one is done. One at a time, each after the last has
+      // been taken: MicroPython's line editor is not re-entrant, and a key
+      // can be several characters at once (an arrow is ESC [ A). Handed in
+      // together, the second began while the first was still in the VM: an
+      // arrow printed a second prompt and a stray "[A", and history went to
+      // the wrong line.
       this._replPending = (this._replPending ?? 0) + 1
       const vm = this.mp
-      this.mp.replProcessCharWithAsyncify(code).finally(() => {
+      const done = () => {
         if (vm !== this.mp) return
         if (--this._replPending === 0) {
           this.stopRequested = false
@@ -393,7 +398,12 @@ export class Engine {
         }
         this._flushOutput()
         this.o.onFrame?.()
-      })
+      }
+      this._replChain = (vm === this._replChainVM ? this._replChain : Promise.resolve())
+        .then(() => (vm === this.mp ? vm.replProcessCharWithAsyncify(code) : null))
+        .catch(() => {})
+        .finally(done)
+      this._replChainVM = vm
     }
     this._flushOutput()
   }

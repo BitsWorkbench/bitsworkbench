@@ -32,10 +32,13 @@ cd "$SRC"
 if [ "$(git rev-parse HEAD)" != "$MP_COMMIT" ]; then
   git fetch origin && git checkout -q "$MP_COMMIT"
 fi
-git checkout -q -- ports/webassembly py
+git checkout -q -- ports/webassembly py shared/runtime
 git apply "$HERE/port.patch"
 # A jump back reports its line again (a loop of one line), for stepping by line.
 git apply "$HERE/py.patch"
+# The event-driven REPL (this port's) waits for the rest of a key on an empty
+# line: an arrow's ESC no longer starts a new prompt, so history works there.
+git apply "$HERE/shared.patch"
 rm -rf ports/webassembly/variants/sim
 cp -r "$HERE/variant" ports/webassembly/variants/sim
 
@@ -55,6 +58,7 @@ export SOURCE_DATE_EPOCH
 STAMP="micropython $MP_COMMIT
 port.patch $(sha256sum "$HERE/port.patch" | cut -c1-16)
 py.patch $(sha256sum "$HERE/py.patch" | cut -c1-16)
+shared.patch $(sha256sum "$HERE/shared.patch" | cut -c1-16)
 variant $(cat "$HERE"/variant/* | sha256sum | cut -c1-16)
 emscripten $(emcc --version | head -1 | sed 's/.* \([0-9][0-9.]*\) .*/\1/')"
 for SUSPEND in jspi asyncify; do

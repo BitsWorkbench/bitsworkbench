@@ -1,0 +1,25 @@
+diff --git a/shared/runtime/pyexec.c b/shared/runtime/pyexec.c
+index bbb8554..a806d7c 100644
+--- a/shared/runtime/pyexec.c
++++ b/shared/runtime/pyexec.c
+@@ -470,14 +470,18 @@ static int pyexec_friendly_repl_process_char(int c) {
+             vstr_reset(MP_STATE_VM(repl_line));
+             repl.paste_mode = true;
+             return 0;
+-        } else if (vstr_len(MP_STATE_VM(repl_line)) == 0) {
+-            goto input_restart;
+         }
+ 
++        // Still reading the line (an escape sequence part way, a key that
++        // only moved the cursor): wait for more, even on an empty line.
+         if (ret < 0) {
+             return 0;
+         }
+ 
++        if (vstr_len(MP_STATE_VM(repl_line)) == 0) {
++            goto input_restart;
++        }
++
+         if (!mp_repl_continue_with_input(vstr_null_terminated_str(MP_STATE_VM(repl_line)))) {
+             goto exec;
+         }
