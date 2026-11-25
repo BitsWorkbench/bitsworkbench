@@ -95,7 +95,7 @@ any of this.
 
 Please say which board, which browser, and what the **Talk to device** tab
 showed when it went wrong: that terminal output is usually the whole story.
-Report it as a [GitHub issue](https://github.com/firialabs/opencodebot/issues). A
+Report it as a [GitHub issue](https://github.com/BitsWorkbench/bitsworkbench/issues). A
 security problem goes privately instead: see [SECURITY.md](SECURITY.md).
 
 ## Writing a test
