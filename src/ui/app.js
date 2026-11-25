@@ -187,7 +187,7 @@ export class App {
   }
 
   _greet() {
-    this.terminal.write(`\x1b[32m${t('term.greeting')}\x1b[0m\r\n\x1b[90m${t('term.greetingHint')}\x1b[0m\r\n`)
+    this.terminal.show(`\x1b[32m${t('term.greeting')}\x1b[0m\r\n\x1b[90m${t('term.greetingHint')}\x1b[0m\r\n`)
   }
 
   // ------------------------------------------------------------- device

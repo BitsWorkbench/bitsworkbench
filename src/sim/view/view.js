@@ -16,6 +16,7 @@ import { courseMesh } from './course-mesh.js'
 import { CameraRig } from './camera-rig.js'
 import { PRESETS, AutoRealism, guessLevel, gpuName } from './realism.js'
 import { settings } from '../settings.js'
+import * as tuner from './led-tuner.js'
 
 const FIGURES = { codebot: CodeBotFigure, codeair: CodeAIRFigure, codex: CodeXFigure }
 const SKY = 0xdfe8ef
@@ -113,6 +114,13 @@ export class SimView {
     canvas.addEventListener('blur', () => { this._releaseAll(); this.rig.held.clear() })
     if (buttons) this._bindPointer(canvas)
     this._changedAt = 0           // when the picture last had reason to change
+    // The LED tuner's key chord, anywhere in the app (led-tuner.js).
+    this._onTunerKey = (e) => {
+      if (!tuner.chord(e)) return
+      e.preventDefault()
+      tuner.toggle(this)
+    }
+    addEventListener('keydown', this._onTunerKey)
 
     this._resize = new ResizeObserver(() => this.resize())
     this._resize.observe(host)
@@ -225,6 +233,8 @@ export class SimView {
     this._realism()
     this._touch()
     fig.update(snap)
+    // The LED tuner, asked for in the page's address (led-tuner.js), opens once there are lights to tune.
+    if (tuner.asked()) tuner.open(this)
     if (fig.home) {
       // a board that stays put: the camera starts where the figure says, and turns
       // round it (from a direction, near enough for its size to fit the view's narrower way)
@@ -509,6 +519,8 @@ export class SimView {
   }
 
   dispose() {
+    removeEventListener('keydown', this._onTunerKey)
+    tuner.close()
     settings.removeEventListener('change', this._onSettings)
     cancelAnimationFrame(this._raf)
     this._resize.disconnect()

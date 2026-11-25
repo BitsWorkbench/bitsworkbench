@@ -6,7 +6,7 @@
 // sits at the world pose: the axle's midpoint on the floor, facing +x.
 import * as THREE from 'three'
 import { CB3_BODY, CB3_PITCH } from '../world/codebot.js'
-import { Led, reflect } from './led.js'
+import { Led, reflect, wear } from './led.js'
 import { Keys } from './keys.js'
 import { Parts, loadParts } from './parts.js'
 
@@ -41,6 +41,11 @@ export class CodeBotFigure {
     this.tilt.rotation.z = -PITCH
     this.leds = { user: [], ls: [], prox: [], pwr: [] }
     this.keys = new Keys()
+  }
+
+  /** Every light on the board (led.js), for its look. */
+  get lights() {
+    return Object.values(this.leds).flat()
   }
 
   // Button n's centre in the world; the button a ray meets, or -1 (view.js).
@@ -114,6 +119,7 @@ export class CodeBotFigure {
     LS.forEach(([x, z]) => led('ls', x, z, GREEN))
     PROX.forEach(([x, z]) => led('prox', x, z, AMBER))
     led('pwr', PWR[0], PWR[1], GREEN)
+    wear(this.lights, 'codebot')
 
     // A soft shadow, cheaper than a shadow map.
     const c = document.createElement('canvas')

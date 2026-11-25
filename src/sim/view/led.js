@@ -21,13 +21,33 @@
 import * as THREE from 'three'
 
 const LENS = new THREE.Color(0.956, 0.921, 0.721)
-const BLACK = new THREE.Color(0, 0, 0)
 const GLOW = 0.85                // the glow's strength at its middle, lit full
+
+// How a lit light looks, for each board: the numbers the LED tuner
+// (led-tuner.js, ?tune=leds) sets live, and shows to copy back here.
+//   colour    how much of the light's colour its body has as a painted
+//             surface (lit by the room), 0 none: a light is its own light
+//   emissive  how bright its body glows, 1 its colour at full; past 1 it
+//             goes toward white, keeping its hue (hot, below), a hot centre
+//   opacity   the lit body's opacity, under 1 the board shows through
+//   glow      the glow's strength, 1 as drawn before
+//   size      the glow's size, 1 as drawn before
+//   add       the glow added as light (true), or laid over as a tint
+//   toneMap   the lit body through the room's tone curve (false: its colour
+//             as the program set it)
+export const LOOK_DEFAULTS = Object.freeze({
+  codebot: Object.freeze({ colour: 0, emissive: 1.4, opacity: 0.7, glow: 1.6, size: 1.6, add: false, toneMap: false }),
+  codex: Object.freeze({ colour: 0, emissive: 1.4, opacity: 0.7, glow: 1.6, size: 1.6, add: false, toneMap: false }),
+  codeair: Object.freeze({ colour: 0, emissive: 1.4, opacity: 0.7, glow: 1.6, size: 1.6, add: false, toneMap: false }),
+})
+// The looks in use, by board: the defaults, changed only by the tuner.
+export const LOOKS = Object.fromEntries(Object.entries(LOOK_DEFAULTS).map(([k, v]) => [k, { ...v }]))
 
 // A light's look: `mat` its body's material (a lens, or the part's own),
 // `halo` its glow; `rest` the body's colour unlit; `glow` the glow's
 // strength, 1 the most. A lens whose material is invisible unlit (a
-// NeoPixel's, over the part's own cup) shows only when lit.
+// NeoPixel's, over the part's own cup) shows only when lit. `look`: its
+// board's entry in LOOKS (a figure sets it).
 export class Light {
   constructor(mat, halo, rest = mat.color.clone(), glow = 1) {
     this.mat = mat
@@ -35,10 +55,18 @@ export class Light {
     this.rest = rest.clone()
     this.restOpacity = mat.opacity
     this.restVisible = mat.visible
+    this.restTransparent = mat.transparent
     this.glow = glow
+    this.haloSize = halo.scale.x
+    this.look = LOOKS.codebot
     this.color = new THREE.Color(1, 1, 1)
     this.level = 0
     this.show(this.color, 0)
+  }
+
+  /** Draw again as it is: after its look changed (the tuner). */
+  refresh() {
+    this.show(this.color, this.level)
   }
 
   // An RGB pixel: each 0 to 255, as a program sets it.
@@ -55,16 +83,52 @@ export class Light {
     this.level = level
     const k = level > 0 ? 0.35 + 0.65 * Math.sqrt(Math.min(1, level)) : 0
     const lit = k > 0
-    this.mat.emissive.copy(this.color).multiplyScalar(k)
-    this.mat.color.copy(lit ? BLACK : this.rest)
-    this.mat.opacity = lit ? 1 : this.restOpacity
-    this.mat.toneMapped = !lit
-    this.mat.visible = lit || this.restVisible
-    this.halo.material.color.copy(this.color)
-    this.halo.material.opacity = GLOW * this.glow * k
+    const look = this.look
+    const m = this.mat
+    hot(m.emissive.copy(this.color), k * look.emissive)
+    if (lit) m.color.copy(this.color).multiplyScalar(look.colour * k)
+    else m.color.copy(this.rest)
+    m.opacity = lit ? look.opacity : this.restOpacity
+    const clear = lit ? look.opacity < 1 : this.restTransparent
+    const toneMapped = lit ? look.toneMap : true
+    // a change of these recompiles the material's shader: only when they change
+    if (m.transparent !== clear || m.toneMapped !== toneMapped) {
+      m.transparent = clear
+      m.toneMapped = toneMapped
+      m.needsUpdate = true
+    }
+    m.visible = lit || this.restVisible
+    const h = this.halo.material
+    h.color.copy(this.color)
+    h.opacity = Math.min(1, GLOW * this.glow * look.glow * k)
+    const blending = look.add ? THREE.AdditiveBlending : THREE.NormalBlending
+    if (h.blending !== blending) { h.blending = blending; h.needsUpdate = true }
+    this.halo.scale.setScalar(this.haloSize * look.size)
     this.halo.visible = lit
   }
 }
+
+// A board's lights take its look (LOOKS), drawn at once in it.
+export function wear(lights, board) {
+  for (const l of lights) {
+    l.look = LOOKS[board]
+    l.refresh()
+  }
+}
+
+// `c` (its brightest channel full) at `k` times its brightness, in place.
+// Up to 1, simply brighter. Past 1 a screen has no more to give, and each
+// channel clipping on its own changes the colour (orange to yellow); so the
+// colour stays full and the rest goes toward white, half of what is past 1:
+// a hotter light of the same hue, as a bright LED looks to a camera. The mix
+// is made as the screen shows it (sRGB): mixed in linear light, orange slides
+// toward red.
+export function hot(c, k) {
+  if (k <= 1) return c.multiplyScalar(k)
+  const w = Math.min(1, (k - 1) / 2)
+  return c.convertLinearToSRGB().lerp(WHITE, w).convertSRGBToLinear()
+}
+const WHITE = new THREE.Color(1, 1, 1)
 
 // A glow `size` across (in its parent's units): a soft disc of a light's
 // colour, laid over the scene.

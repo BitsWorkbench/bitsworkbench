@@ -47,6 +47,13 @@ export class TerminalPanel {
     this.fit = new FitAddon()
     this.term.loadAddon(this.fit)
     this.term.open(host)
+    // Reverse wraparound (DECSET 45): a backspace at the left edge goes back
+    // to the end of the line above, when that line wrapped onto this one.
+    // MicroPython's and CircuitPython's line editors move back over a line
+    // with backspaces; without it, a command longer than the terminal is
+    // wide is redrawn wrongly when recalled with the arrows (the prompt
+    // overwritten, the old text left behind).
+    this.term.write('\x1b[?45h')
 
     // Everything typed goes to the board verbatim — including Ctrl-C and tab.
     this.term.onData(onInput)
@@ -69,17 +76,46 @@ export class TerminalPanel {
     }
   }
 
+  /** What the board (or the simulator) says, with its line editor's redraws made to fit wrapped lines (line-edits.js). */
   write(data) {
-    this.term.write(data)
+    this._wantEdits()
+    this._put(() => this.term.write(this.edits ? this.edits.push(data) : data))
+  }
+
+  /** Text from the app itself, drawn as it is. */
+  show(text) {
+    this._put(() => this.term.write(text))
   }
 
   /** A friendly line from the app itself, in brand green. */
   say(text) {
-    this.term.write(`\r\n\x1b[32m${text}\x1b[0m\r\n`)
+    this._put(() => this.term.write(`\r\n\x1b[32m${text}\x1b[0m\r\n`))
   }
 
   warn(text) {
-    this.term.write(`\r\n\x1b[33m${text}\x1b[0m\r\n`)
+    this._put(() => this.term.write(`\r\n\x1b[33m${text}\x1b[0m\r\n`))
+  }
+
+  // line-edits.js loads with the first thing a board says, not on the first
+  // visit (it has a download budget, tests/lazy-parts.mjs): until it is here,
+  // what is written waits, in order. If it cannot load (a page left on an old
+  // build), the board's words go through as they are.
+  _put(draw) {
+    if (!this._waiting) return draw()
+    this._waiting.push(draw)
+  }
+
+  _wantEdits() {
+    if (this.edits !== undefined) return
+    this.edits = null
+    this._waiting = []
+    import('./line-edits.js')
+      .then(({ LineEdits }) => { this.edits = new LineEdits() }, () => {})
+      .finally(() => {
+        const waiting = this._waiting
+        this._waiting = null
+        for (const draw of waiting) draw()
+      })
   }
 
   clear() {

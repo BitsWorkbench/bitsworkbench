@@ -223,6 +223,56 @@ await page.waitForFunction(() => window.openCodeBot.device.state === 'ready' && 
 await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.sendRaw('print(6 * 7)\r') })
 await page.waitForFunction(() => /42/.test(window.__sim.out), null, { timeout: 20000 }).catch(() => problems.push('REPL: no answer to print(6 * 7)'))
 
+// The REPL as the terminal shows it: colours drawn, not printed; the arrows
+// recall history on an empty prompt with no second prompt and no stray
+// characters, a line longer than the terminal is wide included; and a paste
+// of several commands, one of them waiting, runs them in turn.
+{
+  const before = problems.length
+  const shown = () => page.evaluate(() => {
+    const b = window.openCodeBot.terminal.term.buffer.active
+    const rows = []
+    for (let i = 0; i < b.length; i++) rows.push(b.getLine(i).translateToString(true))
+    return rows.join('\n').trimEnd()
+  })
+  const lastRow = async () => (await shown()).split('\n').pop()
+  const key = async (k) => { await page.evaluate((k) => window.openCodeBot.device.sendRaw(k), k); await page.waitForTimeout(400) }
+  await page.evaluate(() => window.openCodeBot.terminal.clear())
+  const long = `print("${'x'.repeat(140)}")`
+  await key('print("\\x1b[31mRED\\x1b[0m and \\x1b[1;38;5;208mORANGE\\x1b[0m")\r')
+  await key('1+1\r')
+  await key(`${long}\r`)
+  await key('2+2\r')
+  const colour = await page.evaluate(() => {
+    const b = window.openCodeBot.terminal.term.buffer.active
+    for (let i = b.length - 1; i >= 0; i--) {
+      const line = b.getLine(i), s = line.translateToString(true)
+      if (s.startsWith('RED and ORANGE')) return { red: line.getCell(0).getFgColor(), orange: line.getCell(8).getFgColor(), bold: !!line.getCell(8).isBold() }
+    }
+    return null
+  })
+  if (!colour || colour.red !== 1 || colour.orange !== 208 || !colour.bold) problems.push(`REPL: colours not drawn (${JSON.stringify(colour)}): ${await shown()}`)
+  await key('\x1b[A')
+  if (await lastRow() !== '>>> 2+2') problems.push(`REPL: Up on an empty prompt gave "${await lastRow()}"`)
+  await key('\x1b[A')
+  await key('\x1b[B')
+  if (await lastRow() !== '>>> 2+2') problems.push(`REPL: Up, Up, Down (from a line longer than the terminal) gave "${await lastRow()}"`)
+  // (history goes on from the line on show: the long line, 1+1, the colours, then back to 1+1)
+  await key('\x1b[A')
+  await key('\x1b[A')
+  await key('\x1b[A')
+  await key('\x1b[B')
+  if (await lastRow() !== '>>> 1+1') problems.push(`REPL: back through history and forward again gave "${await lastRow()}"`)
+  await key('\r')
+  await page.waitForTimeout(400)
+  const end = (await shown()).split('\n').slice(-3)
+  if (end.join('|') !== '>>> 1+1|2|>>>') problems.push(`REPL: running the recalled line gave ${JSON.stringify(end)}`)
+  if (/\[A|\[B|>>> >>>/.test(await shown())) problems.push(`REPL: stray characters or a second prompt: ${await shown()}`)
+  await page.evaluate(() => { window.__sim.out = ''; window.openCodeBot.device.sendRaw('import time\rtime.sleep(0.3)\rprint(6 * 7)\r') })
+  await page.waitForFunction(() => /42\r\n>>> $/.test(window.__sim.out), null, { timeout: 15000 }).catch(async () => problems.push(`REPL: a paste of three commands gave ${JSON.stringify(await page.evaluate(() => window.__sim.out))}`))
+  if (problems.length === before) console.log('sim-ui: the REPL draws colours, recalls history cleanly (a wrapped line too), and runs a pasted line after a waiting one')
+}
+
 // A program's input() reads a line typed at the terminal (Python Level 1): what it
 // printed before shows while it waits, the keys are echoed, Backspace takes one back.
 {
@@ -747,7 +797,8 @@ else console.log('sim-ui: CodeX drew, and the keyboard pressed its A button')
 {
   const cxPixel = await page.evaluate(() => [...window.openCodeBot.device.sim.view.figures.values()][0].pixels[0].mat.emissive.toArray())
   const cxLens = await page.evaluate(lensesSeated)
-  if (!(cxPixel[0] > 0.5 && cxPixel[1] < 0.1 && cxPixel[2] < 0.1) || cxLens.length) problems.push(`CodeX NeoPixels: lit ${cxPixel}; ${cxLens.join(' | ')}`)
+  // red, hot past full (led.js hot): toward white, red still well ahead
+  if (!(cxPixel[0] > 0.5 && cxPixel[1] < 0.4 * cxPixel[0] && cxPixel[2] < 0.4 * cxPixel[0]) || cxLens.length) problems.push(`CodeX NeoPixels: lit ${cxPixel}; ${cxLens.join(' | ')}`)
   else console.log('sim-ui: CodeX\'s NeoPixels lit red in the cup in each one\'s top')
 }
 await page.screenshot({ path: `${SHOT_DIR}/ocb-sim-codex.png` })
