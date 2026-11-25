@@ -44,6 +44,8 @@ export class SimView {
     this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     this.figures = new Map()
     this.frames = [null, null]      // the two latest snapshots, with arrival times
+    this._snaps = []                // the recent snapshots, for the playout clock (_current)
+    this._play = null               // the playout clock: the simulated time drawn (µs)
 
     // Realism (realism.js): chosen in the settings panel, or Auto, which
     // starts from the graphics chip (where it settled last time, after the
@@ -457,7 +459,14 @@ export class SimView {
 
   // A snapshot from the world: { t, devices: [...] }.
   push(frame) {
-    this.frames = [this.frames[1], { frame, at: performance.now() }]
+    const at = performance.now()
+    this.frames = [this.frames[1], { frame, at }]
+    // The recent snapshots, by simulated time, for drawing (_current). A world
+    // started over (time going back) or a device more or fewer starts afresh.
+    const last = this._snaps[this._snaps.length - 1]
+    if (last && (frame.t < last.t || frame.devices.length !== last.devices.length)) this._snaps = []
+    if (!last || frame.t !== last.t) this._snaps.push({ t: frame.t, at, devices: frame.devices })
+    if (this._snaps.length > SNAPS) this._snaps.shift()
     // Frames keep coming while nothing moves; only a change needs drawing.
     const key = JSON.stringify(frame.devices)
     if (key !== this._lastKey) { this._lastKey = key; this._touch() }
@@ -509,20 +518,45 @@ export class SimView {
     this.renderer.domElement.remove()
   }
 
-  // Draw the device where it is now: between the last two snapshots, by how
-  // far the wall clock has gone from one to the next.
-  _current() {
-    const [a, b] = this.frames
-    if (!b) return null
-    if (!a || a.frame.devices.length !== b.frame.devices.length) return b.frame.devices
-    const span = b.at - a.at
-    const f = span > 0 ? Math.min(1, (performance.now() - b.at) / span) : 1
-    return b.frame.devices.map((d, i) => lerpSnap(a.frame.devices[i], d, f))
+  // Draw the device where it was at the playout clock: a simulated time a
+  // little behind the newest snapshot, which runs on smoothly at the
+  // simulation's pace, between the two snapshots either side of it. The
+  // snapshots come from the worker about every 16 ms of wall clock, but
+  // unevenly, and a frame of the screen may see none or two; drawn by when
+  // each arrived, a robot driving steadily sped up and stalled by turns (and
+  // the chase camera, following it, made the whole room lurch). Drawn on a
+  // clock of its own, it moves as steadily as it was simulated.
+  //   behind  two snapshots' worth of simulated time: the next is nearly
+  //           always in hand
+  //   pace    simulated time a wall millisecond, measured over the snapshots
+  //           held; the clock is steered gently toward its place behind the
+  //           newest (PLAY_STEER a second), so it neither drifts nor jumps
+  //   jump    a clock more than PLAY_JUMP snapshots out (a pause, a reset, a
+  //           slow page) goes straight to its place
+  _current(dt) {
+    const snaps = this._snaps
+    const newest = snaps[snaps.length - 1]
+    if (!newest) return null
+    if (snaps.length < 2) return newest.devices
+    const first = snaps[0]
+    const pace = newest.at > first.at ? (newest.t - first.t) / (newest.at - first.at) : 1000
+    const gap = (newest.t - first.t) / (snaps.length - 1)
+    const want = newest.t - 2 * gap
+    let t = this._play ?? want
+    t += pace * 1000 * Math.min(dt, 0.1)
+    t += (want - t) * Math.min(1, PLAY_STEER * dt)
+    if (Math.abs(want - t) > PLAY_JUMP * gap) t = want
+    t = Math.min(newest.t, Math.max(first.t, t))
+    this._play = t
+    let i = snaps.length - 1
+    while (i > 0 && snaps[i - 1].t > t) i--
+    const a = snaps[Math.max(0, i - 1)], b = snaps[i]
+    const f = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 1
+    return b.devices.map((d, k) => lerpSnap(a.devices[k], d, f))
   }
 
-  _placeCamera(s, jump) {
-    this.rig.heading(s)
-    this.rig.place(s, jump)
+  _placeCamera(s, jump, dt = 0) {
+    this.rig.place(s, jump, dt)
   }
 
   _loop(now) {
@@ -530,11 +564,11 @@ export class SimView {
     const dt = this._lastLoop ? (now - this._lastLoop) / 1000 : 0
     this._lastLoop = now
     if (!this.host.isConnected || this.host.clientWidth === 0) return
-    const devices = this._current()
+    const devices = this._current(dt)
     // a board that stays put (CodeX): the camera is the student's
     if (devices) {
       for (const s of devices) this.figures.get(s.id)?.update(s)
-      if (devices[0].x !== undefined) this._placeCamera(devices[0], false)
+      if (devices[0].x !== undefined) this._placeCamera(devices[0], false, dt)
     }
     if (this.rig.update(dt)) this._touch()
     const moved = this.rig.controls.enabled && this.controls.update()
@@ -592,6 +626,13 @@ export class SimView {
 }
 
 const SETTLE_MS = 1500
+
+// The playout clock (_current): snapshots held (about half a second's), how
+// fast the clock is steered to its place (a second), how far out it may be
+// before it jumps there (in snapshots).
+const SNAPS = 30
+const PLAY_STEER = 2
+const PLAY_JUMP = 15
 
 // Tilting: a drag's radians a pixel; Shift and an arrow key's step (5 degrees)
 // as [x, y], x the right edge down, y the bottom edge down.

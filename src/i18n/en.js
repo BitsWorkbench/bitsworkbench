@@ -217,6 +217,10 @@ export default {
   'welcome.confirm': "Let's go!",
   'welcome.resume': 'Resume',
   'welcome.demo': 'Try a Demo!',
+  'demo.againTitle': 'Start the demo over?',
+  'demo.againBody': 'You have been here before. Start the demo over from the beginning, in blocks, or carry on where you left off?',
+  'demo.startOver': 'Start over',
+  'demo.carryOn': 'Carry on',
   'welcome.bodyHtml': `
     <ul class="welcome-list">
       <li>Code with Blocks or Python, your choice.</li>

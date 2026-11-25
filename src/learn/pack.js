@@ -352,6 +352,7 @@ class Checker {
       hints: [(h, where) => this.list(h, where, this.md, { min: 0 }), false],
       more: [this.md, false],
       skippable: [this.yes, false],
+      onward: [this.yes, false],
       show: [(c, where) => this.fields(c, where, {
         card: (k, w) => this.oneOf(k, w, CARDS),
         caption: this.md,

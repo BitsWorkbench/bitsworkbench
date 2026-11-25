@@ -14,6 +14,9 @@ import * as THREE from 'three'
 // CodeSpace's home for each (its scene unit is 10 cm; z flipped for three's hands)
 const ROTATE = { alpha: Math.PI * 0.8, beta: Math.PI / 2.5, radius: 0.4 }
 const CHASE = { turn: 0, radius: 0.3, height: 0.2 }
+// How chase eases after the robot (s): its place, its heading. A robot at
+// full speed (about 0.4 m/s) is followed about 8 cm behind where it would sit.
+const CHASE_EASE = { place: 0.2, heading: 0.35 }
 const UNIVERSAL = new THREE.Vector3(0.5, 1.5, -0.5)
 const ATTACHED = { back: 0.13, up: 0.05 }
 const FLY_SPEED = 0.6            // m/s, universal's keys
@@ -52,6 +55,7 @@ export class CameraRig {
   setMode(mode, { turn = null } = {}) {
     this.mode = mode
     this.chase = { ...CHASE, ...(turn === null ? {} : { turn: THREE.MathUtils.degToRad(turn) }) }
+    this._follow = null
     this.held.clear()
     const orbit = mode === 'rotate' || mode === 'chase'
     this.controls.enabled = orbit
@@ -59,22 +63,17 @@ export class CameraRig {
     this.controls.maxPolarAngle = 0.95 * Math.PI / 2
   }
 
-  // The camera at its home for the robot at s (jump), or a step toward where
-  // the mode wants it as the robot moves.
-  place(s, jump) {
+  // The camera at its home for the robot at s (jump), or, `dt` seconds of
+  // the screen on, where the mode wants it as the robot moves.
+  place(s, jump, dt = 0) {
     const t = targetOf(s, this.aim)
     const c = this.controls
+    if (this.mode === 'chase') return this._chase(s, t, jump, dt)
     if (this.mode === 'rotate') {
       if (!jump) return
       const { alpha, beta, radius } = ROTATE
       c.target.copy(t)
       this.camera.position.copy(t).add(new THREE.Vector3(Math.cos(alpha) * Math.sin(beta), Math.cos(beta), -Math.sin(alpha) * Math.sin(beta)).multiplyScalar(radius))
-    } else if (this.mode === 'chase') {
-      const back = forwardOf(s).negate().applyAxisAngle(UP, this.chase.turn).multiplyScalar(this.chase.radius)
-      const want = t.clone().add(back).add(new THREE.Vector3(0, this.chase.height, 0))
-      if (jump || this._dragging) this.camera.position.copy(want)
-      else this.camera.position.lerp(want, 0.08)
-      c.target.lerp(t, jump ? 1 : 0.2)
     } else if (this.mode === 'universal') {
       if (!jump) return
       this.camera.position.copy(t).add(UNIVERSAL)
@@ -149,10 +148,30 @@ export class CameraRig {
     this.chase.turn = Math.atan2(d.x, d.z) - back
   }
 
-  // the robot's heading, for chase's offsets (the view calls it each frame)
-  heading(s) {
-    const b = forwardOf(s).negate()
-    this._backTheta = Math.atan2(b.x, b.z)
+  // Chase, as a follow camera does it (Babylon.js's FollowCamera, Unity's
+  // smooth follow): the robot's place and heading are eased toward, on the
+  // screen's clock (`dt`, seconds since the last frame drawn), and the camera
+  // sits rigidly at its offset from that eased pose, looking at it. One
+  // easing, by time, not a fraction a frame: steady at any frame rate, and a
+  // robot driving at a steady speed is followed at a steady distance, the
+  // room gliding past rather than the camera and its aim catching up by
+  // turns. A drag or a jump puts the eased pose on the robot.
+  _chase(s, t, jump, dt) {
+    const f = this._follow
+    if (jump || this._dragging || !f) {
+      this._follow = { at: t.clone(), heading: s.heading ?? 0 }
+    } else {
+      f.at.lerp(t, 1 - Math.exp(-dt / CHASE_EASE.place))
+      let dh = (s.heading ?? 0) - f.heading
+      dh = Math.atan2(Math.sin(dh), Math.cos(dh))
+      f.heading += dh * (1 - Math.exp(-dt / CHASE_EASE.heading))
+    }
+    const { at, heading } = this._follow
+    const back = forwardOf({ heading }).negate()
+    this._backTheta = Math.atan2(back.x, back.z)
+    back.applyAxisAngle(UP, this.chase.turn).multiplyScalar(this.chase.radius)
+    this.controls.target.copy(at)
+    this.camera.position.copy(at).add(back).add(new THREE.Vector3(0, this.chase.height, 0))
   }
 
   // universal: drag to look round, the wheel to go forward and back

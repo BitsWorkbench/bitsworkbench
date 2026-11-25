@@ -280,6 +280,17 @@ await page.screenshot({ path: `${SHOT_DIR}/ocb-sim.png` })
   await page.waitForTimeout(1200)
   const view = await page.evaluate(() => ({ level: window.openCodeBot.device.sim.view.level, ratio: window.openCodeBot.device.sim.view.ratio, overlay: document.querySelector('.sim-perf').hidden ? null : document.querySelector('.sim-perf').textContent }))
   if (view.level !== 'low' || view.ratio > 0.6 || !/fps/.test(view.overlay ?? '')) problems.push(`settings: realism low and frame rate shown gave ${JSON.stringify(view)}`)
+  // The readout's words change as drawing starts and rests; the panel, anchored at its foot, keeps its size.
+  const tall = await page.evaluate(async () => {
+    const box = document.querySelector('.sim-settings'), pace = box.querySelector('.sim-pace')
+    const h = []
+    for (const words of ['Frame rate 60 a second; simulation 1.0× real time', 'Nothing moving, nothing drawn; simulation 1.0× real time']) {
+      pace.textContent = words
+      h.push(box.getBoundingClientRect().height)
+    }
+    return h
+  })
+  if (tall[0] !== tall[1]) problems.push(`settings: the panel changes height with the frame-rate readout (${tall.join(' to ')} px)`)
 
   // Resizing never paints an empty view: sizing a canvas clears it, so each
   // new size is drawn before the frame is painted. A ResizeObserver made after
@@ -484,6 +495,51 @@ if (!problems.some((p) => p.startsWith('rooms'))) console.log('sim-ui: the room 
   await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 }).catch(() => {})
   await page.evaluate(() => window.openCodeBot.device.sim.setCamera('chase'))
   if (problems.length === before) console.log('sim-ui: the view is described, arrows turn the camera, and Space holds a board button')
+}
+
+// A steady drive, followed by the chase camera, moves steadily on screen: the
+// robot is drawn on a playout clock in simulated time, not by when each
+// snapshot arrived, and the camera eases by time (camera-rig.js). Measured on
+// the frames themselves, the drawing left out so the page keeps its frame
+// rate without a graphics chip. (Drawn by arrival, the robot's step from one
+// frame to the next varied by half, and four frames in ten were a third off.)
+{
+  await page.evaluate(() => {
+    const view = window.openCodeBot.device.sim.view
+    window.openCodeBot.device.sim.setSpeed(1)          // at real time (the course check above left it at 4x)
+    window.openCodeBot.device.sim.setCamera('chase', { turn: 150 })
+    window.__steady = []
+    window.__draw = view.renderer.render
+    view.renderer.render = (scene, cam) => {
+      const p = [...view.figures.values()][0].root.position
+      window.__steady.push({ now: performance.now(), bx: p.x, bz: p.z, cx: cam.position.x, cz: cam.position.z })
+    }
+    window.openCodeBot.device.run('from botcore import *\nimport time\nmotors.enable(True)\nmotors.run(LEFT, 50)\nmotors.run(RIGHT, 50)\ntime.sleep(4)\nmotors.run(LEFT, 0)\nmotors.run(RIGHT, 0)\n')
+  })
+  await page.waitForTimeout(6000)
+  await page.waitForFunction(() => window.openCodeBot.device.state === 'ready', null, { timeout: 15000 }).catch(() => {})
+  const steady = await page.evaluate(() => {
+    const view = window.openCodeBot.device.sim.view
+    view.renderer.render = window.__draw
+    const r = window.__steady
+    const v = []
+    for (let i = 1; i < r.length; i++) {
+      const a = r[i - 1], b = r[i], dt = (b.now - a.now) / 1000
+      v.push({ at: b.now, bot: Math.hypot(b.bx - a.bx, b.bz - a.bz) / dt, cam: Math.hypot(b.cx - a.cx, b.cz - a.cz) / dt })
+    }
+    const moving = v.filter((x) => x.bot > 0.05)
+    if (moving.length < 10) return { frames: 0, drawn: r.length, moving: moving.length }
+    const t0 = moving[0].at, t1 = moving[moving.length - 1].at
+    if (t1 - t0 < 3000) return { frames: 0, drawn: r.length, moving: moving.length, ms: Math.round(t1 - t0) }
+    const mid = v.filter((x) => x.at > t0 + 1500 && x.at < t1 - 1000)
+    const spread = (xs) => { const m = xs.reduce((s, x) => s + x, 0) / xs.length; return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length) / m }
+    const bot = mid.map((x) => x.bot)
+    const med = [...bot].sort((a, b) => a - b)[Math.floor(bot.length / 2)]
+    return { frames: mid.length, bot: spread(bot), cam: spread(mid.map((x) => x.cam)), off: bot.filter((x) => Math.abs(x - med) > med / 3).length / bot.length }
+  })
+  if (!(steady.frames >= 20 && steady.bot < 0.1 && steady.cam < 0.1 && steady.off < 0.1)) problems.push(`chase: a steady drive is not drawn steadily ${JSON.stringify(steady)}`)
+  else console.log(`sim-ui: a steady drive in chase is drawn steadily (the robot's speed varies ${Math.round(steady.bot * 100)}% frame to frame, the camera's ${Math.round(steady.cam * 100)}%)`)
+  await page.evaluate(() => { window.openCodeBot.device.sim.setCamera('chase'); window.openCodeBot.device.sim.setSpeed(4) })
 }
 
 // The camera menu: each of CodeSpace's four where it should be for the robot,

@@ -28,7 +28,7 @@
               "title": "Drive",
               "code": "from botcore import *\nimport time\n\nmotors.enable(True)\n\nmotors.run(LEFT, 50)\nmotors.run(RIGHT, 50)\ntime.sleep(1)\nmotors.run(LEFT, 0)\nmotors.run(RIGHT, 0)\n",
               "steps": [
-                { "id": "DEMO_look", "goal": "Look around CodeBot", "say": "This is **CodeBot**, in the simulator. Drag it to look around.", "point": "sim", "do": { "event": "orbit" }, "skippable": true, "cheer": "Nice view!" },
+                { "id": "DEMO_look", "goal": "Look around CodeBot", "say": "Meet **CodeBot**, in the simulator! Drag it to look around.", "point": "sim", "do": { "event": "orbit" }, "skippable": true, "cheer": "Nice view!" },
                 { "id": "DEMO_program", "goal": "Read your program", "say": "--Blocks--These blocks are your program. They run from the top down: when the program starts, CodeBot drives forward at half power for one second.--/Blocks----Python--This Python is your program. It runs from the top down: it switches the motors on, drives both wheels at half power for one second, then stops them.--/Python--", "point": "program" },
                 { "id": "DEMO_run", "goal": "Run your program", "say": "Press **▶ Run** to send your program to CodeBot.", "point": "run", "do": { "runs": true }, "cheer": "It drove!" },
                 {
@@ -46,7 +46,7 @@
               "id": "DEMO_C2",
               "title": "Lights",
               "steps": [
-                { "id": "DEMO_palette", "goal": "Open Lights", "say": "--Blocks--Blocks live in the palette.--/Blocks----Python--The palette has Python too.--/Python-- Open **Lights**.", "point": "palette:lights", "do": { "event": "palette", "name": "lights" } },
+                { "id": "DEMO_palette", "goal": "Open Lights", "say": "--Blocks--Blocks live in the palette.--/Blocks----Python--The palette has Python too.--/Python-- Open **Lights**.", "point": "palette:lights", "do": { "event": "palette", "name": "lights" }, "onward": true },
                 {
                   "id": "DEMO_leds", "goal": "Add the top LEDs",
                   "say": "--Blocks--Drag **turn all top LEDs on** under your drive block.--/Blocks----Python--Drag the **leds.user** card to the end of your program.--/Python--",

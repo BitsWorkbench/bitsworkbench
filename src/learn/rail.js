@@ -53,10 +53,13 @@ export class Rail extends EventTarget {
   }
 
   /**
-   * The rail of a guided pack (guide.js): the pack's button (its missions),
-   * the mission, and the mission's chapters as numbered objectives, each
-   * 'done', 'open' or 'locked', with `current` the one being played. Fires
-   * `missions`, and `chapter` with a chapter's index.
+   * The rail of a guided pack (guide.js), as CodeSpace's: the pack's button
+   * (its missions), the mission's, and the mission's chapters as numbered
+   * objectives, each 'done' (a green check in its corner), 'open' or
+   * 'locked' (grey, a lock in its corner), with `current` the one being
+   * played. Each says only its name when the pointer rests on it (the screen
+   * reader hears what it does too). Fires `missions`, and `chapter` with a
+   * chapter's index.
    */
   renderGuided({ pack, mission, chapters, states, current }) {
     this.guided = true
@@ -66,18 +69,17 @@ export class Rail extends EventTarget {
       .map((c, i) => {
         const s = states[i]
         const name = t('guide.railObjective', { step: i + 1, count, title: c.title }) + (s === 'done' ? ` ${t('learn.railDone')}` : s === 'locked' ? ` ${t('guide.locked')}` : '')
-        return `<li><button type="button" class="rail-step" data-rail-chapter="${i}" data-done="${s === 'done'}" data-locked="${s === 'locked'}" title="${esc(name)}" aria-label="${esc(name)}"${i === current ? ' aria-current="step"' : ''}>${s === 'locked' ? '<span aria-hidden="true">🔒</span>' : i + 1}</button></li>`
+        const badge = s === 'done' ? '<span class="rail-badge rail-badge-done" aria-hidden="true">✓</span>' : s === 'locked' ? '<span class="rail-badge rail-badge-locked" aria-hidden="true">🔒</span>' : ''
+        return `<li><button type="button" class="rail-step" data-rail-chapter="${i}" data-done="${s === 'done'}" data-locked="${s === 'locked'}" title="${esc(c.title)}" aria-label="${esc(name)}"${i === current ? ' aria-current="step"' : ''}>${i + 1}${badge}</button></li>`
       })
       .join('')
-    const packLabel = esc(t('guide.packButton', { title: pack.title }))
     const m = pack.missions[mission]
-    const missionLabel = esc(t('guide.missionButton', { n, title: m.title }))
-    // The pack's and the mission's own pictures (their `avatar`), where they have them.
+    // The pack's and the mission's own pictures (their `avatar`), where they have them; the mission's number where it has none.
     const picture = (name) => (name && pack.assets?.[name] ? `<img class="rail-avatar" src="${esc(pack.assets[name])}" alt="">` : '')
     const packIcon = picture(pack.avatar) || '<span aria-hidden="true">🧭</span>'
-    const missionIcon = picture(m.avatar)
-    this.root.innerHTML = `<button type="button" class="rail-toggle${pack.avatar && packIcon.startsWith('<img') ? ' rail-pack-avatar' : ''}" data-rail="missions" title="${packLabel}" aria-label="${packLabel}">${packIcon}</button>
-      <button type="button" class="rail-mission" data-rail="missions" title="${missionLabel}" aria-label="${missionLabel}">${missionIcon}<span>${esc(t('learn.missionN', { n }))}</span></button>
+    const missionIcon = picture(m.avatar) || `<span>${esc(t('learn.missionN', { n }))}</span>`
+    this.root.innerHTML = `<button type="button" class="rail-toggle${pack.avatar && packIcon.startsWith('<img') ? ' rail-pack-avatar' : ''}" data-rail="missions" title="${esc(pack.title)}" aria-label="${esc(t('guide.packButton', { title: pack.title }))}">${packIcon}</button>
+      <button type="button" class="rail-mission" data-rail="missions" title="${esc(m.title)}" aria-label="${esc(t('guide.missionButton', { n, title: m.title }))}">${missionIcon}</button>
       <ol class="rail-steps" aria-label="${esc(t('guide.objectives'))}">${buttons}</ol>
       <span class="rail-spacer"></span>`
     this.root.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' })

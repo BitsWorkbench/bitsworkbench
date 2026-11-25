@@ -380,8 +380,17 @@ For Chromebooks, draw calls matter more than triangles:
   shapes, spawn points, the floor reflectance map and the light grid. The simulation never
   loads a mesh.
 
-The renderer interpolates between the two latest snapshots, so the picture is smooth at any
-frame rate while the world runs at 1 kHz. OffscreenCanvas in a worker works (measured) and
+The renderer draws on a playout clock of its own (`view/view.js`, `_current`): a simulated time
+about two snapshots behind the newest, running on at the simulation's measured pace and
+steered gently toward that place, drawn between the two snapshots either side of it. The
+snapshots come about every 16 ms of wall clock but unevenly, and a screen frame may see none or
+two; drawn by when each arrived (as it once was), a robot driving steadily sped up and stalled
+by turns, half its speed from frame to frame (measured), and the chase camera made the room
+lurch with it. On the playout clock the same drive varies by 2%. The world runs at 1 kHz
+underneath, untouched. Chase eases after the robot's place and heading by time, on the
+screen's clock, and sits rigidly at its offset from that eased pose, as a follow camera does
+(Babylon.js's FollowCamera), so a steady drive is followed at a steady distance at any frame
+rate. OffscreenCanvas in a worker works (measured) and
 stays an option if the main thread ever gets busy.
 
 Cameras: CodeSpace's four, with its names, homes and controls (`view/camera-rig.js`), picked

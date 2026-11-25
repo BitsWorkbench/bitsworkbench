@@ -109,7 +109,8 @@ export class Places {
       case 'sim': {
         const el = this.sim()?.renderer?.domElement
         const box = boxOf(el)
-        return box && { box, el }
+        // To its left, pointing in, clear of its buttons and the terminal under it.
+        return box && { box, el, side: 'left' }
       }
       case 'palette': {
         const item = this.workspace.getToolbox()?.getToolboxItemById(arg)

@@ -459,6 +459,16 @@ kbd {
 .rail-step[data-done='true'] { background: var(--green-strong); border-color: var(--green-strong); color: #fff; }
 .rail-step[aria-current='step'] { border-color: var(--green-deep); box-shadow: 0 0 0 3px var(--green-soft); }
 .rail-step[data-locked='true'] { background: var(--paper-2); border-style: dashed; color: var(--ink-soft); font-size: 13px; }
+/* A guided pack's objectives, as CodeSpace's: every number in sight, a badge in the corner of the done and the locked. */
+.rail-step:has(.rail-badge) { position: relative; }
+.rail-badge {
+  position: absolute; top: -6px; right: -7px; width: 17px; height: 17px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 10px; line-height: 1; font-weight: 900; pointer-events: none;
+}
+.rail-badge-done { background: var(--green-strong); color: #fff; box-shadow: 0 0 0 2px var(--paper-2); }
+.rail-badge-locked { background: var(--paper-2); font-size: 10px; }
+.learn-rail .rail-step[data-rail-chapter][data-done='true'] { background: var(--surface); border-color: var(--green-strong); color: var(--green-deep); }
+.learn-rail .rail-step[data-rail-chapter][data-locked='true'] { color: #9aa0a6; font-size: 14px; }
 /* A guided pack has no drawer: the coach and the rail lead. */
 .workarea[data-guided='true'] .learn-pane { display: none; }
 .rail-spacer { flex: 1 1 auto; }
