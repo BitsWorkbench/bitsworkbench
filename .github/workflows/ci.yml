@@ -53,7 +53,7 @@ jobs:
       - run: npm test
 
       # The tested bundle, for a preview on Firebase (the `preview` job below).
-      - if: github.repository == 'firialabs/opencodebot' && vars.FIREBASE_PROJECT_ID != ''
+      - if: github.repository == 'BitsWorkbench/bitsworkbench' && vars.FIREBASE_PROJECT_ID != ''
         uses: actions/upload-artifact@v4
         with:
           name: site
@@ -149,12 +149,12 @@ jobs:
 
   # A pull request's tested bundle on a Firebase preview channel, its address
   # posted on the pull request, kept a week: to look at a change before it
-  # merges. Firia's own, like the deploy workflow: only in firialabs/opencodebot
+  # merges. Firia's own, like the deploy workflow: only in BitsWorkbench/bitsworkbench
   # once Firebase is set up (README, "Deploying"), and only for branches of it
   # (a fork's pull request gets no secrets). A fork's own CI skips it.
   preview:
     needs: build-and-test
-    if: github.repository == 'firialabs/opencodebot' && vars.FIREBASE_PROJECT_ID != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.repository == 'BitsWorkbench/bitsworkbench' && vars.FIREBASE_PROJECT_ID != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -1,8 +1,8 @@
 # BitsWorkbench
 
-**Firia Labs' open-source editor and simulator for CodeBot, CodeX and CodeAIR: blocks and Python.**
+**Open source blocks and Python coding environment for CodeBot, CodeX and CodeAIR.**
 
-(Earlier called OpenCodeBot, the repository's name, and for a while LabBlocks.)
+from [Firia Labs](https://firialabs.com)
 
 BitsWorkbench lets a teacher plug in a **CodeBot**, **CodeX** or **CodeAIR**, snap
 some blocks together, and press Run. No board yet? Press Simulate and the
@@ -13,12 +13,11 @@ web page, and a USB cable when there is a board.
 install. Chrome or Edge on a computer or Chromebook.
 
 **BitsWorkbench is in Beta:** an early public release. It works, and it is still
-changing; tell us what breaks ([issues](https://github.com/firialabs/opencodebot/issues)).
+changing; tell us what breaks ([issues](https://github.com/BitsWorkbench/bitsworkbench/issues)).
 
 Everything it makes is real CircuitPython, and the Python is one click away,
 in place of the blocks, for the class that is ready to type. Learn has short
 examples for each board and the first missions of Firia Labs' courses, free.
-Schools already teaching with [CodeSpace](https://firialabs.com) keep it.
 
 > Built with ❤️ for the many brilliant teachers who would like to try computer
 > science but do not (yet) want to look at a text editor.
@@ -169,7 +168,7 @@ npm run preview  # serve dist/ locally
 
 `npm run build` writes `dist/`, a plain static site with a relative base path:
 any static host can serve it, from the root of a domain or from a sub-path such
-as `/opencodebot/`. Nothing in it needs a server, a database or an account.
+as `/bitsworkbench/`. Nothing in it needs a server, a database or an account.
 Firebase Hosting is one way, and the one Firia uses; GitHub Pages, Netlify,
 Cloudflare Pages, S3 or your school's own web server work as well.
 
@@ -204,7 +203,7 @@ custom domain on the site that also answers at
 https://firialabs-open-editor.web.app/). `.github/workflows/deploy.yml` builds, tests and publishes the tested
 bundle there on every merge to `main`, and CI gives each pull request from a
 branch of this repository a preview address, posted on the pull request and
-kept a week. Both run only in `firialabs/opencodebot`, so a fork never tries to
+kept a week. Both run only in `BitsWorkbench/bitsworkbench`, so a fork never tries to
 deploy as Firia, and only once the repository has:
 
 1. **The project's id** in the repository variable `FIREBASE_PROJECT_ID`

@@ -7,7 +7,11 @@ adds a line under **Unreleased**.
 
 ## Unreleased
 
-The first public release, planned for December 1, 2026. Everything it holds:
+## 0.1.0-beta.1 (2026-11-25)
+
+The first Beta of BitsWorkbench, ahead of the 0.1.0 release planned for
+December 1, 2026. The repository is now github.com/BitsWorkbench/bitsworkbench
+(the old address redirects). Everything it holds:
 
 ### Editor
 - Blocks for CodeBot, CodeX and CodeAIR, each in its category's colour, with dark

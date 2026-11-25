@@ -1,7 +1,7 @@
 # Publishes the site to Firebase Hosting, the live channel of Firia's project,
 # on every merge to main: build, test the exact bundle, then deploy it.
 #
-# This is Firia's own deploy. It runs only in firialabs/opencodebot, and only
+# This is Firia's own deploy. It runs only in BitsWorkbench/bitsworkbench, and only
 # once the repository has the variable FIREBASE_PROJECT_ID and the secret
 # FIREBASE_SERVICE_ACCOUNT (README, "Deploying"). The credential lives only in
 # that secret, never in a file. A fork skips this workflow quietly; to publish
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.repository == 'firialabs/opencodebot' && vars.FIREBASE_PROJECT_ID != ''
+    if: github.repository == 'BitsWorkbench/bitsworkbench' && vars.FIREBASE_PROJECT_ID != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment:
