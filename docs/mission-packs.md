@@ -5,7 +5,7 @@ instructions, the code it builds toward, the goals that finish it, hints, and qu
 the way. This file is the format; `src/learn/pack.js` reads it and refuses a pack that breaks
 it, naming every problem it finds.
 
-The structure follows Firia Labs' CodeSpace curriculum (pack, mission, objective, quiz), with
+The structure follows Firia Labs' curriculum (pack, mission, objective, quiz), with
 three changes: every objective can be done in blocks or in Python, and the student can switch
 between them at any time; a pack holds no script, since packs arrive as files and from teachers;
 and the CodeTrek, the code an objective provides, is a set of chunks the student drags from
@@ -226,7 +226,7 @@ mission controller leads. Nothing in the pack says so; it is the shape of its mi
   Progress stays for next time; a reload comes back to the step.
 - **The rail** shows, top to bottom, the mission pack and the mission, each by its `avatar`
   where it has one (its tooltip is its name alone), both opening the missions list, then the
-  mission's chapters as numbered objectives, as CodeSpace shows them: every number in sight,
+  mission's chapters as numbered objectives: every number in sight,
   a green check in the corner of a done one, a lock in the corner of a locked one (grey), and
   the objective's name as its tooltip.
 - **The goals HUD**, at the lower left of the simulator, shows the objective (the chapter) and
@@ -284,7 +284,7 @@ Instructions, goals, hints and the rest are Markdown. On top of plain Markdown:
 - **Blocks or Python.** `--Blocks--` ... `--/Blocks--` shows only in blocks mode, and
   `--Python--` ... `--/Python--` only in Python mode. Write the text once, and mark only what
   differs: "drag the block" against "type the line".
-- **Sections**, as in CodeSpace: `--Concept--` ... `--/Concept--` sets text apart as a panel.
+- **Sections**: `--Concept--` ... `--/Concept--` sets text apart as a panel.
   The kinds: `Concept` (a new idea), `Caution`, `Peek` (folded until opened), `Remix` (try it
   your own way), `Run` (run the program now), `Debug`, `Touch` (try it on the board),
   `ConsoleData` (read what the program prints) and `CheckTheTrek` (the CodeTrek has the code).
@@ -327,7 +327,7 @@ make Python. A **pattern** is one Python statement or expression:
 | `{ "prints": "regex" }` | A run prints a line matching the regular expression. |
 | `{ "runs": true }` | The program runs to its end, or is stopped, without an error. Add `"seconds": n` for at least n seconds of running. |
 | `{ "event": "name" }` | The student does something in BitsWorkbench: `edited` (changes the program), `file-created` (with `"name"`, a new file of that name), `trek-used` (drags a CodeTrek chunk in), `stepped` (steps through the program), `switched` (changes between blocks and Python). |
-| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches: the name the board's CAD model gives it, as listed in the built model's `public/sim-assets/models/<model>.parts.json` (made from `sim/assets/` by `sim/tools/build-models.mjs`). These are the names CodeSpace's packs use, such as `Cylinder.015` for CodeBot's wheel encoder or `BTN_A` on CodeX. A click is a press and release in place; a drag that turns the camera is not one. |
+| `{ "pick": "regex" }` | The student clicks a part of the simulated board whose name matches: the name the board's CAD model gives it, as listed in the built model's `public/sim-assets/models/<model>.parts.json` (made from `sim/assets/` by `sim/tools/build-models.mjs`). These are the names Firia Labs' packs use, such as `Cylinder.015` for CodeBot's wheel encoder or `BTN_A` on CodeX. A click is a press and release in place; a drag that turns the camera is not one. |
 
 A goal once met stays met, and BitsWorkbench keeps which goals each objective has met. Code checks
 are checked as the student edits, a moment after they pause.
@@ -366,5 +366,5 @@ version on the site replaces the one kept before, progress stays, and it opens o
 has been opened online. The app does not download the packs themselves until one is opened.
 
 These are the first missions of Firia Labs' curriculum packs (their samplers). They are made
-in a private repository by porting the CodeSpace curriculum, and the rest of each pack is a
+in a private repository from Firia Labs' curriculum, and the rest of each pack is a
 second file a school is given.

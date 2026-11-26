@@ -252,8 +252,8 @@ src/
   i18n/        every string the app shows, one table per language
 ```
 
-Running a program does what CodeSpace does: interrupt to a prompt, drop into the
-raw REPL, write `main.py` a kilobyte at a time, then soft-reboot so the board
+Running a program interrupts to a prompt, drops into the
+raw REPL, writes `main.py` a kilobyte at a time, then soft-reboots so the board
 runs it. On boards whose firmware halts at a debug prompt, it then says "go".
 
 ## Strings and languages

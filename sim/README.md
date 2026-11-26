@@ -313,7 +313,7 @@ Add its GLB to `sim/assets/` (and to its LICENSE), an entry in
 `sim/tools/build-env.mjs` (its floor layers, the faces too high to be floor, its
 physics impostors, what to leave out, its start and where courses go), a name in
 `ROOMS` in `src/sim/kinds.js`, and its build to `sim:assets` in package.json.
-CodeSpace's start positions are Babylon's: its z is the glTF z, and its x the
+Start positions in the source models are Babylon's: its z is the glTF z, and its x the
 glTF x mirrored. `tests/sim.mjs` then checks its start and courses are on clear
 floor; look at it from the simulator before trusting it (an impostor may stand
 for something no picture shows).
