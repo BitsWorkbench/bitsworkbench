@@ -210,10 +210,10 @@ silkscreen's axes (x to the right, y down the board, z into it; -1 g in z lying 
 an edge going down reads below zero on its axis (`bridge/codex.js`, through the KXTJ3
 driver's sign conversion and axis swap).
 
-It is drawn as CodeSpace's simulator draws it: its model (`codex.glb`, from
+It is drawn as Firia Labs' simulator draws it: its model (`codex.glb`, from
 `sim/assets/CodeX.glb`) standing 10 cm over the floor of the showroom, a black floor a metre
 square with a teal grid at 10 cm under a slate sky, lit as a studio (three's RoomEnvironment
-in place of CodeSpace's studio light). Facing the camera square stands for lying flat, as
+in place of Firia Labs' simulator's studio light). Facing the camera square stands for lying flat, as
 if looked down on; tilted, the model turns its right or bottom edge away from the camera,
 the way that edge going down looks from above (`codex-figure.js`), and the arrows stay put. Its screen is the program's 240 x 240 pixels on the
 model's active area, 27.72 mm square (the firmware drives a 1.54 inch ST7789), lit by the
@@ -238,7 +238,7 @@ model names it, for a mission pack's `pick` goal ("click the speaker"). The buil
 most parts into one mesh, so `build-models.mjs` writes each source part's box beside it
 (`<model>.parts.json`, before its renames) and the view takes the smallest box around the
 point the click meets. The names are the CAD's (CodeBot's speaker is `Cylinder`), so
-CodeSpace's packs, written against the same models, ask for parts as they always did.
+Firia Labs' packs, written against the same models, ask for parts as they always did.
 
 A board's reset button does what a real reset does. Held, the board is held in reset: its
 program is cut off at once, with no time to clean up, and everything it drives goes off (a
@@ -248,9 +248,9 @@ program saved on it, wherever it is: in the simulator that program is the one la
 CodeBot has no reset button.
 
 **LEDs and metal on CodeBot and CodeAIR** (`src/sim/view/led.js`). An LED is drawn as
-CodeSpace's simulator draws it: a small clear package that shows its pale lens when unlit
+Firia Labs' simulator draws it: a small clear package that shows its pale lens when unlit
 (never a black box) and its own colour when lit, with a glow at the realism levels that have
-effects. CodeBot's 0603 LEDs (2 mm by 1.4 mm, 1 mm tall) sit on their pads at CodeSpace's
+effects. CodeBot's 0603 LEDs (2 mm by 1.4 mm, 1 mm tall) sit on their pads at Firia Labs' simulator's
 positions: the user LEDs red, 0 at the left under its 0; the line sensor LEDs and the battery
 LED (beside the power switch) green; the proximity emitters amber. CodeAIR's sit on the
 model's own parts, named by `build-models.mjs` from the CAD's part numbers: the eight BYTE LEDs
@@ -268,7 +268,7 @@ tone mapped. Past full it runs hotter by mixing toward white (`hot`), never by d
 channel past 1: a channel clipping or the film curve each push orange toward yellow. Its
 glow is a tint of the same colour laid over what is around it rather than light added to it
 (added light runs to white over the lit body and turns red toward yellow over a green
-board). CodeSpace's simulator likewise lights an LED in the program's colour as is, with a
+board). Firia Labs' simulator likewise lights an LED in the program's colour as is, with a
 glow layer of that colour.
 
 How strong each of those is (painted colour, emissive, opacity, glow strength and size,
@@ -296,7 +296,7 @@ a different object than it showed last (and after any `clear()` or `fill()`), wi
 wrapping (past the right edge the text comes round on the left a row lower, as the device's
 pixel writes do); an image from the top left corner at the largest whole scale that fits.
 
-**Rooms** (`world/environment.js`). A room's physics is CodeSpace's impostors: axis-aligned
+**Rooms** (`world/environment.js`). A room's physics is Firia Labs' simulator's impostors: axis-aligned
 boxes and upright cylinders (table legs, pillars), each meeting a device only in its band of
 heights, so a CodeBot drives under a table a CodeAIR hits. The top of any obstacle is also a
 floor (`supportAt`): the auditorium's stage is a box 0.97 m high. CodeBot and CodeAIR carry a
@@ -409,14 +409,14 @@ screen's clock, and sits rigidly at its offset from that eased pose, as a follow
 rate. OffscreenCanvas in a worker works (measured) and
 stays an option if the main thread ever gets busy.
 
-Cameras: CodeSpace's four, with its names, homes and controls (`view/camera-rig.js`), picked
+Cameras: Firia Labs' simulator's four, with its names, homes and controls (`view/camera-rig.js`), picked
 from a menu behind its video camera icon, with its Center button beside it to bring the camera
 back home. Rotate (the first) turns round the robot's starting point, 40 cm out and 18 degrees
 above level; Chase follows 30 cm behind and 20 cm up, and a drag or the arrow keys move where
 it chases from; Universal flies freely from 1.5 m up (drag to look, arrows or W A S D to move,
 Q and E down and up, the wheel forward and back), which shows the floor lines from above; and
-Attached rides behind the robot's middle, looking where it goes. The room menu has CodeSpace's
-mountain icon. Both icons are Material Icons (Apache License 2.0), as CodeSpace uses.
+Attached rides behind the robot's middle, looking where it goes. The room menu has Firia Labs' simulator's
+mountain icon. Both icons are Material Icons (Apache License 2.0), as Firia Labs' simulator uses.
 Rotate and Chase come no nearer than 12 cm to CodeBot; to CodeAIR, which is small, they come
 within 3 cm and turn round its board's middle, so a student can look closely at its LEDs and
 buttons (a figure's `closest` and `aim`). The near plane follows the camera in, so nothing
@@ -485,7 +485,7 @@ through the whole UI with no hardware.
 
 ## 7. Assets
 
-The device and room GLBs come from CodeSpace's simulator and are committed in `sim/assets/`
+The device and room GLBs come from Firia Labs' simulator and are committed in `sim/assets/`
 under CC BY-NC 4.0 (its LICENSE). The derived files (merged meshes, world
 JSON, reflectance maps) are generated into `public/sim-assets/` by `npm run sim:assets` and
 not committed. Four rooms: the gymnasium, a classroom, the cafeteria and the auditorium. The
@@ -510,7 +510,7 @@ once it has been chosen.
 - **JSPI outside Chromium.** Firefox and Safari fall back to the Asyncify build (section 1):
   three times the download, and its speed and memory on an iPad not yet measured on one.
 - **Calibration.** CodeBot drives and reads lines as the physical CB3 should, from its
-  hardware, not as CodeSpace's older simulated CodeBot does; a lesson tuned on that one may
+  hardware, not as Firia Labs' older simulated CodeBot does; a lesson tuned on that one may
   need its powers or times adjusted. Its assumptions ("Calibration" lists them), the
   per-bytecode time cost, CodeX and CodeAIR still need a bench. Until then those behave
   plausibly, not exactly.
@@ -547,7 +547,7 @@ Mk 3 "CB3", Rev C, 2022-03-29, linked from Firia Labs' [CodeBot hardware
 reference](https://docs.firialabs.com/codebot/hardware_reference/Schematic.html):
 [PDF](https://docs.firialabs.com/_downloads/d1a72039afaa962e94f77357ed263519/codebot-cb3-SCH-RevC.pdf)),
 the parts' datasheets are known, the gearmotors' numbers are the published typical ones
-for the part, and the rest is assumed. The physical CB3 is the reference, not CodeSpace's older simulated
+for the part, and the rest is assumed. The physical CB3 is the reference, not Firia Labs' older simulated
 CodeBot, whose physics had quirks (a full-power spin slower than a half-power one).
 
 **What is known** (from the schematic, botcore, the CB3's own module, and the docs):
@@ -601,7 +601,7 @@ CodeBot, whose physics had quirks (a full-power spin slower than a half-power on
   current, at a 20 mA emitter over an aluminium mirror 1 mm away, is 0.10 mA at least and
   0.90 mA typically, with no maximum given. The datasheet gives no absolute current over
   paper, so how far white pulls a reading down at the CB3's height is not in it; "Line
-  sensor levels" below takes it from CodeSpace's simulator.
+  sensor levels" below takes it from Firia Labs' simulator.
 - **Geometry** (`CB3_BODY` in `src/sim/world/codebot.js`, measured from the CB3's 3D
   model, `sim/assets/BotBody.glb`, which matches the robot). The axle is the TT gearbox's
   output shaft: 35.5 mm behind the model's origin and 12.7 mm below the board's top face,
@@ -660,7 +660,7 @@ AA cells less the bridge's and battery's drops.
   reading falls linearly with the floor's reflectance until the sensor saturates: the
   span is the phototransistor's current at full reflectance over the 70 uA that pulls the
   47k pull-up all the way, times the 3930 counts from dark to saturated. The span is
-  CodeSpace's simulator's, the best evidence of the real robot there is: Firia tuned it
+  Firia Labs' simulator's, the best evidence of the real robot there is: Firia tuned it
   to read close to a CB3. That simulator reads 4095 x (1 - g x (1 - d / 100 mm)), g the
   floor's colour (its sRGB channels averaged, as the floor maps here are built) and d the
   length of a ray down the board's tilted axis to the floor. Its robot rests about 20°
@@ -669,7 +669,7 @@ AA cells less the bridge's and battery's drops.
   and that is `lineSpan`. So at full power: a perfect white reads about 230, white paper
   (0.85, the course mats) about 810, the gymnasium's painted lines (0.80) about 1000 and
   its wood (0.38 to 0.52) 2100 to 2600, black tape (0.04) about 3930, a drop 4080; each
-  within 50 of CodeSpace's reading for the same floor. `ls.check()`'s default threshold,
+  within 50 of Firia Labs' simulator's reading for the same floor. `ls.check()`'s default threshold,
   1000, falls between white paper and black tape, and so do botcore's default, 2500, and
   the older simulator's lessons' thresholds (2000 to 3300).
   **The datasheet agrees within its own uncertainty.** A span of 3850 means about 69 uA at
@@ -680,13 +680,13 @@ AA cells less the bridge's and battery's drops.
   above the minimum. An earlier version here guessed 0.3 mA over paper at 1 mm, read the
   datasheet's minimum and typical as a range over white card, and put the sensors 3 mm
   up: a span of 7700, with white saturating. The same guess at the measured 5.5 mm gives a
-  span of 3400, 11% under CodeSpace's: white paper at about 1200 instead of 810. Two
+  span of 3400, 11% under Firia Labs' simulator's: white paper at about 1200 instead of 810. Two
   things the datasheet's curve does not cover push the real reading the other way: it is
   one sensor square over a reflector, while on the CB3 a sensor's neighbours, 9.7 mm away,
   light the same floor (lit in pairs and, for a read of all five, together), and at 5.5 mm
-  each sees a wide patch of it. Where this departs from CodeSpace, it follows the board:
+  each sees a wide patch of it. Where this departs from Firia Labs' simulator, it follows the board:
   the dark level is botcore's 4080, not 4095; at power 1 the emitters carry half the
-  current, so the span halves (white paper then reads about 2440; CodeSpace ignores the
+  current, so the span halves (white paper then reads about 2440; Firia Labs' simulator ignores the
   power); each sensor averages a spot (below) rather than reading one ray; and the
   reading floors at the phototransistor's saturation, `lineSaturated`, 150 (0.1 V,
   inside the datasheet's 0.3 V most), which nothing paler than white reaches at this
@@ -701,7 +701,7 @@ AA cells less the bridge's and battery's drops.
   reading paler floors darker); PWM ripple; motor-to-motor differences (a real pair drifts
   off straight); the CoM ahead of the axle in turns.
 
-**Proximity** reads on: CodeSpace's real-robot lessons (Python with Robots, Hot Pursuit)
+**Proximity** reads on: Firia Labs' real-robot lessons (Python with Robots, Hot Pursuit)
 read it on a CB3, and its range table was measured on one.
 
 **Lessons tuned on the older simulator.** It ran wheels at power x 15 rad/s with no
@@ -712,9 +712,9 @@ three times as far. Its line sensors are the evidence for the levels here ("Line
 levels"): white reads 286 there and about 230 here, and its lessons' thresholds (2000,
 2300, 3300) fall between white and black in both.
 
-CodeAIR and CodeX have no older simulator to follow. CodeSpace's CodeAIR is the board's 3D model and
+CodeAIR and CodeX have no older simulator to follow. Firia Labs' simulated CodeAIR is the board's 3D model and
 nothing more (no flight, sensors or physics), and its CodeX a model with buttons and no
-sensor or output wired. CodeSpace's simulated lessons for them (14 in Python with CodeX, 3
+sensor or output wired. Firia Labs' simulated lessons for them (14 in Python with CodeX, 3
 in Lift-Off, 9 in Fly with Python, checked 2026-11-12) run no code: they are tours of the
 model. Every lesson that programs them runs on the real board, so the real board is their
 reference, and the lists below wait for the bench.
@@ -730,14 +730,14 @@ reference, and the lists below wait for the bench.
 
 ## Where it stands
 
-Built, on branch `sim` (pushed to firialabs/opencodebot):
+Built, on branch `sim` (pushed to BitsWorkbench/bitsworkbench):
 
 - The runtime: MicroPython with JSPI, every clock on simulated time, pause, step, stop
   (with a grace period for programs that swallow the interrupt), a REPL between programs,
   one fresh VM per run.
 - CodeBot in the gymnasium: drive, walls and stalls, line sensors over the court lines,
   proximity, encoders, accelerometer, buttons, LEDs, speaker.
-- In the app: a Simulate button, a Simulator tab (CodeSpace's four cameras, pause,
+- In the app: a Simulate button, a Simulator tab (Firia Labs' simulator's four cameras, pause,
   step, speed, the board's buttons, reset), output and errors through the app's usual
   events, sound.
 - Tests: `tests/sim.mjs` (13 headless) and `tests/sim-ui.mjs` (every CodeBot block, the
@@ -798,8 +798,8 @@ Built, on branch `sim` (pushed to firialabs/opencodebot):
 - Rooms (section 2, "Rooms"): the gymnasium, a classroom, the cafeteria and the auditorium,
   chosen from the simulator bar for CodeBot and CodeAIR (or `env` headless), each fetched
   only when chosen. In the auditorium a CodeBot starts on the stage facing the audience and
-  can drive off it; a CodeAIR takes off from the stage. Left out of CodeSpace's models: the
-  classroom's line arena of sign boards (shown only for CodeSpace's lessons), and an
+  can drive off it; a CodeAIR takes off from the stage. Left out of the source models: the
+  classroom's line arena of sign boards (shown only for Firia Labs' lessons), and an
   invisible rail in the auditorium from the stage over the seats.
 - Without a mouse, and with a screen reader: every simulator control is reached by Tab
   with a visible focus ring, and named for a screen reader (the icon buttons, the sliders,

@@ -282,7 +282,7 @@ await page.click('#btn-menu')
 await page.click('[data-action="about"]')
 await audit('About dialog')
 check(
-  await page.evaluate(() => !!document.querySelector('#modal a[href$="/opencodebot/issues"]')),
+  await page.evaluate(() => !!document.querySelector('#modal a[href$="/bitsworkbench/issues"]')),
   'About links to GitHub issues for reporting a problem',
 )
 await page.keyboard.press('Escape')

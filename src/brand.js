@@ -28,5 +28,5 @@ export const BRAND = {
    */
   site: 'https://bitsworkbench.org',
   /** Where a person reports a problem. */
-  issues: 'https://github.com/firialabs/opencodebot/issues',
+  issues: 'https://github.com/BitsWorkbench/bitsworkbench/issues',
 }

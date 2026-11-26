@@ -75,7 +75,7 @@ December 1, 2026. The repository is now github.com/BitsWorkbench/bitsworkbench
   editor and cards in its palette, in Python's own words. Start a mission in the
   Python view to play it in Python, or finish the pack in blocks and try it again
   in Python.
-- A goals HUD at the lower left of the simulator, as in CodeSpace: the objective
+- A goals HUD at the lower left of the simulator: the objective
   and its goals, ticked as they are met. The rail shows the mission pack's and the
   mission's pictures, then every objective's number, a check on the done ones
   and a lock on the locked, each named in its tooltip.
