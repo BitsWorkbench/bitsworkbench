@@ -9,8 +9,7 @@ export default {
   'app.beta': 'Beta',
   'app.betaTitle': 'Una primera versión pública: consulta Acerca de',
   'app.title': '{app} Beta',
-  // El nombre de este idioma en su propio idioma, en el menú de idiomas.
-  'lang.name': 'Español',
+  'lang.improve': 'Ayúdanos a mejorar la traducción',
 
   // La barra superior
   'chip.pick': 'Elige un dispositivo',
@@ -305,6 +304,11 @@ export default {
     cosas pueden cambiar o aún no funcionar. Si algo falla,
     <a href="{issues}" target="_blank" rel="noreferrer">informa
     del problema en GitHub</a> y cuéntanos qué estabas haciendo.</p>`,
+  'about.machineHtml': `
+    <p><strong>Traducción automática:</strong> este idioma lo tradujo una máquina y
+    todavía no lo ha revisado una persona, así que algunas palabras pueden sonar raras
+    o estar mal. Por favor,
+    <a href="{issues}" target="_blank" rel="noreferrer">ayúdanos a mejorarla</a>.</p>`,
   'about.privacyHtml': `
     <h3>Tu privacidad</h3>
     <p>{app} no tiene cuentas, ni anuncios, ni rastreo. Tus programas se quedan

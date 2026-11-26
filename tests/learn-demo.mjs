@@ -291,7 +291,8 @@ for (const [name, width, height, touch] of SIZES) {
   check(await asked(), 'asked again')
   await page.click('#modal[open] button[value="choice:over"]')
   await page.waitForSelector('.journey-bubble:not([hidden])')
-  await page.waitForTimeout(400)
+  // the restart settles in its own time on a slow machine: wait for it, then check
+  await page.waitForFunction(() => window.openCodeBot.learn.journey.steps[window.openCodeBot.learn.journey.index]?.id === 'DEMO_look', null, { timeout: 10000 }).catch(() => {})
   const over = await page.evaluate(() => ({ at: window.openCodeBot.learn.journey.steps[window.openCodeBot.learn.journey.index]?.id, mode: window.openCodeBot.workspace.mode, done: window.openCodeBot.learn.journey.done.size }))
   check(over.at === 'DEMO_look' && over.mode === 'blocks' && over.done === 0, `Start over: the first step, in blocks, nothing done (${JSON.stringify(over)})`)
   await context.close()

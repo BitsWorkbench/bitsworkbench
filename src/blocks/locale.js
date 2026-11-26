@@ -4,16 +4,24 @@
  */
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
-import * as Es from 'blockly/msg/es'
 import { language, PSEUDO, pseudo } from '../i18n/index.js'
 
-const BLOCKLY = { en: En, es: Es }
+// A language other than English loads only when it is in use (the first
+// visit's budget, as the app's own tables in i18n/index.js).
+const BLOCKLY = { es: () => import('blockly/msg/es') }
 
 // Importing blockly/core on its own leaves the message table empty, which
 // breaks everything from tooltips to the toolbox's aria labels. English
 // first, so anything a translation leaves out still has words.
 Blockly.setLocale(En)
-if (BLOCKLY[language] && language !== 'en') Blockly.setLocale(BLOCKLY[language])
+if (BLOCKLY[language]) {
+  try {
+    const msgs = await BLOCKLY[language]()
+    Blockly.setLocale(msgs.DELETE_BLOCK ? msgs : msgs.default) // loaded on demand, it may come wrapped
+  } catch {
+    // gone with an old build: English words, from above
+  }
+}
 if (language === PSEUDO) {
   for (const [name, text] of Object.entries(Blockly.Msg)) {
     // A message that only points at another (%{BKY_...}) gets its words there.

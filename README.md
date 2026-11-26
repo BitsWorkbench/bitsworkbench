@@ -294,14 +294,19 @@ values filled in on palette blocks are `sample.*` keys. Blockly's built-in block
 picked in `src/blocks/locale.js`.
 
 **Adding a language.** Copy `en.js` to `<code>.js` (say `fr.js`), translate the values
-and leave the keys, then add it to `TABLES` in `src/i18n/index.js`, and Blockly's own
-messages for it (`blockly/msg/fr`) to `src/blocks/locale.js`. A key the new table
+and leave the keys, then add it to `OFFERED` and `LOAD` in `src/i18n/index.js`, and Blockly's own
+messages for it (`blockly/msg/fr`) to `src/blocks/locale.js`. Each loads only when
+it is the language in use, so the first visit carries English alone. A key the new table
 leaves out falls back to English, so a partial translation works. The language comes
 from `?lang=fr` in the address, then the one picked in the ⋯ menu (saved in the
 browser), then the browser's own languages. Changing it reloads the page.
 
 Spanish (`es.js`) is the first: a machine draft that needs a review by a native
-speaker who teaches. Corrections are very welcome.
+speaker who teaches. Corrections are very welcome. A machine-translated language says
+so with `machine` in `OFFERED` (a few words, in that language): the app shows them
+under the language's name in the ⋯ menu, opens About with `about.machineHtml`, and
+adds a link to help improve the translation while it is in use. Once a person has
+reviewed a translation, set its `machine` to `''`.
 
 **Checking.** `npm run test:pseudo` runs the app in a pseudo-language, `?lang=en-XA`,
 where every string from the table has its letters accented (`⟦Ŕûñ⟧`). Any plain letter
