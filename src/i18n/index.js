@@ -20,29 +20,52 @@
  */
 import { BRAND } from '../brand.js'
 import en from './en.js'
-import es from './es.js'
 
-const TABLES = { en, es }
+/**
+ * The languages a person can pick: each one's name for itself and, for one
+ * translated by machine and not yet checked by a person, its own few words
+ * saying so (shown under its name in the menu; while it is in use, the menu
+ * adds lang.improve and About opens with about.machineHtml). Set `machine`
+ * to '' once a person has reviewed it. Here rather than in the tables, so the
+ * menu can offer a language without loading it.
+ */
+const OFFERED = {
+  en: { name: 'English', machine: '' },
+  es: { name: 'Español', machine: 'traducción automática' },
+}
+// A table other than English loads only when it is the language in use: the
+// first visit has a download budget (tests/lazy-parts.mjs).
+const LOAD = { es: () => import('./es.js') }
 const SAVED = 'opencodebot.lang.v1'
 export const PSEUDO = 'en-XA'
 
 /** The languages a person can pick, each named in its own language. */
-export const LANGUAGES = Object.keys(TABLES)
+export const LANGUAGES = Object.keys(OFFERED)
 export const language = pick()
-const table = TABLES[language] ?? en
+const table = await load(language)
+
+// The language's table, or English if it cannot load (a page left on an old
+// build whose parts are gone): words in English rather than no page.
+async function load(lang) {
+  try {
+    return LOAD[lang] ? (await LOAD[lang]()).default : en
+  } catch {
+    return en
+  }
+}
 
 const plural = new Intl.PluralRules(language)
 const number = new Intl.NumberFormat(language)
 const list = new Intl.ListFormat(language, { type: 'conjunction' })
 
-/** A language's own name for itself, from its table: "Español". */
+/** A language's own name for itself: "Español". */
 export function languageName(lang) {
-  return TABLES[lang]?.['lang.name'] ?? lang
+  return OFFERED[lang]?.name ?? lang
 }
 
 /** A language's own few words saying it was translated by machine ("traducción automática"), or '' when a person made or checked it. */
 export function machineNote(lang) {
-  return TABLES[lang]?.['lang.machine'] ?? ''
+  return OFFERED[lang]?.machine ?? ''
 }
 
 /** A number with exactly `digits` decimals, as the language writes it: "0.5". */
@@ -67,9 +90,9 @@ function pick() {
   for (const tag of wanted) {
     if (!tag) continue
     if (tag === PSEUDO) return tag
-    if (TABLES[tag]) return tag
+    if (OFFERED[tag]) return tag
     const base = tag.split('-')[0]
-    if (TABLES[base]) return base
+    if (OFFERED[base]) return base
   }
   return 'en'
 }

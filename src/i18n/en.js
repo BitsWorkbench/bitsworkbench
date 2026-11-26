@@ -14,13 +14,8 @@ export default {
   // The browser tab's title. Drop " Beta" here, in pageTitle and in index.html's link
   // preview tags (og:title, twitter:title) when the Beta ends.
   'app.title': '{app} Beta',
-  // This language's name for itself, shown in the language menu.
-  'lang.name': 'English',
-  // A language translated by machine and not yet by a person says so here, in a few
-  // words shown under its name in the language menu. While it is the language in use,
-  // the menu adds lang.improve and About opens with about.machineHtml. Empty in
-  // English, the original; leave it empty in a translation once a person has reviewed it.
-  'lang.machine': '',
+  // In the language menu, while a language translated by machine is in use
+  // (OFFERED in index.js), and at the top of About.
   'lang.improve': 'Help us improve this translation',
 
   // The top bar

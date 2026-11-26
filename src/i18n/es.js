@@ -9,9 +9,6 @@ export default {
   'app.beta': 'Beta',
   'app.betaTitle': 'Una primera versión pública: consulta Acerca de',
   'app.title': '{app} Beta',
-  // El nombre de este idioma en su propio idioma, en el menú de idiomas.
-  'lang.name': 'Español',
-  'lang.machine': 'traducción automática',
   'lang.improve': 'Ayúdanos a mejorar la traducción',
 
   // La barra superior
