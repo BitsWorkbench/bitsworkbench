@@ -301,7 +301,11 @@ from `?lang=fr` in the address, then the one picked in the ⋯ menu (saved in th
 browser), then the browser's own languages. Changing it reloads the page.
 
 Spanish (`es.js`) is the first: a machine draft that needs a review by a native
-speaker who teaches. Corrections are very welcome.
+speaker who teaches. Corrections are very welcome. A machine-translated table says so
+with `lang.machine` (a few words, in that language): the app shows them under the
+language's name in the ⋯ menu, opens About with `about.machineHtml`, and adds a link
+to help improve the translation while it is in use. Once a person has reviewed a
+translation, set its `lang.machine` to `''`.
 
 **Checking.** `npm run test:pseudo` runs the app in a pseudo-language, `?lang=en-XA`,
 where every string from the table has its letters accented (`⟦Ŕûñ⟧`). Any plain letter

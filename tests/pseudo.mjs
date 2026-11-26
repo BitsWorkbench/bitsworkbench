@@ -224,13 +224,15 @@ console.log('languages')
 await open('codebot', { lang: 'en' })
 await page.click('#btn-menu')
 const items = await page.$$eval('#lang-menu [role="menuitemradio"]', (els) =>
-  els.map((e) => ({ name: e.textContent, lang: e.lang, checked: e.getAttribute('aria-checked') })),
+  els.map((e) => ({ name: e.firstChild.textContent, note: e.querySelector('.lang-note')?.textContent ?? '', lang: e.lang, checked: e.getAttribute('aria-checked') })),
 )
 check(
-  items.some((i) => i.lang === 'en' && i.name === 'English' && i.checked === 'true') &&
+  items.some((i) => i.lang === 'en' && i.name === 'English' && !i.note && i.checked === 'true') &&
     items.some((i) => i.lang === 'es' && i.name === 'Español' && i.checked === 'false'),
   `the ⋯ menu offers English and Español (${items.map((i) => i.name).join(', ')})`,
 )
+// Spanish is machine-translated and says so, in Spanish, under its name.
+check(items.find((i) => i.lang === 'es')?.note === 'traducción automática', 'Español is marked as machine-translated, in Spanish')
 
 // Picking Spanish reloads into it, and stays picked.
 await page.goto(`${BASE}?device=loopback&board=codebot`, { waitUntil: 'networkidle' })
@@ -240,6 +242,11 @@ await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.cl
 await page.waitForFunction(() => !!window.openCodeBot)
 check(await page.evaluate(() => document.documentElement.lang === 'es'), 'picking Español switches the page to Spanish')
 check(await page.evaluate(() => document.getElementById('btn-run').textContent.trim() !== 'Run'), 'the buttons are in Spanish')
+await page.click('#btn-menu')
+check(/github\.com\/.+\/issues/.test((await page.getAttribute('#lang-menu .lang-improve', 'href')) ?? ''), 'in Spanish, the menu links to help improve the translation')
+await page.click('#app-menu [data-action="about"]')
+check(/^Traducción automática/.test((await page.locator('#modal[open] p').first().innerText()).trim()), 'and About opens by saying it is machine-translated')
+await page.keyboard.press('Escape')
 await (await page.$$('.blocklyToolboxCategory:visible'))[0].click()
 await page.waitForTimeout(200)
 const words = await page.evaluate(() =>

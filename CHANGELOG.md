@@ -87,8 +87,9 @@ December 1, 2026. The repository is now github.com/BitsWorkbench/bitsworkbench
 ### Foundations
 - Accessibility: keyboard paths through the app, labelled controls, 4.5:1
   contrast, and an automated WCAG 2.1 AA check on every change.
-- Languages: English and Spanish (machine-drafted), and a test language that shows
-  any string left untranslated.
+- Languages: English and Spanish, and a test language that shows any string left
+  untranslated. Spanish is machine-translated and says so: under its name in the
+  language menu, in About, and with a link to help improve it while it is in use.
 - Privacy: no accounts, no ads, no tracking; nothing about a student or their
   work leaves the browser, and a test holds it to that.
 - Works offline once loaded; a page left open across an update moves onto the new

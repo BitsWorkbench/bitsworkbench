@@ -16,6 +16,12 @@ export default {
   'app.title': '{app} Beta',
   // This language's name for itself, shown in the language menu.
   'lang.name': 'English',
+  // A language translated by machine and not yet by a person says so here, in a few
+  // words shown under its name in the language menu. While it is the language in use,
+  // the menu adds lang.improve and About opens with about.machineHtml. Empty in
+  // English, the original; leave it empty in a translation once a person has reviewed it.
+  'lang.machine': '',
+  'lang.improve': 'Help us improve this translation',
 
   // The top bar
   'chip.pick': 'Pick a device',
@@ -310,6 +316,10 @@ export default {
     may change or not work yet. If something goes wrong, please
     <a href="{issues}" target="_blank" rel="noreferrer">report
     a problem on GitHub</a> and tell us what you were doing.</p>`,
+  'about.machineHtml': `
+    <p><strong>Machine-translated:</strong> this language was translated by machine
+    and not yet checked by a person, so some words may be odd or wrong. Please
+    <a href="{issues}" target="_blank" rel="noreferrer">help us improve it</a>.</p>`,
   'about.privacyHtml': `
     <h3>Your privacy</h3>
     <p>{app} has no accounts, no ads and no tracking. Your programs stay with

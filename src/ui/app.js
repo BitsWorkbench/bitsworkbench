@@ -11,7 +11,8 @@ import { generatePython, generateWithLines, devicesUsed, boardOfPython } from '.
 import { TerminalPanel } from './terminal.js'
 import { toast, showModal, choose } from './notify.js'
 import { examplesFor, exampleProject, EXAMPLE_DEVICES } from '../examples/index.js'
-import { t, listOf, LANGUAGES, language, languageName, setLanguage } from '../i18n/index.js'
+import { t, listOf, LANGUAGES, language, languageName, machineNote, setLanguage } from '../i18n/index.js'
+import { BRAND } from '../brand.js'
 import { DeviceSwitch } from '../sim/device-switch.js'
 import { SimDevice } from '../sim/sim-device.js'   // registers the 'sim' kind
 import { SimPanel } from '../sim/sim-panel.js'
@@ -1749,7 +1750,7 @@ export class App {
       case 'about':
         showModal({
           title: t('about.title'),
-          bodyHtml: t('about.betaHtml') + t('about.bodyHtml') + t('about.privacyHtml') + t('about.versionHtml', { version: APP_VERSION, build: APP_BUILD }),
+          bodyHtml: (machineNote(language) ? t('about.machineHtml') : '') + t('about.betaHtml') + t('about.bodyHtml') + t('about.privacyHtml') + t('about.versionHtml', { version: APP_VERSION, build: APP_BUILD }),
         })
         break
       default:
@@ -1757,7 +1758,11 @@ export class App {
     }
   }
 
-  /** One item per language in the ⋯ menu, each named in its own language. */
+  /**
+   * One item per language in the ⋯ menu, each named in its own language, and
+   * one translated by machine saying so under its name, in its own language.
+   * While that language is in use, a link to help improve it follows.
+   */
   _renderLanguages() {
     const group = $('lang-menu')
     for (const lang of LANGUAGES) {
@@ -1767,7 +1772,25 @@ export class App {
       item.dataset.action = `lang:${lang}`
       item.lang = lang
       item.textContent = languageName(lang)
+      const note = machineNote(lang)
+      if (note) {
+        const small = document.createElement('span')
+        small.className = 'lang-note'
+        small.textContent = note
+        item.append(' ', small)
+      }
       group.append(item)
+    }
+    if (machineNote(language)) {
+      const link = document.createElement('a')
+      link.setAttribute('role', 'menuitem')
+      link.className = 'lang-improve'
+      link.href = BRAND.issues
+      link.target = '_blank'
+      link.rel = 'noreferrer'
+      link.dataset.action = 'improve-translation' // closes the menu, as any item does
+      link.textContent = `${t('lang.improve')} ↗`
+      group.append(link)
     }
   }
 

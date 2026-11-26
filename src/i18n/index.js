@@ -40,6 +40,11 @@ export function languageName(lang) {
   return TABLES[lang]?.['lang.name'] ?? lang
 }
 
+/** A language's own few words saying it was translated by machine ("traducción automática"), or '' when a person made or checked it. */
+export function machineNote(lang) {
+  return TABLES[lang]?.['lang.machine'] ?? ''
+}
+
 /** A number with exactly `digits` decimals, as the language writes it: "0.5". */
 export function fixed(value, digits) {
   return new Intl.NumberFormat(language, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)
