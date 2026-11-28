@@ -112,8 +112,9 @@ export function setLanguage(lang) {
 /**
  * The string for `key`, with `params` put into its {placeholders}. Numbers are
  * formatted for the language. A key ending in `Html` is HTML: its params are
- * escaped. `{app}` is always the product's name and `{issues}` where to report
- * a problem (src/brand.js), unless the caller passes its own.
+ * escaped. `{app}` is always the product's name, `{issues}` where to report
+ * a problem and `{source}` where its source code is (src/brand.js), unless the
+ * caller passes its own.
  */
 export function t(key, params = {}) {
   let s = table[key] ?? en[key] ?? key
@@ -121,7 +122,7 @@ export function t(key, params = {}) {
   if (language === PSEUDO && s !== key) s = pseudo(s)
   const html = key.endsWith('Html')
   return s.replace(/\{(\w+)\}/g, (whole, name) => {
-    const v = name in params ? params[name] : name === 'app' ? t('app.name') : name === 'issues' ? BRAND.issues : undefined
+    const v = name in params ? params[name] : name === 'app' ? t('app.name') : name === 'issues' ? BRAND.issues : name === 'source' ? BRAND.source : undefined
     if (v === undefined) return whole
     const text = typeof v === 'number' ? number.format(v) : String(v)
     return html ? escapeHtml(text) : text

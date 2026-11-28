@@ -298,7 +298,10 @@ export default {
     bibliotecas que se documentan en
     <a href="https://docs.firialabs.com/" target="_blank" rel="noreferrer">docs.firialabs.com</a>.</p>
     <p>¿Encontraste un error o quieres un bloque que falta? Las contribuciones son muy
-    bienvenidas en GitHub.</p>`,
+    bienvenidas <a href="{source}" target="_blank" rel="noreferrer">en GitHub</a>.</p>
+    <p>El código es abierto, con licencia MIT; los dibujos y modelos del simulador
+    tienen licencia CC BY-NC 4.0.
+    <a href="licenses/" target="_blank" rel="noreferrer">Licencias y avisos</a>.</p>`,
   'about.betaHtml': `
     <p><strong>Beta:</strong> esta es una primera versión pública, así que algunas
     cosas pueden cambiar o aún no funcionar. Si algo falla,

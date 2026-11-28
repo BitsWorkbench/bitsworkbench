@@ -29,4 +29,6 @@ export const BRAND = {
   site: 'https://bitsworkbench.org',
   /** Where a person reports a problem. */
   issues: 'https://github.com/BitsWorkbench/bitsworkbench/issues',
+  /** Where the source code is. */
+  source: 'https://github.com/BitsWorkbench/bitsworkbench',
 }
