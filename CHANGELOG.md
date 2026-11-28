@@ -7,6 +7,8 @@ adds a line under **Unreleased**.
 
 ## Unreleased
 
+- The app's English is spelled the American way: color, gray.
+
 ## 0.1.0-beta.1 (2026-11-25)
 
 The first Beta of BitsWorkbench, ahead of the 0.1.0 release planned for
