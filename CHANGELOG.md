@@ -9,8 +9,8 @@ adds a line under **Unreleased**.
 
 ## 0.1.0-beta.1 (2026-11-25)
 
-The first Beta of BitsWorkbench, ahead of the 0.1.0 release planned for
-December 1, 2026. The repository is now github.com/BitsWorkbench/bitsworkbench
+The first Beta of BitsWorkbench, ahead of its official launch on
+December 3, 2026. The repository is now github.com/BitsWorkbench/bitsworkbench
 (the old address redirects). Everything it holds:
 
 ### Editor
