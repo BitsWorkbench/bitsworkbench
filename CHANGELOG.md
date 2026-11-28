@@ -9,6 +9,8 @@ adds a line under **Unreleased**.
 
 - About links the source code on GitHub and a new Licenses and notices page
   (licenses/), which says what each part of the app is licensed under.
+- A privacy policy (privacy/) and an accessibility statement (accessibility/),
+  in English and Spanish, linked from About.
 
 ## 0.1.0-beta.1 (2026-11-25)
 
