@@ -305,7 +305,10 @@ export default {
     libraries documented at
     <a href="https://docs.firialabs.com/" target="_blank" rel="noreferrer">docs.firialabs.com</a>.</p>
     <p>Found a bug, or want a block that is missing? Contributions are very
-    welcome on GitHub.</p>`,
+    welcome <a href="{source}" target="_blank" rel="noreferrer">on GitHub</a>.</p>
+    <p>The code is open source under the MIT license; the simulator's artwork and
+    models are under CC BY-NC 4.0.
+    <a href="licenses/" target="_blank" rel="noreferrer">Licenses and notices</a>.</p>`,
   'about.betaHtml': `
     <p><strong>Beta:</strong> this is an early public release, so some things
     may change or not work yet. If something goes wrong, please
@@ -322,7 +325,18 @@ export default {
     them to. The app sends nothing about you or your work anywhere.</p>
     <p>Opening the page loads the app from the site that hosts it, as any web
     page does. After that, it works offline.</p>`,
-  'about.versionHtml': `<p class="about-version">Version <span lang="zxx">{version}</span>, build <span lang="zxx">{build}</span>. Please give both when you report a problem.</p>`,
+  // The page at licenses/, made when the site is built (vite.config.js), in English.
+  'licenses.title': '{app}: licenses and notices',
+  'licenses.intro': '{app} is open source. What each part of it is licensed under:',
+  'licenses.code': 'The code: MIT',
+  'licenses.notices': 'Code by others that the site carries, and their licenses',
+  'licenses.gpl': 'GNU General Public License, version 2 (part of CodeAIR\'s flight code)',
+  'licenses.packs': 'Mission packs: CC BY-NC 4.0, copyright Firia Labs',
+  'licenses.art': 'The simulator\'s artwork, 3D models and rooms: Creative Commons Attribution-NonCommercial 4.0',
+  'licenses.marks': 'Firia Labs, CodeBot, CodeX, CodeAIR and {app} are trademarks of Firia Labs, covered by neither license.',
+  'licenses.source': 'The source code',
+  'licenses.back': 'Back to {app}',
+  'about.versionHtml':`<p class="about-version">Version <span lang="zxx">{version}</span>, build <span lang="zxx">{build}</span>. Please give both when you report a problem.</p>`,
 
   // Python errors, as a student reads them
   'pyerr.NameError': 'Something has no name yet',
