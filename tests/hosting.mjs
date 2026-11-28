@@ -63,6 +63,14 @@ if (!existsSync('dist/index.html')) {
   const wasm = files.filter((f) => f.endsWith('.wasm'))
   check(wasm.length > 0 && wasm.every((f) => rules.some((r) => r.re.test(f) && r.headers['Content-Type'] === 'application/wasm')), `the simulator's wasm is served as application/wasm (${wasm.length})`)
   check(files.every((f) => rules.some((r) => r.re.test(f) && r.headers['Referrer-Policy'] === 'no-referrer')), 'no page tells another site where a student came from (Referrer-Policy)')
+  // About links licenses/: a page, not the app's shell with its assets missing.
+  check(files.includes('/licenses/index.html'), 'licenses/ has a page of its own')
+  if (files.includes('/licenses/index.html')) {
+    const page = readFileSync('dist/licenses/index.html', 'utf8')
+    const local = [...page.matchAll(/href="([^"]+)"/g)].map((m) => m[1]).filter((h) => !/^https?:/.test(h))
+    const missing = local.map((h) => new URL(h, 'https://x/licenses/').pathname).filter((p) => p !== '/' && !files.includes(p))
+    check(local.length >= 3 && missing.length === 0, `and every file it links is on the site${missing.length ? ': not ' + missing.join(', ') : ''}`)
+  }
 }
 
 if (problems.length) {

@@ -7,6 +7,9 @@ adds a line under **Unreleased**.
 
 ## Unreleased
 
+- About links the source code on GitHub and a new Licenses and notices page
+  (licenses/), which says what each part of the app is licensed under.
+
 ## 0.1.0-beta.1 (2026-11-25)
 
 The first Beta of BitsWorkbench, ahead of the 0.1.0 release planned for

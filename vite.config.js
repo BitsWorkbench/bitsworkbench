@@ -52,7 +52,49 @@ const licenses = {
     this.emitFile({ type: 'asset', fileName: 'licenses/THIRD_PARTY_NOTICES.md', source: notices })
     if (FLIGHT) this.emitFile({ type: 'asset', fileName: 'licenses/GPL-2.0.txt', source: flightLib.license })
     this.emitFile({ type: 'asset', fileName: 'licenses/LICENSE.txt', source: fs.readFileSync('LICENSE') })
+    // An index, so licenses/ (linked from About) is a page and not a missing one. It is also
+    // what the offline app's service worker serves there, in place of the app itself.
+    this.emitFile({ type: 'asset', fileName: 'licenses/index.html', source: licensesPage() })
   },
+}
+
+/** licenses/index.html: what each part is licensed under, linking the texts, in English (en.js). */
+function licensesPage() {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const say = (key) => esc(en[key].replaceAll('{app}', BRAND.name))
+  const item = (href, key) => `<li><a href="${esc(href)}">${say(key)}</a></li>`
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${say('licenses.title')}</title>
+<link rel="icon" href="../icons/firia-bot-head.svg" type="image/svg+xml">
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; color: #2b2c2e; background: #fffdf7; max-width: 44rem; margin: 0 auto; padding: 1.5rem 1rem; }
+  h1 { font-size: 1.5rem; line-height: 1.2; }
+  a { color: #2f7d2b; }
+  li { margin: 0.4rem 0; }
+</style>
+</head>
+<body>
+<p><a href="../">← ${say('licenses.back')}</a></p>
+<h1>${say('licenses.title')}</h1>
+<p>${say('licenses.intro')}</p>
+<ul>
+${[
+    item('LICENSE.txt', 'licenses.code'),
+    item('THIRD_PARTY_NOTICES.md', 'licenses.notices'),
+    FLIGHT ? item('GPL-2.0.txt', 'licenses.gpl') : '',
+    item('../learn/packs/LICENSE', 'licenses.packs'),
+    item('https://creativecommons.org/licenses/by-nc/4.0/', 'licenses.art'),
+    item(BRAND.source, 'licenses.source'),
+  ].filter(Boolean).join('\n')}
+</ul>
+<p>${say('licenses.marks')}</p>
+</body>
+</html>
+`
 }
 
 // Which build this is, for About and bug reports: package.json's version, and
